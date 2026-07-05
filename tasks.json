@@ -1,0 +1,12 @@
+{
+  "project": "Rental Property Financial Management",
+  "current_sprint_status": "planning",
+  "tasks": [
+    {
+      "id": "T-01",
+      "title": "Define Domain Entities and Value Objects",
+      "status": "pending",
+      "assigned_agent": "spec_author"
+    }
+  ]
+}
