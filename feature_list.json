@@ -1,0 +1,13 @@
+{
+  "project": "Rental Property Web Platform",
+  "features": [
+    { "id": "F-01", "title": "Property Catalog and Listing", "status": "done" }
+  ]
+}
+{
+  "project": "Rental Property Web Platform",
+  "features": [
+    { "id": "F-02", "title": "FastAPI layer as input adapter.", "status": "pending" }
+  ]
+}
+
