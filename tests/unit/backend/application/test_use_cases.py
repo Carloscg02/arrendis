@@ -41,6 +41,15 @@ def test_create_property(property_repo):
     assert found.id == prop.id
 
 
+def test_create_property_duplicate_name(property_repo):
+    """UC-01.1: CreatePropertyUseCase impide nombres duplicados."""
+    uc = CreatePropertyUseCase(property_repo)
+    uc.execute("Unique", "Calle A", "Madrid", "28001", "ES", "apartment")
+    
+    with pytest.raises(ValueError, match="already exists"):
+        uc.execute("Unique", "Calle B", "Madrid", "28001", "ES", "house")
+
+
 def test_list_properties(property_repo):
     """UC-02: ListPropertiesUseCase retorna todas las propiedades."""
     create_uc = CreatePropertyUseCase(property_repo)
@@ -135,3 +144,16 @@ def test_get_profit_report(property_repo, income_repo, expense_repo):
     # 750 + 750 - 200 = 1300
     assert result.amount == Decimal("1300.00")
     assert result.currency == "EUR"
+
+
+def test_in_memory_repo_update_image(property_repo):
+    """T-03: InMemoryPropertyRepository.update_image() actualiza el campo correctamente."""
+    create_uc = CreatePropertyUseCase(property_repo)
+    prop = create_uc.execute("Piso", "Calle X", "Madrid", "28001", "ES", "apartment")
+    
+    assert prop.image_filename is None
+    
+    property_repo.update_image(prop.id, "photo.jpg")
+    updated = property_repo.find_by_id(prop.id)
+    assert updated.image_filename == "photo.jpg"
+

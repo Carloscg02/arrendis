@@ -26,6 +26,11 @@ class PropertyRepository(ABC):
         ...
 
     @abstractmethod
+    def find_by_name(self, name: str) -> Property | None:
+        """Busca una propiedad por su nombre exacto. Retorna None si no existe."""
+        ...
+
+    @abstractmethod
     def find_all(self) -> list[Property]:
         """Retorna todas las propiedades."""
         ...
@@ -33,6 +38,11 @@ class PropertyRepository(ABC):
     @abstractmethod
     def delete(self, property_id: str) -> None:
         """Elimina una propiedad por su id."""
+        ...
+
+    @abstractmethod
+    def update_image(self, property_id: str, image_filename: str | None) -> None:
+        """Actualiza el nombre de archivo de imagen de una propiedad."""
         ...
 
 

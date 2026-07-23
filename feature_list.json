@@ -1,13 +1,11 @@
 {
   "project": "Rental Property Web Platform",
   "features": [
-    { "id": "F-01", "title": "Property Catalog and Listing", "status": "done" }
-  ]
-}
-{
-  "project": "Rental Property Web Platform",
-  "features": [
-    { "id": "F-02", "title": "FastAPI layer as input adapter.", "status": "pending" }
+    { "id": "F-01", "title": "Property Catalog and Listing", "status": "done" },
+    { "id": "F-02", "title": "API Implementation", "status": "done" },
+    { "id": "F-03", "title": "Frontend Implementation (React+TS)", "status": "done" },
+    { "id": "F-04", "title": "Frontend Premium Redesign (design-taste-frontend)", "status": "done" },
+    { "id": "F-05", "title": "Fotos de Propiedades y Tarjetas Full-Width", "status": "done" }
   ]
 }
 

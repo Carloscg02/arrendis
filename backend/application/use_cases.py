@@ -60,6 +60,11 @@ class CreatePropertyUseCase:
             country=country,
         )
 
+        # Regla de negocio: No permitir propiedades duplicadas por nombre
+        existing_prop = self._property_repo.find_by_name(name)
+        if existing_prop is not None:
+            raise ValueError(f"Property with name '{name}' already exists.")
+
         # Crear la entidad
         prop = Property(
             name=name,

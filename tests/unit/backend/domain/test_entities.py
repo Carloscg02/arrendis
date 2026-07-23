@@ -63,6 +63,20 @@ def test_property_default_status():
     assert prop.status == PropertyStatus.AVAILABLE
 
 
+def test_property_default_image_filename():
+    """T-01: Property se crea con image_filename=None por defecto."""
+    addr = Address(street="Calle B", city="Sevilla", postal_code="41001")
+    prop = Property(name="Casa Triana", address=addr, property_type=PropertyType.HOUSE)
+    assert prop.image_filename is None
+
+
+def test_property_with_image_filename():
+    """T-02: Property acepta image_filename."""
+    addr = Address(street="Calle B", city="Sevilla", postal_code="41001")
+    prop = Property(name="Casa Triana", address=addr, property_type=PropertyType.HOUSE, image_filename="test.jpg")
+    assert prop.image_filename == "test.jpg"
+
+
 def test_property_equality_by_id():
     """EN-05: Dos Properties con el mismo id son iguales (aunque tengan distinto nombre)."""
     addr = Address(street="Calle X", city="Madrid", postal_code="28013")

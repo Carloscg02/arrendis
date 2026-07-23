@@ -45,7 +45,7 @@ class SQLiteConnection:
         if db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self._connection = sqlite3.connect(db_path)
+        self._connection = sqlite3.connect(db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         # Activar claves foráneas
         self._connection.execute("PRAGMA foreign_keys = ON")
@@ -68,6 +68,11 @@ class SQLiteConnection:
                 status TEXT NOT NULL
             )
         """)
+        # Migración: añadir columna image_filename si no existe
+        try:
+            cursor.execute("ALTER TABLE properties ADD COLUMN image_filename TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass  # La columna ya existe
 
         # Tabla de ingresos
         cursor.execute("""
@@ -120,8 +125,8 @@ class SQLitePropertyRepository(PropertyRepository):
         self._conn.execute(
             """
             INSERT OR REPLACE INTO properties
-                (id, name, street, city, postal_code, country, property_type, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, name, street, city, postal_code, country, property_type, status, image_filename)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 property.id,
@@ -132,6 +137,7 @@ class SQLitePropertyRepository(PropertyRepository):
                 property.address.country,
                 property.property_type.value,
                 property.status.value,
+                property.image_filename,
             ),
         )
         self._conn.commit()
@@ -147,6 +153,17 @@ class SQLitePropertyRepository(PropertyRepository):
             return None
         return self._row_to_entity(row)
 
+    def find_by_name(self, name: str) -> Property | None:
+        """Busca una propiedad por su nombre exacto. Retorna None si no existe."""
+        cursor = self._conn.execute(
+            "SELECT * FROM properties WHERE name = ?",
+            (name,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
     def find_all(self) -> list[Property]:
         """Retorna todas las propiedades."""
         cursor = self._conn.execute("SELECT * FROM properties")
@@ -154,9 +171,29 @@ class SQLitePropertyRepository(PropertyRepository):
 
     def delete(self, property_id: str) -> None:
         """Elimina una propiedad por su id."""
+        # Check if property has an image file and delete it
+        cursor = self._conn.execute("SELECT image_filename FROM properties WHERE id = ?", (property_id,))
+        row = cursor.fetchone()
+        if row and row["image_filename"]:
+            image_path = Path("data/images") / row["image_filename"]
+            if image_path.exists():
+                image_path.unlink()
+        
+        # Eliminar registros dependientes primero para evitar fallos de Foreign Key
+        self._conn.execute("DELETE FROM incomes WHERE property_id = ?", (property_id,))
+        self._conn.execute("DELETE FROM expenses WHERE property_id = ?", (property_id,))
+        # Eliminar la propiedad
         self._conn.execute(
             "DELETE FROM properties WHERE id = ?",
             (property_id,),
+        )
+        self._conn.commit()
+
+    def update_image(self, property_id: str, image_filename: str | None) -> None:
+        """Actualiza el nombre de archivo de imagen de una propiedad."""
+        self._conn.execute(
+            "UPDATE properties SET image_filename = ? WHERE id = ?",
+            (image_filename, property_id),
         )
         self._conn.commit()
 
@@ -174,6 +211,7 @@ class SQLitePropertyRepository(PropertyRepository):
             ),
             property_type=PropertyType(row["property_type"]),
             status=PropertyStatus(row["status"]),
+            image_filename=row["image_filename"],
         )
 
 

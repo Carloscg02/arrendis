@@ -1,24 +1,11 @@
-"""
-Fixtures compartidos para todos los tests de F-01.
-
-Incluye repositorios in-memory (dict) y conexión SQLite :memory:.
-"""
-
-from __future__ import annotations
-
 import pytest
 
-from backend.adapters.sqlite_adapter import SQLiteConnection
 from backend.domain.entities import Expense, Income, Property
 from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository
 
 
-# ──────────────────────────────────────────────
-# Repositorios In-Memory (implementan los puertos abstractos)
-# ──────────────────────────────────────────────
-
 class InMemoryPropertyRepository(PropertyRepository):
-    """Implementación in-memory de PropertyRepository para tests."""
+    """Implementación in-memory de PropertyRepository para tests unitarios."""
 
     def __init__(self) -> None:
         self._store: dict[str, Property] = {}
@@ -29,15 +16,27 @@ class InMemoryPropertyRepository(PropertyRepository):
     def find_by_id(self, property_id: str) -> Property | None:
         return self._store.get(property_id)
 
+    def find_by_name(self, name: str) -> Property | None:
+        for p in self._store.values():
+            if p.name == name:
+                return p
+        return None
+
     def find_all(self) -> list[Property]:
         return list(self._store.values())
 
     def delete(self, property_id: str) -> None:
         self._store.pop(property_id, None)
 
+    def update_image(self, property_id: str, image_filename: str | None) -> None:
+        for prop in self._store.values():
+            if prop.id == property_id:
+                prop.image_filename = image_filename
+                return
+
 
 class InMemoryIncomeRepository(IncomeRepository):
-    """Implementación in-memory de IncomeRepository para tests."""
+    """Implementación in-memory de IncomeRepository para tests unitarios."""
 
     def __init__(self) -> None:
         self._store: dict[str, Income] = {}
@@ -53,7 +52,7 @@ class InMemoryIncomeRepository(IncomeRepository):
 
 
 class InMemoryExpenseRepository(ExpenseRepository):
-    """Implementación in-memory de ExpenseRepository para tests."""
+    """Implementación in-memory de ExpenseRepository para tests unitarios."""
 
     def __init__(self) -> None:
         self._store: dict[str, Expense] = {}
@@ -67,10 +66,6 @@ class InMemoryExpenseRepository(ExpenseRepository):
     def delete(self, expense_id: str) -> None:
         self._store.pop(expense_id, None)
 
-
-# ──────────────────────────────────────────────
-# Fixtures de pytest
-# ──────────────────────────────────────────────
 
 @pytest.fixture
 def property_repo() -> InMemoryPropertyRepository:
@@ -88,11 +83,3 @@ def income_repo() -> InMemoryIncomeRepository:
 def expense_repo() -> InMemoryExpenseRepository:
     """Retorna un repositorio de gastos in-memory limpio."""
     return InMemoryExpenseRepository()
-
-
-@pytest.fixture
-def sqlite_connection():
-    """Retorna una conexión SQLite :memory: y la cierra al finalizar."""
-    conn = SQLiteConnection(db_path=":memory:")
-    yield conn
-    conn.close()

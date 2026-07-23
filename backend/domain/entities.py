@@ -68,6 +68,7 @@ class Property:
     address: Address
     property_type: PropertyType
     status: PropertyStatus = PropertyStatus.AVAILABLE
+    image_filename: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
