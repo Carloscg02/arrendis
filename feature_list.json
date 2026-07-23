@@ -5,7 +5,8 @@
     { "id": "F-02", "title": "API Implementation", "status": "done" },
     { "id": "F-03", "title": "Frontend Implementation (React+TS)", "status": "done" },
     { "id": "F-04", "title": "Frontend Premium Redesign (design-taste-frontend)", "status": "done" },
-    { "id": "F-05", "title": "Fotos de Propiedades y Tarjetas Full-Width", "status": "done" }
+    { "id": "F-05", "title": "Fotos de Propiedades y Tarjetas Full-Width", "status": "done" },
+    { "id": "F-06", "title": "Secure Login System (Shielded JWT)", "status": "pending" }
   ]
 }
 

@@ -183,7 +183,7 @@ export default function PropertyDetail() {
         />
       </div>
 
-      <div className="dashboard-grid detail-centered-container">
+      <div className="detail-centered-container">
         {property.image_url ? (
           <div className="detail-hero-layout">
             <div className="detail-hero-image-wrapper">
@@ -203,8 +203,9 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* Incomes Section */}
-        <div className="data-section glass-panel">
+        <div className="dashboard-grid">
+          {/* Incomes Section */}
+          <div className="data-section glass-panel">
           <div className="section-header">
             <h3>Ingresos</h3>
             <button
@@ -279,6 +280,7 @@ export default function PropertyDetail() {
               </tbody>
             </table>
           )}
+        </div>
         </div>
       </div>
 
