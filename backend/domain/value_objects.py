@@ -106,3 +106,135 @@ class Address:
 
     def __repr__(self) -> str:
         return f"Address({self.street}, {self.city}, {self.postal_code}, {self.country})"
+
+
+@dataclass(frozen=True)
+class Email:
+    """Dirección de correo electrónico validada e inmutable."""
+    value: str
+
+    def __post_init__(self) -> None:
+        if not self.value or "@" not in self.value or "." not in self.value.split("@")[-1]:
+            raise ValueError(f"Email no válido: '{self.value}'")
+        object.__setattr__(self, "value", self.value.strip().lower())
+
+
+@dataclass(frozen=True)
+class PasswordHash:
+    """Hash bcrypt de una contraseña. Nunca almacena texto plano."""
+    hash_value: str
+
+    def __post_init__(self) -> None:
+        if not self.hash_value or not self.hash_value.startswith("$2b$"):
+            raise ValueError("PasswordHash debe ser un hash bcrypt válido.")
+
+
+@dataclass(frozen=True)
+class CadastralBreakdown:
+    """Desglose del valor catastral de un inmueble (del recibo del IBI)."""
+    land_value: Decimal
+    construction_value: Decimal
+
+    def __post_init__(self) -> None:
+        if self.land_value < 0:
+            raise ValueError(f"El valor catastral del suelo no puede ser negativo: {self.land_value}")
+        if self.construction_value < 0:
+            raise ValueError(f"El valor catastral de la construcción no puede ser negativo: {self.construction_value}")
+        if self.land_value == 0 and self.construction_value == 0:
+            raise ValueError("El desglose catastral no puede ser todo ceros.")
+
+    @property
+    def total_value(self) -> Decimal:
+        return self.land_value + self.construction_value
+
+
+@dataclass(frozen=True)
+class AcquisitionCost:
+    """Coste total de adquisición de un inmueble."""
+    purchase_price: Decimal
+    construction_portion: Decimal
+    land_portion: Decimal
+    transfer_tax: Decimal
+    notary_fees: Decimal
+    registry_fees: Decimal
+
+    def __post_init__(self) -> None:
+        for field_name in ["purchase_price", "construction_portion", "land_portion",
+                           "transfer_tax", "notary_fees", "registry_fees"]:
+            if getattr(self, field_name) < 0:
+                raise ValueError(f"{field_name} no puede ser negativo: {getattr(self, field_name)}")
+        if self.purchase_price <= 0:
+            raise ValueError("El precio de compraventa debe ser positivo.")
+        total_portions = self.construction_portion + self.land_portion
+        if total_portions != self.purchase_price:
+            raise ValueError(
+                f"construction_portion ({self.construction_portion}) + "
+                f"land_portion ({self.land_portion}) = {total_portions}, "
+                f"pero purchase_price es {self.purchase_price}. Deben coincidir."
+            )
+
+    @property
+    def total_acquisition_expenses(self) -> Decimal:
+        return self.transfer_tax + self.notary_fees + self.registry_fees
+
+    @property
+    def total_cost(self) -> Decimal:
+        return self.purchase_price + self.total_acquisition_expenses
+
+
+@dataclass(frozen=True)
+class FiscalReport:
+    """Resultado completo del cálculo fiscal para una propiedad en un año fiscal."""
+    fiscal_year: int
+    property_id: str
+
+    # Rendimientos Íntegros
+    gross_rental_income: Decimal
+    other_income: Decimal
+    total_income: Decimal
+
+    # Ocupación
+    rented_days: int
+    total_days_in_year: int
+    occupation_ratio: Decimal
+
+    # Gastos Deducibles por Categoría (tras prorrateo)
+    expenses_intereses: Decimal
+    expenses_reparacion: Decimal
+    expenses_tributos: Decimal
+    expenses_seguros: Decimal
+    expenses_suministros: Decimal
+    expenses_formalizacion: Decimal
+    expenses_dudoso_cobro: Decimal
+    expenses_otros: Decimal
+
+    # Tope Reparación + Intereses
+    repair_interest_raw: Decimal
+    repair_interest_cap: Decimal
+    repair_interest_applied: Decimal
+    repair_interest_excess: Decimal
+
+    # Amortización
+    amortization_base: Decimal
+    amortization_rate: Decimal
+    amortization_full_year: Decimal
+    amortization_prorated: Decimal
+
+    # Rendimiento Neto
+    total_deductible_expenses: Decimal
+    net_income_before_reduction: Decimal
+
+    # Reducción por Vivienda Habitual
+    vivienda_habitual_days: int
+    vivienda_habitual_ratio: Decimal
+    reduction_base: Decimal
+    reduction_percentage: Decimal
+    reduction_amount: Decimal
+
+    # Resultado Final
+    net_income_final: Decimal
+
+    # Metadatos
+    unclassified_income_count: int
+    unclassified_expense_count: int
+    has_warnings: bool

@@ -89,3 +89,39 @@ def test_get_profit_report(client: TestClient):
     assert data["property_id"] == prop_id
     assert data["net_profit"] == "550.00"
     assert data["currency"] == "EUR"
+
+def test_record_income_with_fiscal_category(client: TestClient):
+    """T-I-11-06: POST /api/incomes con fiscal_category"""
+    prop_id = create_property(client)
+    
+    response = client.post("/api/incomes", json={
+        "property_id": prop_id,
+        "amount": 750.00,
+        "date": "2026-07-01",
+        "category": "rent",
+        "fiscal_category": "rendimiento_integro"
+    })
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["fiscal_category"] == "rendimiento_integro"
+
+def test_update_income_fiscal_category(client: TestClient):
+    """T-I-11-08: PATCH /api/incomes/{id}/fiscal-category"""
+    prop_id = create_property(client)
+    
+    create_response = client.post("/api/incomes", json={
+        "property_id": prop_id,
+        "amount": 750.00,
+        "date": "2026-07-01",
+        "category": "rent"
+    })
+    inc_id = create_response.json()["id"]
+    
+    response = client.patch(f"/api/incomes/{inc_id}/fiscal-category", json={
+        "fiscal_category": "rendimiento_integro"
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["fiscal_category"] == "rendimiento_integro"

@@ -62,3 +62,39 @@ def test_list_expenses_by_property(client: TestClient):
     data = response.json()
     assert len(data) == 1
     assert data[0]["amount"] == "200.0"
+
+def test_record_expense_with_fiscal_category(client: TestClient):
+    """T-I-11-07: POST /api/expenses con fiscal_category"""
+    prop_id = create_property(client)
+    
+    response = client.post("/api/expenses", json={
+        "property_id": prop_id,
+        "amount": 200.00,
+        "date": "2026-07-05",
+        "category": "repair",
+        "fiscal_category": "reparacion_conservacion"
+    })
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["fiscal_category"] == "reparacion_conservacion"
+
+def test_update_expense_fiscal_category(client: TestClient):
+    """T-I-11-09: PATCH /api/expenses/{id}/fiscal-category"""
+    prop_id = create_property(client)
+    
+    create_response = client.post("/api/expenses", json={
+        "property_id": prop_id,
+        "amount": 200.00,
+        "date": "2026-07-05",
+        "category": "repair"
+    })
+    exp_id = create_response.json()["id"]
+    
+    response = client.patch(f"/api/expenses/{exp_id}/fiscal-category", json={
+        "fiscal_category": "reparacion_conservacion"
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["fiscal_category"] == "reparacion_conservacion"

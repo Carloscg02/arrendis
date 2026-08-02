@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { IncomeCreateInput } from "../types";
+import type { IncomeCreateInput, FiscalIncomeCategory } from "../types";
 
 interface Props {
   propertyId: string;
@@ -12,6 +12,7 @@ export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [category, setCategory] = useState("rent");
   const [description, setDescription] = useState("");
+  const [fiscalCategory, setFiscalCategory] = useState<FiscalIncomeCategory | "">("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +22,7 @@ export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
       date,
       category,
       description,
+      fiscal_category: fiscalCategory ? (fiscalCategory as FiscalIncomeCategory) : null,
     });
   };
 
@@ -65,6 +67,16 @@ export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
         />
+      </div>
+
+      <div className="form-group">
+        <label>Categoría Fiscal (Opcional)</label>
+        <select value={fiscalCategory} onChange={(e) => setFiscalCategory(e.target.value as any)}>
+          <option value="">Seleccione una categoría...</option>
+          <option value="rendimiento_integro">Rendimiento Íntegro</option>
+          <option value="indemnizacion">Indemnización</option>
+          <option value="otros_ingresos">Otros Ingresos</option>
+        </select>
       </div>
 
       <div className="form-actions">

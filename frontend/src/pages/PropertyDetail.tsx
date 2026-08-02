@@ -7,6 +7,7 @@ import type {
   ProfitReport,
   IncomeCreateInput,
   ExpenseCreateInput,
+  FiscalDataInput,
 } from "../types";
 import {
   getPropertyById,
@@ -17,9 +18,14 @@ import {
   createExpense,
   deleteProperty,
   uploadPropertyImage,
+  updateFiscalData,
 } from "../services/api";
 import IncomeForm from "../components/IncomeForm";
 import ExpenseForm from "../components/ExpenseForm";
+import FiscalDataForm from "../components/FiscalDataForm";
+import FiscalClassificationPanel from "../components/FiscalClassificationPanel";
+import FiscalReportView from "../components/FiscalReportView";
+import { ContractSection } from "../components/ContractSection";
 import Modal from "../components/Modal";
 import { useToast } from "../components/Toast";
 import { KPICard } from "../components/KPICard";
@@ -42,6 +48,7 @@ export default function PropertyDetail() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
 
   const loadData = async () => {
     if (!id) return;
@@ -103,6 +110,16 @@ export default function PropertyDetail() {
       toast.success("Gasto registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el gasto");
+    }
+  };
+
+  const handleUpdateFiscalData = async (data: FiscalDataInput) => {
+    try {
+      await updateFiscalData(id!, data);
+      toast.success("Datos fiscales actualizados correctamente");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Error al actualizar los datos fiscales");
     }
   };
 
@@ -203,85 +220,122 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        <div className="dashboard-grid">
-          {/* Incomes Section */}
-          <div className="data-section glass-panel">
-          <div className="section-header">
-            <h3>Ingresos</h3>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => setIsIncomeModalOpen(true)}
-            >
-              + Registrar Ingreso
-            </button>
-          </div>
-          {incomes.length === 0 ? (
-            <p className="empty-text">Aún no hay ingresos registrados.</p>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Categoría</th>
-                  <th>Descripción</th>
-                  <th className="text-right">Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incomes.map((inc) => (
-                  <tr key={inc.id}>
-                    <td>{inc.date}</td>
-                    <td><span className="badge badge-neutral">{inc.category}</span></td>
-                    <td>{inc.description}</td>
-                    <td className="text-right text-success">
-                      +{parseFloat(inc.amount).toFixed(2)} €
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div className="tabs-container">
+          <button 
+            className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            📊 Finanzas
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === "contracts" ? "active" : ""}`}
+            onClick={() => setActiveTab("contracts")}
+          >
+            📋 Contratos
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === "fiscal" ? "active" : ""}`}
+            onClick={() => setActiveTab("fiscal")}
+          >
+            ⚖️ Datos Fiscales {property.has_fiscal_data ? "🟢" : "⚪"}
+          </button>
         </div>
 
-        {/* Expenses Section */}
-        <div className="data-section glass-panel">
-          <div className="section-header">
-            <h3>Gastos</h3>
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={() => setIsExpenseModalOpen(true)}
-            >
-              + Registrar Gasto
-            </button>
-          </div>
-          {expenses.length === 0 ? (
-            <p className="empty-text">Aún no hay gastos registrados.</p>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Categoría</th>
-                  <th>Descripción</th>
-                  <th className="text-right">Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((exp) => (
-                  <tr key={exp.id}>
-                    <td>{exp.date}</td>
-                    <td><span className="badge badge-warning">{exp.category}</span></td>
-                    <td>{exp.description}</td>
-                    <td className="text-right text-danger">
-                      -{parseFloat(exp.amount).toFixed(2)} €
-                    </td>
+        {activeTab === "dashboard" ? (
+          <div className="dashboard-grid">
+            {/* Incomes Section */}
+            <div className="data-section glass-panel">
+            <div className="section-header">
+              <h3>Ingresos</h3>
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => setIsIncomeModalOpen(true)}
+              >
+                + Registrar Ingreso
+              </button>
+            </div>
+            {incomes.length === 0 ? (
+              <p className="empty-text">Aún no hay ingresos registrados.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th className="text-right">Importe</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        </div>
+                </thead>
+                <tbody>
+                  {incomes.map((inc) => (
+                    <tr key={inc.id}>
+                      <td>{inc.date}</td>
+                      <td><span className="badge badge-neutral">{inc.category}</span></td>
+                      <td>{inc.description}</td>
+                      <td className="text-right text-success">
+                        +{parseFloat(inc.amount).toFixed(2)} €
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Expenses Section */}
+          <div className="data-section glass-panel">
+            <div className="section-header">
+              <h3>Gastos</h3>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => setIsExpenseModalOpen(true)}
+              >
+                + Registrar Gasto
+              </button>
+            </div>
+            {expenses.length === 0 ? (
+              <p className="empty-text">Aún no hay gastos registrados.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th className="text-right">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((exp) => (
+                    <tr key={exp.id}>
+                      <td>{exp.date}</td>
+                      <td><span className="badge badge-warning">{exp.category}</span></td>
+                      <td>{exp.description}</td>
+                      <td className="text-right text-danger">
+                        -{parseFloat(exp.amount).toFixed(2)} €
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          </div>
+        ) : activeTab === "contracts" ? (
+          <div className="contracts-tab-content glass-panel" style={{ padding: '2rem' }}>
+            <ContractSection propertyId={property.id} />
+          </div>
+        ) : (
+          <div className="fiscal-tab-content glass-panel">
+            <FiscalDataForm 
+              propertyId={property.id} 
+              onSubmit={handleUpdateFiscalData} 
+              onCancel={() => setActiveTab("dashboard")} 
+            />
+            <FiscalClassificationPanel propertyId={property.id} onClassified={loadData} />
+            <FiscalReportView propertyId={property.id} />
+          </div>
+        )}
       </div>
 
       <Modal

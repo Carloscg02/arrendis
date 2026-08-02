@@ -213,6 +213,8 @@ FastAPI vive **fuera** del dominio, en `backend/api/`. Es un Adaptador de Entrad
 |----------------------|-------------------------------------------------------------|
 | Lenguaje del código  | Inglés (nombres de clases, variables, funciones)            |
 | Lenguaje docs        | Español (documentación, comentarios explicativos)           |
+| Nombres de Puertos   | `*Repository` (persistencia de entidades DDD) o `*Port` (servicios de infraestructura: `PasswordHasherPort`, `TokenServicePort`) |
+| Nombres Adaptadores  | Tecnología + `Repository` / `Adapter` (`SQLitePropertyRepository`, `BcryptPasswordHasherAdapter`, `JWTTokenServiceAdapter`) |
 | Formato de IDs       | UUID v4 (generados con `uuid.uuid4()`)                      |
 | Formato monetario    | `Decimal` con 2 decimales, siempre en céntimos de EUR       |
 | Fechas               | `datetime.date` para fechas, `datetime.datetime` para timestamps |
