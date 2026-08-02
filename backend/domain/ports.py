@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from backend.domain.entities import Expense, Income, Property
+from datetime import date
+from backend.domain.entities import Expense, Income, Property, User, LeaseContract
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
 
 
 class PropertyRepository(ABC):
@@ -31,8 +33,8 @@ class PropertyRepository(ABC):
         ...
 
     @abstractmethod
-    def find_all(self) -> list[Property]:
-        """Retorna todas las propiedades."""
+    def list_properties(self, user_id: str) -> list[Property]:
+        """Retorna todas las propiedades de un usuario."""
         ...
 
     @abstractmethod
@@ -43,6 +45,18 @@ class PropertyRepository(ABC):
     @abstractmethod
     def update_image(self, property_id: str, image_filename: str | None) -> None:
         """Actualiza el nombre de archivo de imagen de una propiedad."""
+        ...
+
+    @abstractmethod
+    def update_fiscal_data(
+        self,
+        property_id: str,
+        cadastral_ref: str | None,
+        cadastral_breakdown: CadastralBreakdown | None,
+        acquisition_cost: AcquisitionCost | None,
+        acquisition_date: date | None,
+    ) -> None:
+        """Actualiza los datos fiscales de una propiedad."""
         ...
 
 
@@ -64,6 +78,11 @@ class IncomeRepository(ABC):
         """Elimina un ingreso por su id."""
         ...
 
+    @abstractmethod
+    def update_fiscal_category(self, record_id: str, fiscal_category: str | None) -> None:
+        """Actualiza la categoría fiscal de un registro."""
+        ...
+
 
 class ExpenseRepository(ABC):
     """Puerto de salida para persistir y recuperar Expenses."""
@@ -81,4 +100,59 @@ class ExpenseRepository(ABC):
     @abstractmethod
     def delete(self, expense_id: str) -> None:
         """Elimina un gasto por su id."""
+        ...
+
+    @abstractmethod
+    def update_fiscal_category(self, record_id: str, fiscal_category: str | None) -> None:
+        """Actualiza la categoría fiscal de un registro."""
+        ...
+
+
+class UserRepository(ABC):
+    """Puerto de salida para persistir y recuperar Users."""
+    @abstractmethod
+    def save(self, user: User) -> None: ...
+    @abstractmethod
+    def find_by_id(self, user_id: str) -> User | None: ...
+    @abstractmethod
+    def find_by_email(self, email: str) -> User | None: ...
+
+class PasswordHasherPort(ABC):
+    """Puerto de salida para hashear y verificar contraseñas."""
+    @abstractmethod
+    def hash(self, plain_password: str) -> str: ...
+    @abstractmethod
+    def verify(self, plain_password: str, hashed_password: str) -> bool: ...
+
+class TokenServicePort(ABC):
+    """Puerto de salida para generar y verificar tokens JWT."""
+    @abstractmethod
+    def create_access_token(self, user_id: str) -> str: ...
+    @abstractmethod
+    def create_refresh_token(self, user_id: str) -> str: ...
+    @abstractmethod
+    def verify_token(self, token: str) -> str | None: ...
+
+
+class LeaseContractRepository(ABC):
+    """Puerto de salida para persistir y recuperar LeaseContracts."""
+
+    @abstractmethod
+    def save(self, contract: LeaseContract) -> None:
+        """Guarda o actualiza un contrato."""
+        ...
+
+    @abstractmethod
+    def find_by_id(self, contract_id: str) -> LeaseContract | None:
+        """Busca un contrato por su id. Retorna None si no existe."""
+        ...
+
+    @abstractmethod
+    def find_by_property_id(self, property_id: str) -> list[LeaseContract]:
+        """Retorna todos los contratos de una propiedad (ordenados por start_date desc)."""
+        ...
+
+    @abstractmethod
+    def delete(self, contract_id: str) -> None:
+        """Elimina un contrato por su id."""
         ...

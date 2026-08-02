@@ -1,12 +1,27 @@
 {
   "project": "Rental Property Web Platform",
+  "epics": [
+    {
+      "id": "E-01",
+      "title": "Sistema de Fiscalidad y Declaración de Impuestos",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-01-fiscalidad/vision_y_dominio.md"
+    }
+  ],
   "features": [
     { "id": "F-01", "title": "Property Catalog and Listing", "status": "done" },
     { "id": "F-02", "title": "API Implementation", "status": "done" },
     { "id": "F-03", "title": "Frontend Implementation (React+TS)", "status": "done" },
     { "id": "F-04", "title": "Frontend Premium Redesign (design-taste-frontend)", "status": "done" },
     { "id": "F-05", "title": "Fotos de Propiedades y Tarjetas Full-Width", "status": "done" },
-    { "id": "F-06", "title": "Secure Login System (Shielded JWT)", "status": "pending" }
+    { "id": "F-06", "title": "Secure Login System (Shielded JWT)", "status": "done" },
+    { "id": "F-07", "title": "Frontend Route Protection and Auth Header (UI Guards & Navigation)", "status": "done" },
+    { "id": "F-08", "title": "User Property Ownership and Data Isolation (Multi-tenancy)", "status": "done" },
+    { "id": "F-09", "epic": "E-01", "title": "Datos Fiscales de Propiedad (Catastral + Adquisición)", "status": "done" },
+    { "id": "F-10", "epic": "E-01", "title": "Contratos de Arrendamiento (Lease Contracts)", "status": "done" },
+    { "id": "F-11", "epic": "E-01", "title": "Clasificación Fiscal de Gastos e Ingresos", "status": "done" },
+    { "id": "F-12", "epic": "E-01", "title": "Motor de Cálculo Fiscal (Amortización, Reducciones, Rendimiento Neto)", "status": "done" },
+    { "id": "F-13", "epic": "E-01", "title": "Informe Fiscal y Generación de PDF (Borrador AEAT)", "status": "draft" },
+    { "id": "F-14", "title": "Refactor Naming Conventions for Non-Repository Ports and Adapters (Port & Adapter Suffixes)", "status": "done" }
   ]
 }
-

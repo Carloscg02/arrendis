@@ -164,3 +164,189 @@ def test_delete_property_deletes_image_file(client: TestClient):
     client.delete(f"/api/properties/{prop_id}")
     assert not os.path.exists(image_path)
 
+def test_list_properties_isolated(client: TestClient, auth_user):
+    """AP-09: Properties isolation between users."""
+    from backend.api.main import app
+    from backend.api.dependencies import get_current_user
+    from backend.domain.entities import User
+    from backend.domain.value_objects import Email, PasswordHash
+    
+    # User A (user-1) creates property
+    client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    
+    # User B creates property
+    user_b = User(
+        email=Email("userb@test.com"),
+        password_hash=PasswordHash("$2b$12$dummyhashdummyhashdummyhashdummyhash"),
+        username="user_b",
+        id="user-2",
+    )
+    
+    # Temporarily override user
+    app.dependency_overrides[get_current_user] = lambda: user_b
+    payload_b = VALID_PROPERTY_PAYLOAD.copy()
+    payload_b["name"] = "Property B"
+    client.post("/api/properties", json=payload_b)
+    
+    # Check user B sees 1
+    res_b = client.get("/api/properties")
+    assert len(res_b.json()) == 1
+    assert res_b.json()[0]["name"] == "Property B"
+    
+    # Restore User A and check sees 1
+    app.dependency_overrides[get_current_user] = lambda: auth_user
+    res_a = client.get("/api/properties")
+    assert len(res_a.json()) == 1
+    assert res_a.json()[0]["name"] == "Test Property"
+
+def test_create_property_unauthenticated(client: TestClient):
+    """AP-10: POST without token is 401."""
+    from backend.api.main import app
+    from backend.api.dependencies import get_current_user
+    
+    # Remove mock completely
+    del app.dependency_overrides[get_current_user]
+    
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    assert res.status_code == 401
+    
+    # No need to restore, fixture takes care of it, but just in case, this is last in execution
+
+def test_record_expense_for_others_property(client: TestClient, auth_user):
+    """AP-11: 404/403 for other user's property."""
+    from backend.api.main import app
+    from backend.api.dependencies import get_current_user
+    from backend.domain.entities import User
+    from backend.domain.value_objects import Email, PasswordHash
+    
+    # User A creates property
+    res_a = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res_a.json()["id"]
+    
+    # Switch to User B
+    user_b = User(
+        email=Email("userb@test.com"),
+        password_hash=PasswordHash("$2b$12$dummyhashdummyhashdummyhashdummyhash"),
+        username="user_b",
+        id="user-2",
+    )
+    app.dependency_overrides[get_current_user] = lambda: user_b
+    
+    expense_payload = {
+        "property_id": prop_id,
+        "amount": 100,
+        "date": "2026-08-01",
+        "category": "repair",
+        "description": "Test"
+    }
+    res = client.post("/api/expenses", json=expense_payload)
+    assert res.status_code == 404
+    assert "No existe" in res.json()["detail"]
+
+
+def test_get_fiscal_data_empty(client: TestClient, auth_user):
+    """T-I-09-06: GET /api/properties/{id}/fiscal-data retorna datos vacíos inicialmente"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+    
+    fiscal_res = client.get(f"/api/properties/{prop_id}/fiscal-data")
+    assert fiscal_res.status_code == 200
+    data = fiscal_res.json()
+    assert data["cadastral_ref"] is None
+    assert data["has_fiscal_data"] is False
+
+
+def test_put_fiscal_data(client: TestClient, auth_user):
+    """T-I-09-07: PUT /api/properties/{id}/fiscal-data persiste y retorna datos fiscales"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+    
+    payload = {
+        "cadastral_ref": "1234567AB1234C0001XY",
+        "cadastral_breakdown": {"land_value": "40000", "construction_value": "80000"},
+        "acquisition_cost": {
+            "purchase_price": "200000",
+            "construction_portion": "120000",
+            "land_portion": "80000"
+        },
+        "acquisition_date": "2020-01-01"
+    }
+    
+    fiscal_res = client.put(f"/api/properties/{prop_id}/fiscal-data", json=payload)
+    assert fiscal_res.status_code == 200
+    data = fiscal_res.json()
+    assert data["has_fiscal_data"] is True
+    assert data["cadastral_ref"] == "1234567AB1234C0001XY"
+
+
+def test_put_fiscal_data_invalid(client: TestClient, auth_user):
+    """T-I-09-08: PUT /api/properties/{id}/fiscal-data con datos inválidos retorna 400"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+    
+    payload = {
+        "cadastral_ref": "123",  # invalid length
+    }
+    fiscal_res = client.put(f"/api/properties/{prop_id}/fiscal-data", json=payload)
+    assert fiscal_res.status_code == 400
+
+
+def test_get_fiscal_data_other_user(client: TestClient, auth_user):
+    """T-I-09-09: GET /api/properties/{id}/fiscal-data de propiedad ajena retorna 404"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+    
+    from backend.api.main import app
+    from backend.api.dependencies import get_current_user
+    from backend.domain.entities import User
+    from backend.domain.value_objects import Email, PasswordHash
+    user_b = User(
+        email=Email("userb@test.com"),
+        password_hash=PasswordHash("$2b$12$dummyhashdummyhashdummyhashdummyhash"),
+        username="user_b",
+        id="user-2",
+    )
+    app.dependency_overrides[get_current_user] = lambda: user_b
+    
+    fiscal_res = client.get(f"/api/properties/{prop_id}/fiscal-data")
+    assert fiscal_res.status_code == 404
+    
+    app.dependency_overrides[get_current_user] = lambda: auth_user
+
+
+def test_property_response_includes_has_fiscal_data(client: TestClient, auth_user):
+    """T-I-09-10: PropertyResponse incluye has_fiscal_data"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    assert "has_fiscal_data" in res.json()
+    assert res.json()["has_fiscal_data"] is False
+
+
+def test_get_fiscal_suggestions(client: TestClient, auth_user):
+    """T-I-11-10: GET /api/properties/{id}/fiscal-suggestions"""
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+    
+    client.post("/api/incomes", json={
+        "property_id": prop_id,
+        "amount": 750.00,
+        "date": "2026-07-01",
+        "category": "rent"
+    })
+    
+    client.post("/api/expenses", json={
+        "property_id": prop_id,
+        "amount": 200.00,
+        "date": "2026-07-05",
+        "category": "repair"
+    })
+    
+    res_sugg = client.get(f"/api/properties/{prop_id}/fiscal-suggestions")
+    assert res_sugg.status_code == 200
+    data = res_sugg.json()
+    
+    assert data["total_unclassified"] == 2
+    assert len(data["unclassified_incomes"]) == 1
+    assert data["unclassified_incomes"][0]["suggested_fiscal_category"] == "rendimiento_integro"
+    
+    assert len(data["unclassified_expenses"]) == 1
+    assert data["unclassified_expenses"][0]["suggested_fiscal_category"] == "reparacion_conservacion"

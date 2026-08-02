@@ -1,0 +1,95 @@
+from __future__ import annotations
+from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
+from backend.adapters.sqlite_adapter import SQLiteConnection, SQLiteUserRepository
+from backend.adapters.auth_adapter import BcryptPasswordHasherAdapter, JWTTokenServiceAdapter
+from backend.api.dependencies import get_db, get_user_repo, get_hasher, get_token_service, get_current_user
+from backend.api.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse
+from backend.application.use_cases import RegisterUserUseCase, LoginUserUseCase, RefreshTokenUseCase
+from backend.domain.entities import User
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # False for local dev (HTTP), True in production
+        samesite="lax",
+        path="/api/auth",
+        max_age=7 * 24 * 3600,
+    )
+
+def _user_response(user: User) -> UserResponse:
+    return UserResponse(id=user.id, email=user.email.value, username=user.username)
+
+
+@router.post("/register", response_model=TokenResponse, status_code=201)
+def register(
+    body: UserRegisterRequest,
+    response: Response,
+    db: SQLiteConnection = Depends(get_db),
+    hasher: BcryptPasswordHasherAdapter = Depends(get_hasher),
+    tokens: JWTTokenServiceAdapter = Depends(get_token_service),
+):
+    user_repo = SQLiteUserRepository(db)
+    use_case = RegisterUserUseCase(user_repo, hasher)
+    try:
+        user = use_case.execute(body.email, body.username, body.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    access = tokens.create_access_token(user.id)
+    refresh = tokens.create_refresh_token(user.id)
+    _set_refresh_cookie(response, refresh)
+    return TokenResponse(access_token=access, user=_user_response(user))
+
+
+@router.post("/login", response_model=TokenResponse)
+def login(
+    body: UserLoginRequest,
+    response: Response,
+    db: SQLiteConnection = Depends(get_db),
+    hasher: BcryptPasswordHasherAdapter = Depends(get_hasher),
+    tokens: JWTTokenServiceAdapter = Depends(get_token_service),
+):
+    user_repo = SQLiteUserRepository(db)
+    use_case = LoginUserUseCase(user_repo, hasher, tokens)
+    try:
+        user, access, refresh = use_case.execute(body.email, body.password)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    _set_refresh_cookie(response, refresh)
+    return TokenResponse(access_token=access, user=_user_response(user))
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_token(
+    response: Response,
+    refresh_token: str | None = Cookie(None),
+    db: SQLiteConnection = Depends(get_db),
+    tokens: JWTTokenServiceAdapter = Depends(get_token_service),
+):
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No se encontró token de refresco")
+    user_repo = SQLiteUserRepository(db)
+    use_case = RefreshTokenUseCase(user_repo, tokens)
+    try:
+        new_access, new_refresh = use_case.execute(refresh_token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Token de refresco inválido o expirado")
+    # Get user for response
+    user_id = tokens.verify_token(new_access)
+    user = user_repo.find_by_id(user_id)
+    _set_refresh_cookie(response, new_refresh)
+    return TokenResponse(access_token=new_access, user=_user_response(user))
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(key="refresh_token", path="/api/auth")
+    return {"message": "Sesión cerrada"}
+
+
+@router.get("/me", response_model=UserResponse)
+def me(current_user: User = Depends(get_current_user)):
+    return _user_response(current_user)

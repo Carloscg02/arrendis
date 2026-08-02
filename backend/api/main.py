@@ -19,6 +19,8 @@ from backend.adapters.sqlite_adapter import SQLiteConnection
 from backend.api.routes.expenses import router as expenses_router
 from backend.api.routes.incomes import router as incomes_router
 from backend.api.routes.properties import router as properties_router
+from backend.api.routes.auth import router as auth_router
+from backend.api.routes.contracts import router as contracts_router
 
 
 @asynccontextmanager
@@ -39,10 +41,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — permitir todas las origenes (en producción, restringir al dominio del frontend)
+# CORS — permitir origenes, en este caso el frontend en local
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -51,6 +54,8 @@ app.add_middleware(
 app.include_router(properties_router)
 app.include_router(incomes_router)
 app.include_router(expenses_router)
+app.include_router(auth_router)
+app.include_router(contracts_router)
 
 # Mount static files para servir imágenes de propiedades
 _images_dir = Path("data/images")

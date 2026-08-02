@@ -62,10 +62,12 @@ El ciclo de cada feature sigue **exactamente** estos pasos en orden.
 
 ---
 
-## 3. 📂 Reglas de Estructura de Specs (Control del Monolito)
-Cuando redactes las especificaciones y el diseño de dominio, **NO crees un documento monolítico global**. Debes respetar la estructura de carpetas aislada por feature:
-- Guarda los requerimientos (Notación EARS o historias) en `specs/<nombre_feature>/requirements.md`.
-- Guarda el diseño técnico en `specs/<nombre_feature>/design.md`.
+## 3. 📂 Reglas de Estructura de Specs (Control del Monolito y Épicas)
+Cuando redactes las especificaciones y el diseño de dominio, **NO crees un documento monolítico global**. Debes respetar la estructura de carpetas aislada por nivel:
+- **Nivel Épica (Subdominio):** Para grandes iniciativas de negocio, guarda la visión general, reglas de dominio y desglose funcional en `specs/epics/<nombre_epica>/vision_y_dominio.md`.
+- **Nivel Feature (SDD Atómico):**
+  - Guarda los requerimientos (Notación EARS o historias) en `specs/<nombre_feature>/requirements.md` (o `specs/epics/<nombre_epica>/<nombre_feature>/requirements.md`).
+  - Guarda el diseño técnico en `specs/<nombre_feature>/design.md` (o `specs/epics/<nombre_epica>/<nombre_feature>/design.md`).
 - **Tracking de Tareas:** Utiliza tu sistema de tracking nativo para el paso a paso de la implementación. No intentes actualizar archivos de progreso externos; limítate a tus propios artefactos de planificación y generación de `walkthrough.md` nativos.
 
 ---

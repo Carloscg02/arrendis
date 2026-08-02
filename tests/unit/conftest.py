@@ -1,7 +1,9 @@
 import pytest
 
-from backend.domain.entities import Expense, Income, Property
-from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository
+from datetime import date
+from backend.domain.entities import Expense, Income, Property, User, LeaseContract
+from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, PasswordHasherPort, TokenServicePort, LeaseContractRepository
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
 
 
 class InMemoryPropertyRepository(PropertyRepository):
@@ -22,8 +24,8 @@ class InMemoryPropertyRepository(PropertyRepository):
                 return p
         return None
 
-    def find_all(self) -> list[Property]:
-        return list(self._store.values())
+    def list_properties(self, user_id: str) -> list[Property]:
+        return [p for p in self._store.values() if p.user_id == user_id]
 
     def delete(self, property_id: str) -> None:
         self._store.pop(property_id, None)
@@ -33,6 +35,21 @@ class InMemoryPropertyRepository(PropertyRepository):
             if prop.id == property_id:
                 prop.image_filename = image_filename
                 return
+
+    def update_fiscal_data(
+        self,
+        property_id: str,
+        cadastral_ref: str | None,
+        cadastral_breakdown: CadastralBreakdown | None,
+        acquisition_cost: AcquisitionCost | None,
+        acquisition_date: date | None,
+    ) -> None:
+        prop = self._store.get(property_id)
+        if prop:
+            prop.cadastral_ref = cadastral_ref
+            prop.cadastral_breakdown = cadastral_breakdown
+            prop.acquisition_cost = acquisition_cost
+            prop.acquisition_date = acquisition_date
 
 
 class InMemoryIncomeRepository(IncomeRepository):
@@ -50,6 +67,12 @@ class InMemoryIncomeRepository(IncomeRepository):
     def delete(self, income_id: str) -> None:
         self._store.pop(income_id, None)
 
+    def update_fiscal_category(self, record_id: str, fiscal_category: str | None) -> None:
+        from backend.domain.entities import FiscalIncomeCategory
+        record = self._store.get(record_id)
+        if record:
+            record.fiscal_category = FiscalIncomeCategory(fiscal_category) if fiscal_category else None
+
 
 class InMemoryExpenseRepository(ExpenseRepository):
     """Implementación in-memory de ExpenseRepository para tests unitarios."""
@@ -65,6 +88,12 @@ class InMemoryExpenseRepository(ExpenseRepository):
 
     def delete(self, expense_id: str) -> None:
         self._store.pop(expense_id, None)
+
+    def update_fiscal_category(self, record_id: str, fiscal_category: str | None) -> None:
+        from backend.domain.entities import FiscalExpenseCategory
+        record = self._store.get(record_id)
+        if record:
+            record.fiscal_category = FiscalExpenseCategory(fiscal_category) if fiscal_category else None
 
 
 @pytest.fixture
@@ -83,3 +112,69 @@ def income_repo() -> InMemoryIncomeRepository:
 def expense_repo() -> InMemoryExpenseRepository:
     """Retorna un repositorio de gastos in-memory limpio."""
     return InMemoryExpenseRepository()
+
+
+class InMemoryUserRepository(UserRepository):
+    def __init__(self) -> None:
+        self._users: list[User] = []
+    def save(self, user: User) -> None:
+        self._users.append(user)
+    def find_by_id(self, user_id: str) -> User | None:
+        return next((u for u in self._users if u.id == user_id), None)
+    def find_by_email(self, email: str) -> User | None:
+        return next((u for u in self._users if u.email.value == email.lower()), None)
+
+class FakePasswordHasherAdapter(PasswordHasherPort):
+    """Hasher falso para tests: hash = '$2b$fake$' + password, verify = comparación directa."""
+    def hash(self, plain_password: str) -> str:
+        return f"$2b$fake${plain_password}"
+    def verify(self, plain_password: str, hashed_password: str) -> bool:
+        return hashed_password == f"$2b$fake${plain_password}"
+
+class FakeTokenServiceAdapter(TokenServicePort):
+    """Token service falso para tests: tokens son el user_id directamente."""
+    def create_access_token(self, user_id: str) -> str:
+        return f"access-{user_id}"
+    def create_refresh_token(self, user_id: str) -> str:
+        return f"refresh-{user_id}"
+    def verify_token(self, token: str) -> str | None:
+        for prefix in ("access-", "refresh-"):
+            if token.startswith(prefix):
+                return token[len(prefix):]
+        return None
+
+@pytest.fixture
+def user_repo():
+    return InMemoryUserRepository()
+
+@pytest.fixture
+def hasher():
+    return FakePasswordHasherAdapter()
+
+@pytest.fixture
+def token_service():
+    return FakeTokenServiceAdapter()
+
+class InMemoryLeaseContractRepository(LeaseContractRepository):
+    def __init__(self) -> None:
+        self._store: dict[str, LeaseContract] = {}
+
+    def save(self, contract: LeaseContract) -> None:
+        self._store[contract.id] = contract
+
+    def find_by_id(self, contract_id: str) -> LeaseContract | None:
+        return self._store.get(contract_id)
+
+    def find_by_property_id(self, property_id: str) -> list[LeaseContract]:
+        return sorted(
+            [c for c in self._store.values() if c.property_id == property_id],
+            key=lambda c: c.start_date,
+            reverse=True
+        )
+
+    def delete(self, contract_id: str) -> None:
+        self._store.pop(contract_id, None)
+
+@pytest.fixture
+def lease_contract_repo() -> InMemoryLeaseContractRepository:
+    return InMemoryLeaseContractRepository()
