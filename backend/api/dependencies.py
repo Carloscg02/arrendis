@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import Depends, Request, Header, HTTPException
 from backend.domain.entities import User
 
+from backend.adapters.aeat_pdf_renderer_adapter import AEATPdfRendererAdapter
 from backend.adapters.auth_adapter import BcryptPasswordHasherAdapter, JWTTokenServiceAdapter
 from backend.adapters.sqlite_adapter import (
     SQLiteConnection,
@@ -74,3 +75,9 @@ async def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
+
+
+def get_fiscal_report_renderer() -> AEATPdfRendererAdapter:
+    """Retorna el renderizador de informes fiscales (PDF AEAT por defecto)."""
+    return AEATPdfRendererAdapter()
+

@@ -7,22 +7,47 @@ interface Props {
   onCancel: () => void;
 }
 
+interface CategoryMapping {
+  label: string;
+  category: string;
+  fiscalCategory: FiscalIncomeCategory | null;
+}
+
+const INCOME_CATEGORIES: Record<string, CategoryMapping> = {
+  rent: {
+    label: "Renta de Alquiler (Rendimiento Íntegro Computable)",
+    category: "rent",
+    fiscalCategory: "rendimiento_integro",
+  },
+  deposit: {
+    label: "Fianza / Depósito (Fianza recibida)",
+    category: "deposit",
+    fiscalCategory: null,
+  },
+  otros_ingresos: {
+    label: "Otros Ingresos Computables (Indemnización, reexpedición)",
+    category: "other",
+    fiscalCategory: "otros_ingresos",
+  },
+};
+
 export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState("rent");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("rent");
   const [description, setDescription] = useState("");
-  const [fiscalCategory, setFiscalCategory] = useState<FiscalIncomeCategory | "">("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const mapping = INCOME_CATEGORIES[selectedCategoryKey] || INCOME_CATEGORIES.rent;
+
     onSubmit({
       property_id: propertyId,
       amount: parseFloat(amount),
       date,
-      category,
+      category: mapping.category,
       description,
-      fiscal_category: fiscalCategory ? (fiscalCategory as FiscalIncomeCategory) : null,
+      fiscal_category: mapping.fiscalCategory,
     });
   };
 
@@ -52,11 +77,17 @@ export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
       </div>
 
       <div className="form-group">
-        <label>Categoría</label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="rent">Alquiler</option>
-          <option value="deposit">Fianza</option>
-          <option value="other">Otro</option>
+        <label>Categoría del Ingreso</label>
+        <select
+          value={selectedCategoryKey}
+          onChange={(e) => setSelectedCategoryKey(e.target.value)}
+          required
+        >
+          {Object.entries(INCOME_CATEGORIES).map(([key, item]) => (
+            <option key={key} value={key}>
+              {item.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -66,17 +97,8 @@ export default function IncomeForm({ propertyId, onSubmit, onCancel }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
+          placeholder="Ej: Alquiler mes de junio"
         />
-      </div>
-
-      <div className="form-group">
-        <label>Categoría Fiscal (Opcional)</label>
-        <select value={fiscalCategory} onChange={(e) => setFiscalCategory(e.target.value as any)}>
-          <option value="">Seleccione una categoría...</option>
-          <option value="rendimiento_integro">Rendimiento Íntegro</option>
-          <option value="indemnizacion">Indemnización</option>
-          <option value="otros_ingresos">Otros Ingresos</option>
-        </select>
       </div>
 
       <div className="form-actions">

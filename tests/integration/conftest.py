@@ -1,4 +1,7 @@
+import os
 import pytest
+
+os.environ["TESTING"] = "1"
 
 from backend.adapters.sqlite_adapter import SQLiteConnection
 

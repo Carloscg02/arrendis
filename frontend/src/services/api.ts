@@ -200,3 +200,34 @@ export async function getFiscalReport(propertyId: string, year: number): Promise
   const res = await apiFetch(`${API_BASE}/properties/${propertyId}/fiscal-report?year=${year}`);
   return handleResponse<FiscalReport>(res);
 }
+
+export async function downloadFiscalReportPdf(propertyId: string, year: number): Promise<void> {
+  const res = await apiFetch(
+    `${API_BASE}/properties/${propertyId}/fiscal-report/pdf?year=${year}`
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.detail || text);
+    } catch {
+      throw new Error(text || 'Error al descargar el PDF');
+    }
+  }
+
+  const contentDisposition = res.headers.get('content-disposition');
+  const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+  const filename = filenameMatch ? filenameMatch[1] : `borrador_fiscal_${year}.pdf`;
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+

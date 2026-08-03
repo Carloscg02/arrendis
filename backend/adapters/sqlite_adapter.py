@@ -157,6 +157,16 @@ class SQLiteConnection:
             )
         """)
 
+        # Cleanup query to self-heal any corrupted cadastral_ref with length != 20
+        cursor.execute(
+            """
+            UPDATE properties
+            SET cadastral_ref = NULL
+            WHERE cadastral_ref IS NOT NULL
+              AND length(trim(cadastral_ref)) != 20
+            """
+        )
+
         # Migración F-11: clasificación fiscal
         try:
             cursor.execute("ALTER TABLE incomes ADD COLUMN fiscal_category TEXT DEFAULT NULL")
@@ -345,6 +355,12 @@ class SQLitePropertyRepository(PropertyRepository):
         if row["acquisition_date"] is not None:
             acquisition_date = date.fromisoformat(row["acquisition_date"])
 
+        cadastral_ref = row["cadastral_ref"]
+        if cadastral_ref is not None:
+            cadastral_ref = cadastral_ref.strip()
+            if len(cadastral_ref) != 20:
+                cadastral_ref = None
+
         return Property(
             id=row["id"],
             name=row["name"],
@@ -358,7 +374,7 @@ class SQLitePropertyRepository(PropertyRepository):
             user_id=row["user_id"],
             status=PropertyStatus(row["status"]),
             image_filename=row["image_filename"],
-            cadastral_ref=row["cadastral_ref"],
+            cadastral_ref=cadastral_ref,
             cadastral_breakdown=cadastral_breakdown,
             acquisition_cost=acquisition_cost,
             acquisition_date=acquisition_date,
