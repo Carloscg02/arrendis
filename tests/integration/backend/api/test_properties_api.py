@@ -280,7 +280,7 @@ def test_put_fiscal_data(client: TestClient, auth_user):
 
 
 def test_put_fiscal_data_invalid(client: TestClient, auth_user):
-    """T-I-09-08: PUT /api/properties/{id}/fiscal-data con datos inválidos retorna 400"""
+    """T-I-09-08: PUT /api/properties/{id}/fiscal-data con datos inválidos no corrompe la BD y retorna 422 o 400"""
     res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
     prop_id = res.json()["id"]
     
@@ -288,7 +288,12 @@ def test_put_fiscal_data_invalid(client: TestClient, auth_user):
         "cadastral_ref": "123",  # invalid length
     }
     fiscal_res = client.put(f"/api/properties/{prop_id}/fiscal-data", json=payload)
-    assert fiscal_res.status_code == 400
+    assert fiscal_res.status_code in (400, 422)
+
+    # Verificar que las consultas posteriores de propiedades sigan funcionando (no hay corrupción en DB)
+    list_res = client.get("/api/properties")
+    assert list_res.status_code == 200
+    assert len(list_res.json()) == 1
 
 
 def test_get_fiscal_data_other_user(client: TestClient, auth_user):

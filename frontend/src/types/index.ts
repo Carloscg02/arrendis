@@ -155,17 +155,18 @@ export interface LeaseContractInput {
 }
 
 export type FiscalExpenseCategory =
+  | "intereses_capital"
   | "reparacion_conservacion"
-  | "tributos_recargos"
-  | "intereses_financiacion"
-  | "amortizacion_inmueble"
-  | "comunidad_propietarios"
-  | "otros_gastos_deducibles"
+  | "tributos"
+  | "primas_seguros"
+  | "servicios_suministros"
+  | "formalizacion"
+  | "dudoso_cobro"
+  | "otros_deducibles"
   | "no_deducible";
 
 export type FiscalIncomeCategory =
   | "rendimiento_integro"
-  | "indemnizacion"
   | "otros_ingresos";
 
 export interface FiscalSuggestionItem {

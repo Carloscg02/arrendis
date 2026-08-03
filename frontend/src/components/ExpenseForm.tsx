@@ -7,22 +7,77 @@ interface Props {
   onCancel: () => void;
 }
 
+interface CategoryMapping {
+  label: string;
+  category: string;
+  fiscalCategory: FiscalExpenseCategory | null;
+}
+
+const EXPENSE_CATEGORIES: Record<string, CategoryMapping> = {
+  reparacion_conservacion: {
+    label: "Reparación y Conservación (Pintura, averías, fontanería)",
+    category: "repair",
+    fiscalCategory: "reparacion_conservacion",
+  },
+  tributos: {
+    label: "Tributos, Tasas y Recargos (IBI, tasa de basuras)",
+    category: "tax",
+    fiscalCategory: "tributos",
+  },
+  primas_seguros: {
+    label: "Primas de Seguros (Hogar, impago de alquiler)",
+    category: "insurance",
+    fiscalCategory: "primas_seguros",
+  },
+  servicios_suministros: {
+    label: "Suministros y Gastos de Comunidad (Agua, luz, gas, comunidad)",
+    category: "utility",
+    fiscalCategory: "servicios_suministros",
+  },
+  intereses_capital: {
+    label: "Intereses de Hipoteca / Financiación",
+    category: "mortgage",
+    fiscalCategory: "intereses_capital",
+  },
+  formalizacion: {
+    label: "Gastos de Formalización (Notaría, registro, contrato)",
+    category: "other",
+    fiscalCategory: "formalizacion",
+  },
+  dudoso_cobro: {
+    label: "Saldos de Dudoso Cobro",
+    category: "other",
+    fiscalCategory: "dudoso_cobro",
+  },
+  otros_deducibles: {
+    label: "Otros Gastos Deducibles",
+    category: "other",
+    fiscalCategory: "otros_deducibles",
+  },
+  no_deducible: {
+    label: "No Deducible (Gasto no deducible fiscalmente)",
+    category: "other",
+    fiscalCategory: "no_deducible",
+  },
+};
+
 export default function ExpenseForm({ propertyId, onSubmit, onCancel }: Props) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState("maintenance");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("reparacion_conservacion");
   const [description, setDescription] = useState("");
-  const [fiscalCategory, setFiscalCategory] = useState<FiscalExpenseCategory | "">("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const mapping = EXPENSE_CATEGORIES[selectedCategoryKey] || EXPENSE_CATEGORIES.reparacion_conservacion;
+
     onSubmit({
       property_id: propertyId,
       amount: parseFloat(amount),
       date,
-      category,
+      category: mapping.category,
       description,
-      fiscal_category: fiscalCategory ? (fiscalCategory as FiscalExpenseCategory) : null,
+      fiscal_category: mapping.fiscalCategory,
     });
   };
 
@@ -52,13 +107,17 @@ export default function ExpenseForm({ propertyId, onSubmit, onCancel }: Props) {
       </div>
 
       <div className="form-group">
-        <label>Categoría</label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="maintenance">Mantenimiento</option>
-          <option value="repair">Reparación</option>
-          <option value="tax">Impuestos</option>
-          <option value="insurance">Seguro</option>
-          <option value="other">Otro</option>
+        <label>Categoría del Gasto</label>
+        <select
+          value={selectedCategoryKey}
+          onChange={(e) => setSelectedCategoryKey(e.target.value)}
+          required
+        >
+          {Object.entries(EXPENSE_CATEGORIES).map(([key, item]) => (
+            <option key={key} value={key}>
+              {item.label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -68,21 +127,8 @@ export default function ExpenseForm({ propertyId, onSubmit, onCancel }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
+          placeholder="Ej: Reparación de fuga en baño"
         />
-      </div>
-
-      <div className="form-group">
-        <label>Categoría Fiscal (Opcional)</label>
-        <select value={fiscalCategory} onChange={(e) => setFiscalCategory(e.target.value as any)}>
-          <option value="">Seleccione una categoría...</option>
-          <option value="reparacion_conservacion">Reparación y Conservación</option>
-          <option value="tributos_recargos">Tributos y Recargos</option>
-          <option value="intereses_financiacion">Intereses Financiación</option>
-          <option value="amortizacion_inmueble">Amortización Inmueble</option>
-          <option value="comunidad_propietarios">Comunidad Propietarios</option>
-          <option value="otros_gastos_deducibles">Otros Gastos Deducibles</option>
-          <option value="no_deducible">No Deducible</option>
-        </select>
       </div>
 
       <div className="form-actions">

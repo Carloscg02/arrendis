@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 from datetime import date
 from backend.domain.entities import Expense, Income, Property, User, LeaseContract
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport
 
 
 class PropertyRepository(ABC):
@@ -156,3 +156,27 @@ class LeaseContractRepository(ABC):
     def delete(self, contract_id: str) -> None:
         """Elimina un contrato por su id."""
         ...
+
+
+class FiscalReportRendererPort(ABC):
+    """Puerto de salida para renderizar un FiscalReport a un formato descargable.
+
+    El dominio define QUÉ se renderiza (FiscalReport), pero no CÓMO.
+    Cada adaptador concreto decide el formato (PDF, Excel, HTML, etc.).
+    """
+
+    @abstractmethod
+    def render(self, report: FiscalReport, property_name: str, property_address: str) -> bytes:
+        """Renderiza un FiscalReport a bytes."""
+        ...
+
+    @abstractmethod
+    def content_type(self) -> str:
+        """Retorna el MIME type del formato de salida (e.g., 'application/pdf')."""
+        ...
+
+    @abstractmethod
+    def file_extension(self) -> str:
+        """Retorna la extensión del archivo (e.g., 'pdf')."""
+        ...
+

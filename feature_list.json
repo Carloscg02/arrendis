@@ -4,7 +4,7 @@
     {
       "id": "E-01",
       "title": "Sistema de Fiscalidad y Declaración de Impuestos",
-      "status": "in_discovery",
+      "status": "done",
       "spec": "specs/epics/E-01-fiscalidad/vision_y_dominio.md"
     }
   ],
@@ -21,7 +21,7 @@
     { "id": "F-10", "epic": "E-01", "title": "Contratos de Arrendamiento (Lease Contracts)", "status": "done" },
     { "id": "F-11", "epic": "E-01", "title": "Clasificación Fiscal de Gastos e Ingresos", "status": "done" },
     { "id": "F-12", "epic": "E-01", "title": "Motor de Cálculo Fiscal (Amortización, Reducciones, Rendimiento Neto)", "status": "done" },
-    { "id": "F-13", "epic": "E-01", "title": "Informe Fiscal y Generación de PDF (Borrador AEAT)", "status": "draft" },
+    { "id": "F-13", "epic": "E-01", "title": "Informe Fiscal y Generación de PDF (Borrador AEAT)", "status": "done" },
     { "id": "F-14", "title": "Refactor Naming Conventions for Non-Repository Ports and Adapters (Port & Adapter Suffixes)", "status": "done" }
   ]
 }

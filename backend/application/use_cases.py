@@ -32,6 +32,7 @@ from backend.domain.ports import (
     PasswordHasherPort,
     TokenServicePort,
     LeaseContractRepository,
+    FiscalReportRendererPort,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
 from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport
@@ -342,6 +343,18 @@ class UpdatePropertyFiscalDataUseCase:
         if prop is None or prop.user_id != user_id:
             raise ValueError(f"No existe la propiedad con id '{property_id}'.")
 
+        # Validate cadastral_ref length if provided before persisting
+        if cadastral_ref is not None:
+            ref_clean = cadastral_ref.strip()
+            if not ref_clean:
+                cadastral_ref = None
+            elif len(ref_clean) != 20:
+                raise ValueError(
+                    f"La referencia catastral debe tener 20 caracteres, tiene {len(ref_clean)}."
+                )
+            else:
+                cadastral_ref = ref_clean
+
         cadastral_breakdown: CadastralBreakdown | None = None
         if land_value is not None and construction_value is not None:
             cadastral_breakdown = CadastralBreakdown(
@@ -609,3 +622,59 @@ class GenerateFiscalReportUseCase:
             expenses=expenses,
             contracts=contracts,
         )
+
+
+class DownloadFiscalReportPdfUseCase:
+    """Caso de uso: generar el informe fiscal en PDF descargable."""
+
+    def __init__(
+        self,
+        property_repo: PropertyRepository,
+        income_repo: IncomeRepository,
+        expense_repo: ExpenseRepository,
+        contract_repo: LeaseContractRepository,
+        renderer: FiscalReportRendererPort,
+    ) -> None:
+        self._property_repo = property_repo
+        self._income_repo = income_repo
+        self._expense_repo = expense_repo
+        self._contract_repo = contract_repo
+        self._renderer = renderer
+
+    def execute(self, user_id: str, property_id: str, fiscal_year: int) -> tuple[bytes, str, str]:
+        """Genera el PDF del borrador fiscal.
+
+        Returns:
+            Tupla (pdf_bytes, content_type, filename).
+        """
+        # 1. Obtener property y validar
+        prop = self._property_repo.find_by_id(property_id)
+        if prop is None or prop.user_id != user_id:
+            raise ValueError(f"No existe la propiedad con id '{property_id}'.")
+        if not prop.has_fiscal_data:
+            raise ValueError("La propiedad no tiene datos fiscales completos.")
+
+        # 2. Recopilar datos
+        incomes = self._income_repo.find_by_property_id(property_id)
+        expenses = self._expense_repo.find_by_property_id(property_id)
+        contracts = self._contract_repo.find_by_property_id(property_id)
+
+        # 3. Calcular el FiscalReport
+        report = FiscalCalculator.calculate(
+            fiscal_year=fiscal_year,
+            property=prop,
+            incomes=incomes,
+            expenses=expenses,
+            contracts=contracts,
+        )
+
+        # 4. Renderizar a PDF
+        address_str = str(prop.address) if prop.address else ""
+        pdf_bytes = self._renderer.render(report, prop.name, address_str)
+
+        # 5. Construir filename
+        safe_name = prop.name.replace(" ", "_").replace("/", "_")
+        filename = f"borrador_fiscal_{safe_name}_{fiscal_year}.{self._renderer.file_extension()}"
+
+        return pdf_bytes, self._renderer.content_type(), filename
+

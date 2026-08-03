@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 # ──────────────────────────────────────────────
@@ -158,6 +158,20 @@ class FiscalDataUpdate(BaseModel):
     cadastral_breakdown: CadastralBreakdownSchema | None = None
     acquisition_cost: AcquisitionCostSchema | None = None
     acquisition_date: date | None = None
+
+    @field_validator("cadastral_ref")
+    @classmethod
+    def validate_cadastral_ref(cls, v: str | None) -> str | None:
+        if v is not None:
+            v_clean = v.strip()
+            if not v_clean:
+                return None
+            if len(v_clean) != 20:
+                raise ValueError(
+                    f"La referencia catastral debe tener 20 caracteres, tiene {len(v_clean)}."
+                )
+            return v_clean
+        return None
 
 class FiscalDataResponse(BaseModel):
     """Response body con los datos fiscales de una propiedad."""

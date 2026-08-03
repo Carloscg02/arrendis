@@ -11,6 +11,7 @@ interface FiscalDataFormProps {
 
 export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: FiscalDataFormProps) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [cadastralRef, setCadastralRef] = useState("");
   const [landValue, setLandValue] = useState("");
   const [constructionValue, setConstructionValue] = useState("");
@@ -58,10 +59,17 @@ export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: Fisca
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    const refClean = cadastralRef.trim();
+    if (refClean.length > 0 && refClean.length !== 20) {
+      setError(`La referencia catastral debe tener exactamente 20 caracteres (actualmente tiene ${refClean.length}).`);
+      return;
+    }
 
     const input: FiscalDataInput = {};
     
-    if (cadastralRef) input.cadastral_ref = cadastralRef;
+    if (refClean) input.cadastral_ref = refClean;
 
     if (landValue || constructionValue) {
       input.cadastral_breakdown = {
@@ -102,6 +110,11 @@ export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: Fisca
 
   return (
     <form className="form fiscal-form" onSubmit={handleSubmit}>
+      {error && (
+        <div className="report-warning" style={{ marginBottom: "1rem" }}>
+          ⚠️ {error}
+        </div>
+      )}
       <div className={`fiscal-section ${expandedSection === "both" || expandedSection === "cadastral" ? "expanded" : "collapsed"}`}>
         <div className="fiscal-section-header" onClick={() => toggleSection("cadastral")}>
           <div className="fiscal-section-title">

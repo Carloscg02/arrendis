@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FiscalReport } from "../types";
-import { getFiscalReport } from "../services/api";
+import { getFiscalReport, downloadFiscalReportPdf } from "../services/api";
 import { useToast } from "./Toast";
 import { SkeletonLoader } from "./SkeletonLoader";
 
@@ -12,6 +12,7 @@ export default function FiscalReportView({ propertyId }: Props) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [report, setReport] = useState<FiscalReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const toast = useToast();
 
   const handleGenerate = async () => {
@@ -24,6 +25,17 @@ export default function FiscalReportView({ propertyId }: Props) {
       setReport(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      setDownloading(true);
+      await downloadFiscalReportPdf(propertyId, year);
+    } catch (error: any) {
+      toast.error(error.message || "Error al descargar el PDF");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -220,8 +232,31 @@ export default function FiscalReportView({ propertyId }: Props) {
             </div>
           </div>
 
+          {/* Sección 9: Descarga PDF */}
+          <div className="fiscal-report-download-section">
+            <button
+              className="fiscal-report-download-btn"
+              onClick={handleDownloadPdf}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <>
+                  <span className="fiscal-report-download-spinner" />
+                  Generando PDF...
+                </>
+              ) : (
+                <>📄 Descargar Borrador Fiscal (PDF)</>
+              )}
+            </button>
+            <p className="fiscal-report-download-disclaimer">
+              Este documento es un borrador orientativo. Los datos deben trasladarse
+              manualmente a Renta Web (AEAT).
+            </p>
+          </div>
+
         </div>
       )}
     </div>
   );
 }
+

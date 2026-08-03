@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 
 from backend.adapters.sqlite_adapter import SQLiteConnection, SQLitePropertyRepository, SQLiteIncomeRepository, SQLiteExpenseRepository, SQLiteLeaseContractRepository
+from backend.adapters.aeat_pdf_renderer_adapter import AEATPdfRendererAdapter
 from backend.api.schemas import AddressSchema, PropertyCreate, PropertyResponse, FiscalDataUpdate, FiscalDataResponse, CadastralBreakdownSchema, AcquisitionCostSchema, FiscalSuggestionsResponse, FiscalReportResponse
-from backend.application.use_cases import CreatePropertyUseCase, ListPropertiesUseCase, GetPropertyUseCase, UpdatePropertyFiscalDataUseCase, GetPropertyFiscalDataUseCase, SuggestFiscalCategoriesUseCase, GenerateFiscalReportUseCase
+from backend.application.use_cases import CreatePropertyUseCase, ListPropertiesUseCase, GetPropertyUseCase, UpdatePropertyFiscalDataUseCase, GetPropertyFiscalDataUseCase, SuggestFiscalCategoriesUseCase, GenerateFiscalReportUseCase, DownloadFiscalReportPdfUseCase
 from backend.domain.entities import Property, User
-from backend.api.dependencies import get_db, get_property_repo, get_income_repo, get_expense_repo, get_current_user, get_contract_repo
+from backend.api.dependencies import get_db, get_property_repo, get_income_repo, get_expense_repo, get_current_user, get_contract_repo, get_fiscal_report_renderer
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
@@ -301,4 +302,36 @@ async def get_fiscal_report(
         unclassified_expense_count=report.unclassified_expense_count,
         has_warnings=report.has_warnings,
     )
+
+
+@router.get("/{property_id}/fiscal-report/pdf")
+async def download_fiscal_report_pdf(
+    property_id: str,
+    year: int,
+    user: User = Depends(get_current_user),
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    income_repo: SQLiteIncomeRepository = Depends(get_income_repo),
+    expense_repo: SQLiteExpenseRepository = Depends(get_expense_repo),
+    contract_repo: SQLiteLeaseContractRepository = Depends(get_contract_repo),
+    renderer: AEATPdfRendererAdapter = Depends(get_fiscal_report_renderer),
+):
+    """Genera y descarga el borrador fiscal en PDF."""
+    uc = DownloadFiscalReportPdfUseCase(
+        property_repo, income_repo, expense_repo, contract_repo, renderer
+    )
+    try:
+        pdf_bytes, content_type, filename = uc.execute(user.id, property_id, year)
+    except ValueError as e:
+        if "datos fiscales" in str(e).lower():
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return Response(
+        content=pdf_bytes,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
 

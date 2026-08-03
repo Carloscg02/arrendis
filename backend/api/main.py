@@ -26,12 +26,14 @@ from backend.api.routes.contracts import router as contracts_router
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Gestiona el ciclo de vida de la app: setup y teardown de la BD."""
-    # SETUP: crear conexión y guardarla en app.state
-    db = SQLiteConnection("data/rental.db")
+    import os, sys
+    db_path = os.getenv("DATABASE_PATH", "data/rental.db")
+    if os.getenv("TESTING") == "1" or "pytest" in sys.modules:
+        db_path = ":memory:"
+    db = SQLiteConnection(db_path)
     app.state.db = db
     Path("data/images").mkdir(parents=True, exist_ok=True)
     yield
-    # TEARDOWN: cerrar conexión
     db.close()
 
 
