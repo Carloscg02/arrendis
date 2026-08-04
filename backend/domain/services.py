@@ -99,6 +99,7 @@ class FiscalCalculator:
         incomes: list[Income],
         expenses: list[Expense],
         contracts: list[LeaseContract],
+        prior_carryforwards: list | None = None,
     ) -> FiscalReport:
         # PASO 1: Filtrar por año fiscal
         incomes_year = [i for i in incomes if i.date.year == fiscal_year]
@@ -143,10 +144,29 @@ class FiscalCalculator:
         raw_reparacion = sum_cat(FiscalExpenseCategory.REPARACION_CONSERVACION)
         raw_tributos = sum_cat(FiscalExpenseCategory.TRIBUTOS)
         raw_seguros = sum_cat(FiscalExpenseCategory.PRIMAS_SEGUROS)
-        raw_suministros = sum_cat(FiscalExpenseCategory.SERVICIOS_SUMINISTROS)
+        raw_comunidad = sum(
+            (e.amount.amount for e in classified_expenses 
+             if e.fiscal_category == FiscalExpenseCategory.SERVICIOS_SUMINISTROS 
+             and e.category == ExpenseCategory.COMMUNITY_FEE),
+            Decimal("0"),
+        )
+        raw_suministros = sum(
+            (e.amount.amount for e in classified_expenses 
+             if e.fiscal_category == FiscalExpenseCategory.SERVICIOS_SUMINISTROS 
+             and e.category != ExpenseCategory.COMMUNITY_FEE),
+            Decimal("0"),
+        )
         raw_formalizacion = sum_cat(FiscalExpenseCategory.FORMALIZACION)
         raw_dudoso = sum_cat(FiscalExpenseCategory.DUDOSO_COBRO)
         raw_otros = sum_cat(FiscalExpenseCategory.OTROS_DEDUCIBLES)
+
+        # Amortización de Bienes Muebles (10% anual de inversiones en los últimos 10 años)
+        furniture_expenses = [
+            e for e in expenses
+            if e.fiscal_category == FiscalExpenseCategory.AMORTIZACION_MUEBLES
+            and (fiscal_year - 9) <= e.date.year <= fiscal_year
+        ]
+        raw_muebles = sum((e.amount.amount for e in furniture_expenses), Decimal("0")) * Decimal("0.10")
 
         # Intereses y reparación NO se prorratean (son deducibles al 100%)
         exp_intereses = raw_intereses
@@ -154,9 +174,11 @@ class FiscalCalculator:
         # El resto se prorratean
         exp_tributos = raw_tributos * occupation_ratio
         exp_seguros = raw_seguros * occupation_ratio
+        exp_comunidad = raw_comunidad * occupation_ratio
         exp_suministros = raw_suministros * occupation_ratio
         exp_formalizacion = raw_formalizacion * occupation_ratio
         exp_dudoso = raw_dudoso * occupation_ratio
+        exp_muebles = raw_muebles * occupation_ratio
         exp_otros = raw_otros * occupation_ratio
 
         # PASO 6: Tope reparación + intereses
@@ -165,7 +187,23 @@ class FiscalCalculator:
         repair_interest_applied = min(repair_interest_raw, repair_interest_cap)
         repair_interest_excess = max(Decimal("0"), repair_interest_raw - repair_interest_cap)
 
-        # PASO 7: Amortización
+        # Excesos de ejercicios anteriores
+        prior_excess_available = Decimal("0")
+        prior_excess_applied = Decimal("0")
+        if prior_carryforwards:
+            remaining_cap = repair_interest_cap - repair_interest_applied
+            sorted_cf = sorted(prior_carryforwards, key=lambda cf: cf.year_generated)
+            for cf in sorted_cf:
+                available = cf.amount_remaining
+                prior_excess_available += available
+                if remaining_cap > 0:
+                    apply = min(available, remaining_cap)
+                    prior_excess_applied += apply
+                    remaining_cap -= apply
+
+        total_repair_interest_deductible = repair_interest_applied + prior_excess_applied
+
+        # PASO 7: Amortización Edificación
         acq = property.acquisition_cost
         cat = property.cadastral_breakdown
         if acq is None or cat is None:
@@ -185,26 +223,43 @@ class FiscalCalculator:
 
         # PASO 8: Total gastos deducibles
         total_deductible = (
-            repair_interest_applied
-            + exp_tributos + exp_seguros + exp_suministros
-            + exp_formalizacion + exp_dudoso + exp_otros
+            total_repair_interest_deductible
+            + exp_tributos + exp_seguros + exp_comunidad + exp_suministros
+            + exp_formalizacion + exp_dudoso + exp_muebles + exp_otros
             + amort_prorated
         )
 
         # PASO 9: Rendimiento Neto previo
         net_before = total_income - total_deductible
 
-        # PASO 10: Reducción VH
+        # PASO 10: Reducción VH (Ley 12/2023 de Vivienda)
+        # Contratos firmados antes de 01/01/2024 -> 60%, a partir de 01/01/2024 -> 50%
         vh_contracts = [c for c in contracts if c.lease_type == LeaseType.VIVIENDA_HABITUAL]
         vh_days = cls._merge_rented_intervals(vh_contracts, fiscal_year)
         vh_ratio = (Decimal(vh_days) / Decimal(rented_days)) if rented_days > 0 else Decimal("0")
 
+        cutoff_2024 = date(2024, 1, 1)
+
         if net_before > 0 and vh_days > 0:
             reduction_base = net_before * vh_ratio
-            reduction_amount = reduction_base * cls.VIVIENDA_REDUCTION_RATE
+            reduction_amount = Decimal("0")
+            for c in vh_contracts:
+                c_days = cls._merge_rented_intervals([c], fiscal_year)
+                if c_days > 0:
+                    c_ratio = Decimal(c_days) / Decimal(rented_days)
+                    c_rate = Decimal("0.50") if c.start_date >= cutoff_2024 else Decimal("0.60")
+                    reduction_amount += (net_before * c_ratio) * c_rate
+
+            if all(c.start_date >= cutoff_2024 for c in vh_contracts):
+                reduction_percentage = Decimal("0.50")
+            elif all(c.start_date < cutoff_2024 for c in vh_contracts):
+                reduction_percentage = Decimal("0.60")
+            else:
+                reduction_percentage = (reduction_amount / reduction_base) if reduction_base > 0 else Decimal("0.50")
         else:
             reduction_base = Decimal("0")
             reduction_amount = Decimal("0")
+            reduction_percentage = Decimal("0.60")
 
         # PASO 11: Resultado final
         net_final = net_before - reduction_amount
@@ -222,14 +277,18 @@ class FiscalCalculator:
             expenses_reparacion=exp_reparacion,
             expenses_tributos=exp_tributos,
             expenses_seguros=exp_seguros,
+            expenses_comunidad=exp_comunidad,
             expenses_suministros=exp_suministros,
             expenses_formalizacion=exp_formalizacion,
             expenses_dudoso_cobro=exp_dudoso,
+            expenses_muebles=exp_muebles,
             expenses_otros=exp_otros,
             repair_interest_raw=repair_interest_raw,
             repair_interest_cap=repair_interest_cap,
             repair_interest_applied=repair_interest_applied,
             repair_interest_excess=repair_interest_excess,
+            prior_excess_available=prior_excess_available,
+            prior_excess_applied=prior_excess_applied,
             amortization_base=amort_base,
             amortization_rate=cls.AMORTIZATION_RATE,
             amortization_full_year=amort_full,
@@ -239,7 +298,7 @@ class FiscalCalculator:
             vivienda_habitual_days=vh_days,
             vivienda_habitual_ratio=vh_ratio,
             reduction_base=reduction_base,
-            reduction_percentage=cls.VIVIENDA_REDUCTION_RATE,
+            reduction_percentage=reduction_percentage,
             reduction_amount=reduction_amount,
             net_income_final=net_final,
             unclassified_income_count=unclassified_income_count,

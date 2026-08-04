@@ -104,6 +104,9 @@ class Address:
         if not self.country or not self.country.strip():
             raise ValueError("El país (country) no puede estar vacío.")
 
+    def __str__(self) -> str:
+        return f"{self.street}, {self.city}, {self.postal_code}"
+
     def __repr__(self) -> str:
         return f"Address({self.street}, {self.city}, {self.postal_code}, {self.country})"
 
@@ -203,9 +206,11 @@ class FiscalReport:
     expenses_reparacion: Decimal
     expenses_tributos: Decimal
     expenses_seguros: Decimal
+    expenses_comunidad: Decimal
     expenses_suministros: Decimal
     expenses_formalizacion: Decimal
     expenses_dudoso_cobro: Decimal
+    expenses_muebles: Decimal
     expenses_otros: Decimal
 
     # Tope Reparación + Intereses
@@ -213,6 +218,10 @@ class FiscalReport:
     repair_interest_cap: Decimal
     repair_interest_applied: Decimal
     repair_interest_excess: Decimal
+
+    # Excesos de ejercicios anteriores
+    prior_excess_available: Decimal  # Total disponible de años anteriores
+    prior_excess_applied: Decimal    # Importe aplicado en este ejercicio
 
     # Amortización
     amortization_base: Decimal

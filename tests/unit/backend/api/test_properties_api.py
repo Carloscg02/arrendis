@@ -99,15 +99,18 @@ def test_upload_property_image_valid(client: TestClient):
     # Minimal valid JPEG
     test_jpeg = bytes([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xD9])
     
-    response = client.post(
-        f"/api/properties/{prop_id}/image",
-        files={"file": ("test.jpg", test_jpeg, "image/jpeg")}
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "image_url" in data
-    assert data["image_url"] == f"/api/images/{prop_id}.jpg"
+    try:
+        response = client.post(
+            f"/api/properties/{prop_id}/image",
+            files={"file": ("test.jpg", test_jpeg, "image/jpeg")}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "image_url" in data
+        assert data["image_url"] == f"/api/images/{prop_id}.jpg"
+    finally:
+        client.delete(f"/api/properties/{prop_id}")
 
 
 def test_upload_property_image_not_found(client: TestClient):

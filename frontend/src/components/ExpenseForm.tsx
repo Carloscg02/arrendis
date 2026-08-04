@@ -29,8 +29,13 @@ const EXPENSE_CATEGORIES: Record<string, CategoryMapping> = {
     category: "insurance",
     fiscalCategory: "primas_seguros",
   },
+  comunidad: {
+    label: "Comunidad de Propietarios",
+    category: "community_fee",
+    fiscalCategory: "servicios_suministros",
+  },
   servicios_suministros: {
-    label: "Suministros y Gastos de Comunidad (Agua, luz, gas, comunidad)",
+    label: "Suministros (Agua, luz, gas, internet)",
     category: "utility",
     fiscalCategory: "servicios_suministros",
   },
@@ -40,14 +45,19 @@ const EXPENSE_CATEGORIES: Record<string, CategoryMapping> = {
     fiscalCategory: "intereses_capital",
   },
   formalizacion: {
-    label: "Gastos de Formalización (Notaría, registro, contrato)",
+    label: "Gastos de Formalización (Notaría, gestoría, contrato)",
     category: "other",
     fiscalCategory: "formalizacion",
   },
   dudoso_cobro: {
-    label: "Saldos de Dudoso Cobro",
+    label: "Saldos de Dudoso Cobro (Impagos justificados)",
     category: "other",
     fiscalCategory: "dudoso_cobro",
+  },
+  amortizacion_muebles: {
+    label: "Compra de Bienes Muebles (10% anual: electrodomésticos, muebles)",
+    category: "other",
+    fiscalCategory: "amortizacion_muebles",
   },
   otros_deducibles: {
     label: "Otros Gastos Deducibles",
@@ -120,6 +130,14 @@ export default function ExpenseForm({ propertyId, onSubmit, onCancel }: Props) {
           ))}
         </select>
       </div>
+
+      {selectedCategoryKey === "dudoso_cobro" && (
+        <div className="report-warning" style={{ fontSize: "0.85rem" }}>
+          <strong>ℹ️ Requisito legal:</strong> Para deducir impagos como saldos de dudoso cobro,
+          deben haber transcurrido más de 6 meses desde la primera gestión de cobro,
+          o el deudor debe estar en situación de concurso de acreedores (Art. 13 RIRPF).
+        </div>
+      )}
 
       <div className="form-group">
         <label>Descripción (Opcional)</label>

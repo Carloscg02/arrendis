@@ -255,9 +255,11 @@ class FiscalReportResponse(BaseModel):
     expenses_reparacion: Decimal
     expenses_tributos: Decimal
     expenses_seguros: Decimal
+    expenses_comunidad: Decimal
     expenses_suministros: Decimal
     expenses_formalizacion: Decimal
     expenses_dudoso_cobro: Decimal
+    expenses_muebles: Decimal
     expenses_otros: Decimal
 
     # Tope
@@ -265,6 +267,9 @@ class FiscalReportResponse(BaseModel):
     repair_interest_cap: Decimal
     repair_interest_applied: Decimal
     repair_interest_excess: Decimal
+
+    prior_excess_available: Decimal
+    prior_excess_applied: Decimal
 
     # Amortización
     amortization_base: Decimal

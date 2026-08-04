@@ -11,12 +11,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 
-from backend.adapters.sqlite_adapter import SQLiteConnection, SQLitePropertyRepository, SQLiteIncomeRepository, SQLiteExpenseRepository, SQLiteLeaseContractRepository
+from backend.adapters.sqlite_adapter import SQLiteConnection, SQLitePropertyRepository, SQLiteIncomeRepository, SQLiteExpenseRepository, SQLiteLeaseContractRepository, SQLiteFiscalCarryforwardRepository
 from backend.adapters.aeat_pdf_renderer_adapter import AEATPdfRendererAdapter
 from backend.api.schemas import AddressSchema, PropertyCreate, PropertyResponse, FiscalDataUpdate, FiscalDataResponse, CadastralBreakdownSchema, AcquisitionCostSchema, FiscalSuggestionsResponse, FiscalReportResponse
 from backend.application.use_cases import CreatePropertyUseCase, ListPropertiesUseCase, GetPropertyUseCase, UpdatePropertyFiscalDataUseCase, GetPropertyFiscalDataUseCase, SuggestFiscalCategoriesUseCase, GenerateFiscalReportUseCase, DownloadFiscalReportPdfUseCase
 from backend.domain.entities import Property, User
-from backend.api.dependencies import get_db, get_property_repo, get_income_repo, get_expense_repo, get_current_user, get_contract_repo, get_fiscal_report_renderer
+from backend.api.dependencies import get_db, get_property_repo, get_income_repo, get_expense_repo, get_current_user, get_contract_repo, get_fiscal_report_renderer, get_carryforward_repo
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
@@ -255,9 +255,10 @@ async def get_fiscal_report(
     income_repo: SQLiteIncomeRepository = Depends(get_income_repo),
     expense_repo: SQLiteExpenseRepository = Depends(get_expense_repo),
     contract_repo: SQLiteLeaseContractRepository = Depends(get_contract_repo),
+    carryforward_repo: SQLiteFiscalCarryforwardRepository = Depends(get_carryforward_repo),
 ):
     """Calcula y devuelve el informe fiscal para una propiedad y un año."""
-    uc = GenerateFiscalReportUseCase(property_repo, income_repo, expense_repo, contract_repo)
+    uc = GenerateFiscalReportUseCase(property_repo, income_repo, expense_repo, contract_repo, carryforward_repo)
     try:
         report = uc.execute(user.id, property_id, year)
     except ValueError as e:
@@ -278,14 +279,18 @@ async def get_fiscal_report(
         expenses_reparacion=report.expenses_reparacion,
         expenses_tributos=report.expenses_tributos,
         expenses_seguros=report.expenses_seguros,
+        expenses_comunidad=report.expenses_comunidad,
         expenses_suministros=report.expenses_suministros,
         expenses_formalizacion=report.expenses_formalizacion,
         expenses_dudoso_cobro=report.expenses_dudoso_cobro,
+        expenses_muebles=report.expenses_muebles,
         expenses_otros=report.expenses_otros,
         repair_interest_raw=report.repair_interest_raw,
         repair_interest_cap=report.repair_interest_cap,
         repair_interest_applied=report.repair_interest_applied,
         repair_interest_excess=report.repair_interest_excess,
+        prior_excess_available=report.prior_excess_available,
+        prior_excess_applied=report.prior_excess_applied,
         amortization_base=report.amortization_base,
         amortization_rate=report.amortization_rate,
         amortization_full_year=report.amortization_full_year,
@@ -313,11 +318,13 @@ async def download_fiscal_report_pdf(
     income_repo: SQLiteIncomeRepository = Depends(get_income_repo),
     expense_repo: SQLiteExpenseRepository = Depends(get_expense_repo),
     contract_repo: SQLiteLeaseContractRepository = Depends(get_contract_repo),
+    carryforward_repo: SQLiteFiscalCarryforwardRepository = Depends(get_carryforward_repo),
     renderer: AEATPdfRendererAdapter = Depends(get_fiscal_report_renderer),
 ):
     """Genera y descarga el borrador fiscal en PDF."""
     uc = DownloadFiscalReportPdfUseCase(
-        property_repo, income_repo, expense_repo, contract_repo, renderer
+        property_repo, income_repo, expense_repo, contract_repo, renderer,
+        carryforward_repo=carryforward_repo,
     )
     try:
         pdf_bytes, content_type, filename = uc.execute(user.id, property_id, year)

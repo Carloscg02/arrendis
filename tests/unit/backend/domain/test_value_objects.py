@@ -114,3 +114,10 @@ def test_address_immutability():
     addr = Address(street="Calle A", city="Barcelona", postal_code="08001", country="ES")
     with pytest.raises(FrozenInstanceError):
         addr.street = "Otra calle"  # type: ignore[misc]
+
+
+def test_address_str():
+    """VO-13: Address.__str__() retorna formato legible de dirección."""
+    addr = Address(street="C/ Antonio", city="Madrid", postal_code="23004", country="ES")
+    assert str(addr) == "C/ Antonio, Madrid, 23004"
+

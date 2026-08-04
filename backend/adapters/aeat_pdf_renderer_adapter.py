@@ -14,21 +14,53 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from backend.domain.ports import FiscalReportRendererPort
 from backend.domain.value_objects import FiscalReport
 
-# Mapeo para el Modelo D-100, Ejercicio 2024
-AEAT_CASILLA_MAP_2024: dict[str, str] = {
-    "rendimiento_integro": "0075",
-    "intereses_capital": "0076",
-    "reparacion_conservacion": "0077",
-    "tributos": "0079",
-    "seguros": "0081",
-    "suministros": "0082",
-    "amortizacion": "0083",
-    "otros_gastos": "0084",
-    "total_gastos_deducibles": "0085",
-    "rendimiento_neto": "0086",
-    "reduccion_vivienda": "0087",
-    "rendimiento_neto_reducido": "0088",
+# Mapeo de casillas AEAT por año fiscal (Modelo D-100).
+# Cada campaña puede cambiar la numeración; basta con añadir una nueva
+# entrada anual y el sistema usará la más reciente aplicable.
+_OFFICIAL_MAP_2026 = {
+    "rendimiento_integro": "0102",
+    "intereses_capital": "0105",
+    "reparacion_conservacion": "0106",
+    "comunidad": "0109",
+    "formalizacion": "0110",
+    "suministros": "0113",
+    "seguros": "0114",
+    "tributos": "0115",
+    "dudoso_cobro": "0116",
+    "amortizacion_muebles": "0117",
+    "amortizacion": "0131",
+    "otros_gastos": "0148",
+    "total_gastos_deducibles": "—",
+    "rendimiento_neto": "0149",
+    "reduccion_vivienda": "0150",
+    "rendimiento_neto_reducido": "0154",
 }
+
+AEAT_CASILLA_MAPS: dict[int, dict[str, str]] = {
+    2024: _OFFICIAL_MAP_2026,
+    2025: _OFFICIAL_MAP_2026,
+    2026: _OFFICIAL_MAP_2026,
+}
+
+def _resolve_casilla_map(fiscal_year: int) -> dict[str, str]:
+    """Devuelve el mapa de casillas para el año fiscal dado, con fallback al año previo más cercano."""
+    if fiscal_year in AEAT_CASILLA_MAPS:
+        return AEAT_CASILLA_MAPS[fiscal_year]
+    # Fallback: usar el del año más cercano anterior
+    available_years = sorted(y for y in AEAT_CASILLA_MAPS if y <= fiscal_year)
+    if available_years:
+        return AEAT_CASILLA_MAPS[available_years[-1]]
+    # Último recurso: el mapa más reciente
+    return AEAT_CASILLA_MAPS[max(AEAT_CASILLA_MAPS)]
+
+def _resolve_map_year(fiscal_year: int) -> int:
+    """Devuelve el año del mapa de casillas que se utilizará."""
+    if fiscal_year in AEAT_CASILLA_MAPS:
+        return fiscal_year
+    available_years = sorted(y for y in AEAT_CASILLA_MAPS if y <= fiscal_year)
+    if available_years:
+        return available_years[-1]
+    return max(AEAT_CASILLA_MAPS)
 
 
 class AEATPdfRendererAdapter(FiscalReportRendererPort):
@@ -40,9 +72,20 @@ class AEATPdfRendererAdapter(FiscalReportRendererPort):
     DARK_GRAY = colors.HexColor("#333333")
 
     def __init__(self, casilla_map: dict[str, str] | None = None) -> None:
-        self._casilla_map = casilla_map or AEAT_CASILLA_MAP_2024
+        self._custom_casilla_map = casilla_map
+        # Defaults para uso directo (se sobreescriben en render())
+        latest_year = max(AEAT_CASILLA_MAPS)
+        self._casilla_map = casilla_map or AEAT_CASILLA_MAPS[latest_year]
+        self._map_year = latest_year
 
     def render(self, report: FiscalReport, property_name: str, property_address: str) -> bytes:
+        if self._custom_casilla_map:
+            self._casilla_map = self._custom_casilla_map
+            self._map_year = report.fiscal_year
+        else:
+            self._casilla_map = _resolve_casilla_map(report.fiscal_year)
+            self._map_year = _resolve_map_year(report.fiscal_year)
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -122,12 +165,15 @@ class AEATPdfRendererAdapter(FiscalReportRendererPort):
             ["Concepto", "Casilla", "Importe"],
             ["Intereses de capital", self._casilla_map.get("intereses_capital", "—"), self._fmt(report.expenses_intereses)],
             ["Reparación y conservación", self._casilla_map.get("reparacion_conservacion", "—"), self._fmt(report.expenses_reparacion)],
+            ["Gastos de comunidad", self._casilla_map.get("comunidad", "—"), self._fmt(report.expenses_comunidad)],
+            ["Gastos de formalización", self._casilla_map.get("formalizacion", "—"), self._fmt(report.expenses_formalizacion)],
+            ["Servicios y suministros", self._casilla_map.get("suministros", "—"), self._fmt(report.expenses_suministros)],
+            ["Primas de seguros", self._casilla_map.get("seguros", "—"), self._fmt(report.expenses_seguros)],
             ["Tributos (IBI, tasas)", self._casilla_map.get("tributos", "—"), self._fmt(report.expenses_tributos)],
-            ["Seguros", self._casilla_map.get("seguros", "—"), self._fmt(report.expenses_seguros)],
-            ["Suministros", self._casilla_map.get("suministros", "—"), self._fmt(report.expenses_suministros)],
-            ["Amortización", self._casilla_map.get("amortizacion", "—"), self._fmt(report.amortization_prorated)],
-            ["Otros gastos deducibles", self._casilla_map.get("otros_gastos", "—"),
-             self._fmt(report.expenses_formalizacion + report.expenses_dudoso_cobro + report.expenses_otros)],
+            ["Saldos de dudoso cobro", self._casilla_map.get("dudoso_cobro", "—"), self._fmt(report.expenses_dudoso_cobro)],
+            ["Amortización de bienes muebles", self._casilla_map.get("amortizacion_muebles", "—"), self._fmt(report.expenses_muebles)],
+            ["Amortización del inmueble", self._casilla_map.get("amortizacion", "—"), self._fmt(report.amortization_prorated)],
+            ["Otros gastos deducibles", self._casilla_map.get("otros_gastos", "—"), self._fmt(report.expenses_otros)],
             ["TOTAL GASTOS DEDUCIBLES", self._casilla_map.get("total_gastos_deducibles", "—"), self._fmt(report.total_deductible_expenses)],
         ]
         elements.append(self._build_table(expense_rows, has_header=True, highlight_last=True))
@@ -147,9 +193,10 @@ class AEATPdfRendererAdapter(FiscalReportRendererPort):
         detail_rows = [
             ["Concepto", "Valor"],
             ["Días alquilados", f"{report.rented_days}/{report.total_days_in_year} ({self._pct(report.occupation_ratio)})"],
-            ["Base amortización", self._fmt(report.amortization_base)],
-            ["Amortización anual completa (3%)", self._fmt(report.amortization_full_year)],
-            ["Amortización prorrateada", self._fmt(report.amortization_prorated)],
+            ["Base amortización edificación", self._fmt(report.amortization_base)],
+            ["Amortización anual edificación (3%)", self._fmt(report.amortization_full_year)],
+            ["Amortización prorrateada edificación", self._fmt(report.amortization_prorated)],
+            ["Amortización bienes muebles (10%)", self._fmt(report.expenses_muebles)],
             ["Tope reparación+intereses aplicado", "Sí" if report.repair_interest_excess > 0 else "No"],
             ["Exceso pendiente (4 años siguientes)", self._fmt(report.repair_interest_excess)],
             ["Días vivienda habitual", str(report.vivienda_habitual_days)],
@@ -166,6 +213,13 @@ class AEATPdfRendererAdapter(FiscalReportRendererPort):
                 "Estos registros NO se han incluido en el cálculo.",
                 styles["Normal"],
             ))
+        if report.vivienda_habitual_days > 0 and report.reduction_percentage <= Decimal("0.50"):
+            elements.append(Paragraph(
+                "<b>Nota Ley de Vivienda:</b> Se ha aplicado la reducción general del 50% para contratos posteriores a 01/01/2024. "
+                "Verifique con su asesor si cumple los requisitos para aplicar reducciones incrementadas del 70% (alquiler a jóvenes en zona tensionada) "
+                "o del 90% (rebaja del precio del alquiler en zona tensionada).",
+                styles["Normal"],
+            ))
         elements.append(Spacer(1, 8))
 
         # Disclaimer
@@ -176,6 +230,13 @@ class AEATPdfRendererAdapter(FiscalReportRendererPort):
             f"Generado por Gestión de Alquileres — {date.today().strftime('%d/%m/%Y')}",
             disclaimer_style,
         ))
+
+        if getattr(self, '_map_year', report.fiscal_year) != report.fiscal_year:
+            elements.append(Paragraph(
+                f"Nota: Las casillas AEAT corresponden al modelo del ejercicio {self._map_year}. "
+                f"Verifique con la AEAT si han cambiado para el ejercicio {report.fiscal_year}.",
+                disclaimer_style,
+            ))
 
         return elements
 

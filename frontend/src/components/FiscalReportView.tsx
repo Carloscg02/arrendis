@@ -121,7 +121,11 @@ export default function FiscalReportView({ propertyId }: Props) {
               <span>{parseFloat(report.expenses_seguros).toFixed(2)} €</span>
             </div>
             <div className="report-row">
-              <span>Suministros</span>
+              <span>Gastos de Comunidad</span>
+              <span>{parseFloat(report.expenses_comunidad).toFixed(2)} €</span>
+            </div>
+            <div className="report-row">
+              <span>Servicios y Suministros</span>
               <span>{parseFloat(report.expenses_suministros).toFixed(2)} €</span>
             </div>
             <div className="report-row">
@@ -131,6 +135,10 @@ export default function FiscalReportView({ propertyId }: Props) {
             <div className="report-row">
               <span>Saldos de Dudoso Cobro</span>
               <span>{parseFloat(report.expenses_dudoso_cobro).toFixed(2)} €</span>
+            </div>
+            <div className="report-row">
+              <span>Amortización Bienes Muebles (10%)</span>
+              <span>{parseFloat(report.expenses_muebles).toFixed(2)} €</span>
             </div>
             <div className="report-row">
               <span>Otros Gastos</span>
@@ -159,6 +167,18 @@ export default function FiscalReportView({ propertyId }: Props) {
                 <span>Exceso pendiente para 4 años</span>
                 <span>{parseFloat(report.repair_interest_excess).toFixed(2)} €</span>
               </div>
+            )}
+            {parseFloat(report.prior_excess_available) > 0 && (
+              <>
+                <div className="report-row" style={{ marginTop: "1rem" }}>
+                  <span>Exceso acumulado ej. anteriores (disponible)</span>
+                  <span>{parseFloat(report.prior_excess_available).toFixed(2)} €</span>
+                </div>
+                <div className="report-row total">
+                  <span>Exceso aplicado en este ejercicio</span>
+                  <span className="text-success">-{parseFloat(report.prior_excess_applied).toFixed(2)} €</span>
+                </div>
+              </>
             )}
           </div>
 

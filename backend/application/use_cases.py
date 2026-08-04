@@ -33,6 +33,7 @@ from backend.domain.ports import (
     TokenServicePort,
     LeaseContractRepository,
     FiscalReportRendererPort,
+    FiscalCarryforwardRepository,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
 from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport
@@ -598,11 +599,13 @@ class GenerateFiscalReportUseCase:
         income_repo: IncomeRepository,
         expense_repo: ExpenseRepository,
         contract_repo: LeaseContractRepository,
+        carryforward_repo: FiscalCarryforwardRepository | None = None,
     ) -> None:
         self._property_repo = property_repo
         self._income_repo = income_repo
         self._expense_repo = expense_repo
         self._contract_repo = contract_repo
+        self._carryforward_repo = carryforward_repo
 
     def execute(self, user_id: str, property_id: str, fiscal_year: int) -> FiscalReport:
         prop = self._property_repo.find_by_id(property_id)
@@ -614,6 +617,10 @@ class GenerateFiscalReportUseCase:
         incomes = self._income_repo.find_by_property_id(property_id)
         expenses = self._expense_repo.find_by_property_id(property_id)
         contracts = self._contract_repo.find_by_property_id(property_id)
+        carryforwards = (
+            self._carryforward_repo.find_available_for_year(property_id, fiscal_year)
+            if self._carryforward_repo else []
+        )
 
         return FiscalCalculator.calculate(
             fiscal_year=fiscal_year,
@@ -621,6 +628,7 @@ class GenerateFiscalReportUseCase:
             incomes=incomes,
             expenses=expenses,
             contracts=contracts,
+            prior_carryforwards=carryforwards,
         )
 
 
@@ -634,12 +642,14 @@ class DownloadFiscalReportPdfUseCase:
         expense_repo: ExpenseRepository,
         contract_repo: LeaseContractRepository,
         renderer: FiscalReportRendererPort,
+        carryforward_repo: FiscalCarryforwardRepository | None = None,
     ) -> None:
         self._property_repo = property_repo
         self._income_repo = income_repo
         self._expense_repo = expense_repo
         self._contract_repo = contract_repo
         self._renderer = renderer
+        self._carryforward_repo = carryforward_repo
 
     def execute(self, user_id: str, property_id: str, fiscal_year: int) -> tuple[bytes, str, str]:
         """Genera el PDF del borrador fiscal.
@@ -658,6 +668,10 @@ class DownloadFiscalReportPdfUseCase:
         incomes = self._income_repo.find_by_property_id(property_id)
         expenses = self._expense_repo.find_by_property_id(property_id)
         contracts = self._contract_repo.find_by_property_id(property_id)
+        carryforwards = (
+            self._carryforward_repo.find_available_for_year(property_id, fiscal_year)
+            if self._carryforward_repo else []
+        )
 
         # 3. Calcular el FiscalReport
         report = FiscalCalculator.calculate(
@@ -666,6 +680,7 @@ class DownloadFiscalReportPdfUseCase:
             incomes=incomes,
             expenses=expenses,
             contracts=contracts,
+            prior_carryforwards=carryforwards,
         )
 
         # 4. Renderizar a PDF

@@ -7,9 +7,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# Bases de datos locales
+# Bases de datos locales e imágenes subidas
 *.db
 *.sqlite3
-
-# Variables de entorno (secretos)
+data/images/
 .env

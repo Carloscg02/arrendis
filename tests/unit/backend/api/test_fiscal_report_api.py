@@ -109,7 +109,7 @@ def test_ti_12_05_get_fiscal_report_numeric_calculations(client: TestClient):
     client.post(f"/api/properties/{prop_id}/contracts", json={
         "tenant_name": "Juan",
         "tenant_nif": "12345678A",
-        "start_date": "2025-01-01",
+        "start_date": "2023-01-01",
         "end_date": "2025-12-31",
         "monthly_rent": 1000,
         "lease_type": "vivienda_habitual"
