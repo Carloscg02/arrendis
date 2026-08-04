@@ -145,13 +145,16 @@ def build_pdf(filename: str):
     elements.append(Paragraph("Categorías Fiscales de Gastos según la AEAT", h2_style))
     cat_data = [
         [Paragraph("Categoría Fiscal AEAT", table_header), Paragraph("Casilla D-100", table_header), Paragraph("Conceptos Incluidos", table_header)],
-        [Paragraph("Intereses de Capital / Financiación", table_cell), Paragraph("<b>0076</b>", table_cell), Paragraph("Intereses de hipotecas o préstamos para la compra/mejora.", table_cell)],
-        [Paragraph("Reparación y Conservación", table_cell), Paragraph("<b>0077</b>", table_cell), Paragraph("Pintura, reparación de averías, sustitución de instalaciones.", table_cell)],
-        [Paragraph("Tributos, Tasas y Recargos", table_cell), Paragraph("<b>0079</b>", table_cell), Paragraph("IBI, tasa de basuras, vados y tributos no estatales.", table_cell)],
-        [Paragraph("Primas de Seguros", table_cell), Paragraph("<b>0081</b>", table_cell), Paragraph("Seguro del hogar, impago de alquiler, responsabilidad civil.", table_cell)],
-        [Paragraph("Servicios y Suministros", table_cell), Paragraph("<b>0082</b>", table_cell), Paragraph("Agua, luz, gas, internet y gastos de comunidad.", table_cell)],
-        [Paragraph("Amortización de la Edificación", table_cell), Paragraph("<b>0083</b>", table_cell), Paragraph("3% anual sobre el mayor valor de construcción.", table_cell)],
-        [Paragraph("Otros Gastos Deducibles", table_cell), Paragraph("<b>0084</b>", table_cell), Paragraph("Formalización contrato, saldos dudoso cobro, gestoría.", table_cell)],
+        [Paragraph("Intereses de Capital / Financiación", table_cell), Paragraph("<b>0105</b>", table_cell), Paragraph("Intereses de hipotecas o préstamos para la compra/mejora.", table_cell)],
+        [Paragraph("Reparación y Conservación", table_cell), Paragraph("<b>0106</b>", table_cell), Paragraph("Pintura, reparación de averías, sustitución de instalaciones.", table_cell)],
+        [Paragraph("Gastos de Comunidad", table_cell), Paragraph("<b>0109</b>", table_cell), Paragraph("Cuotas ordinarias y extraordinarias de la comunidad.", table_cell)],
+        [Paragraph("Gastos de Formalización", table_cell), Paragraph("<b>0110</b>", table_cell), Paragraph("Gestoría, notaría, registro y formalización del contrato.", table_cell)],
+        [Paragraph("Servicios y Suministros", table_cell), Paragraph("<b>0113</b>", table_cell), Paragraph("Agua, luz, gas e internet a cargo del propietario.", table_cell)],
+        [Paragraph("Primas de Seguros", table_cell), Paragraph("<b>0114</b>", table_cell), Paragraph("Seguro del hogar, impago de alquiler, responsabilidad civil.", table_cell)],
+        [Paragraph("Tributos, Tasas y Recargos", table_cell), Paragraph("<b>0115</b>", table_cell), Paragraph("IBI, tasa de basuras, vados y tributos no estatales.", table_cell)],
+        [Paragraph("Saldos de Dudoso Cobro", table_cell), Paragraph("<b>0116</b>", table_cell), Paragraph("Impagos justificados (+6 meses o concurso acreedores).", table_cell)],
+        [Paragraph("Amortización de la Edificación", table_cell), Paragraph("<b>0131</b>", table_cell), Paragraph("3% anual sobre el mayor valor de construcción.", table_cell)],
+        [Paragraph("Otros Gastos Deducibles", table_cell), Paragraph("<b>0148</b>", table_cell), Paragraph("Cualquier otro gasto deducible fiscalmente.", table_cell)],
     ]
     t_cat = Table(cat_data, colWidths=[160, 80, 260])
     t_cat.setStyle(TableStyle([
@@ -168,14 +171,14 @@ def build_pdf(filename: str):
     elements.append(Paragraph("2. ALGORITMO DE CÁLCULO PASO A PASO (LIRPF)", h1_style))
 
     steps_text = [
-        "<b>PASO 1 (Rendimientos Íntegros):</b> Suma total de los alquileres cobrados en el ejercicio fiscal (Casilla 0075).",
+        "<b>PASO 1 (Rendimientos Íntegros):</b> Suma total de los alquileres cobrados en el ejercicio fiscal (Casilla 0102).",
         "<b>PASO 2 (Ratio de Ocupación):</b> Fusión de intervalos de contratos para obtener los días reales alquilados. <i>Ratio = Días Alquilados / 365 (o 366)</i>.",
         "<b>PASO 3 (Prorrateo de Gastos):</b> Los gastos fijos (IBI, Seguros, Suministros, Amortización) se multiplican por el Ratio de Ocupación. Los intereses y reparaciones se deducen al 100%.",
-        "<b>PASO 4 (Tope Art. 23.1.a LIRPF):</b> La suma de Intereses + Reparación no puede superar el Rendimiento Íntegro Total. El exceso no deducido se guarda para deducir en los 4 años siguientes.",
-        "<b>PASO 5 (Amortización Art. 23.1.b LIRPF):</b> 3% sobre el mayor valor entre: 1) Coste de construcción + gastos de compra proporcionales, y 2) Valor catastral de la construcción. Se prorratea por ocupación.",
-        "<b>PASO 6 (Rendimiento Neto Previo):</b> <i>Casilla 0075 (Ingresos) − Casilla 0085 (Total Gastos Deducibles)</i>.",
-        "<b>PASO 7 (Reducción 60% Art. 23.2 LIRPF):</b> Si el neto es positivo y el contrato es de Vivienda Habitual, se aplica la reducción del 60% (Casilla 0087).",
-        "<b>PASO 8 (Rendimiento Neto Reducido):</b> Resultado final a integrar en la base imponible del IRPF (Casilla 0088)."
+        "<b>PASO 4 (Tope Art. 23.1.a LIRPF):</b> La suma de Intereses + Reparación no puede superar el Rendimiento Íntegro Total. El exceso se aplica de años anteriores (Casilla 0103) o se guarda para los 4 años siguientes (Casilla 0108).",
+        "<b>PASO 5 (Amortización Art. 23.1.b LIRPF):</b> 3% sobre el mayor valor entre: 1) Coste de construcción + gastos de compra proporcionales, y 2) Valor catastral de la construcción. Se prorratea por ocupación (Casilla 0131).",
+        "<b>PASO 6 (Rendimiento Neto Previo):</b> <i>Casilla 0102 (Ingresos) − Total Gastos Deducibles (Casilla 0149)</i>.",
+        "<b>PASO 7 (Reducción Ley de Vivienda Art. 23.2 LIRPF):</b> Si el neto es positivo y el contrato es de Vivienda Habitual: 60% para contratos anteriores a 01/01/2024 y 50% para contratos desde 01/01/2024 (Casilla 0150).",
+        "<b>PASO 8 (Rendimiento Neto Reducido):</b> Resultado final a integrar en la base imponible del IRPF (Casilla 0154)."
     ]
 
     for step in steps_text:
@@ -188,18 +191,21 @@ def build_pdf(filename: str):
 
     aeat_mapping_data = [
         [Paragraph("Casilla", table_header), Paragraph("Denominación Oficial AEAT (Renta Web)", table_header), Paragraph("Concepto del Sistema / Fórmula", table_header)],
-        [Paragraph("<b>0075</b>", table_cell), Paragraph("Rendimientos íntegros devengados", table_cell), Paragraph("Total ingresos de alquiler cobrados", table_cell)],
-        [Paragraph("<b>0076</b>", table_cell), Paragraph("Intereses de capitales ajenos y gastos de financiación", table_cell), Paragraph("Intereses de hipoteca aplicados (con tope)", table_cell)],
-        [Paragraph("<b>0077</b>", table_cell), Paragraph("Gastos de conservación y reparación", table_cell), Paragraph("Reparaciones y conservación aplicadas (con tope)", table_cell)],
-        [Paragraph("<b>0079</b>", table_cell), Paragraph("Tributos, recargos y tasas no estatales", table_cell), Paragraph("IBI, basuras y tasas prorrateados por ocupación", table_cell)],
-        [Paragraph("<b>0081</b>", table_cell), Paragraph("Primas de contratos de seguro", table_cell), Paragraph("Seguros prorrateados por ocupación", table_cell)],
-        [Paragraph("<b>0082</b>", table_cell), Paragraph("Servicios y suministros", table_cell), Paragraph("Agua, luz, gas y comunidad prorrateados", table_cell)],
-        [Paragraph("<b>0083</b>", table_cell), Paragraph("Amortización del inmueble", table_cell), Paragraph("3% amortización construcción prorrateada", table_cell)],
-        [Paragraph("<b>0084</b>", table_cell), Paragraph("Otros gastos deducibles", table_cell), Paragraph("Formalización, dudoso cobro y otros prorrateados", table_cell)],
-        [Paragraph("<b>0085</b>", table_cell), Paragraph("Total gastos deducibles", table_cell), Paragraph("Suma casillas 0076 a 0084", table_cell)],
-        [Paragraph("<b>0086</b>", table_cell), Paragraph("Rendimiento neto", table_cell), Paragraph("Casilla 0075 − Casilla 0085", table_cell)],
-        [Paragraph("<b>0087</b>", table_cell), Paragraph("Reducción por arrendamiento de vivienda habitual", table_cell), Paragraph("60% de reducción sobre rendimiento positivo VH", table_cell)],
-        [Paragraph("<b>0088</b>", table_cell), Paragraph("Rendimiento neto reducido", table_cell), Paragraph("<b>Resultado Final a declarar (0086 − 0087)</b>", table_cell)],
+        [Paragraph("<b>0102</b>", table_cell), Paragraph("Ingresos íntegros computables", table_cell), Paragraph("Total ingresos de alquiler cobrados", table_cell)],
+        [Paragraph("<b>0105</b>", table_cell), Paragraph("Intereses de capitales ajenos y gastos de financiación", table_cell), Paragraph("Intereses de hipoteca aplicados (con tope)", table_cell)],
+        [Paragraph("<b>0106</b>", table_cell), Paragraph("Gastos de conservación y reparación", table_cell), Paragraph("Reparaciones y conservación aplicadas (con tope)", table_cell)],
+        [Paragraph("<b>0109</b>", table_cell), Paragraph("Gastos de comunidad", table_cell), Paragraph("Cuotas de comunidad prorrateadas por ocupación", table_cell)],
+        [Paragraph("<b>0110</b>", table_cell), Paragraph("Gastos de formalización del contrato", table_cell), Paragraph("Gestoría, notaría, registro prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0113</b>", table_cell), Paragraph("Servicios y suministros", table_cell), Paragraph("Agua, luz, gas e internet prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0114</b>", table_cell), Paragraph("Primas de contratos de seguro", table_cell), Paragraph("Seguros prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0115</b>", table_cell), Paragraph("Tributos, recargos y tasas no estatales", table_cell), Paragraph("IBI, basuras y tasas prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0116</b>", table_cell), Paragraph("Saldos de dudoso cobro", table_cell), Paragraph("Impagos justificados prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0117</b>", table_cell), Paragraph("Amortización de bienes muebles", table_cell), Paragraph("10% anual de muebles/enseres prorrateado", table_cell)],
+        [Paragraph("<b>0131</b>", table_cell), Paragraph("Amortización del inmueble y la mejora", table_cell), Paragraph("3% amortización construcción prorrateada", table_cell)],
+        [Paragraph("<b>0148</b>", table_cell), Paragraph("Otros gastos deducibles", table_cell), Paragraph("Otros gastos deducibles prorrateados por ocupación", table_cell)],
+        [Paragraph("<b>0149</b>", table_cell), Paragraph("Rendimiento neto", table_cell), Paragraph("Casilla 0102 − Total Gastos Deducibles", table_cell)],
+        [Paragraph("<b>0150</b>", table_cell), Paragraph("Reducción por arrendamiento de vivienda habitual", table_cell), Paragraph("60% de reducción sobre rendimiento positivo VH", table_cell)],
+        [Paragraph("<b>0154</b>", table_cell), Paragraph("Rendimiento neto reducido", table_cell), Paragraph("<b>Resultado Final a declarar (0149 − 0150)</b>", table_cell)],
     ]
 
     t_aeat = Table(aeat_mapping_data, colWidths=[55, 235, 210])
@@ -225,14 +231,14 @@ def build_pdf(filename: str):
 
     example_data = [
         [Paragraph("Pasos del Cálculo", table_header), Paragraph("Cálculo Matemático", table_header), Paragraph("Resultado", table_header)],
-        [Paragraph("1. Ingresos Íntegros (0075)", table_cell), Paragraph("12.000,00 €", table_cell), Paragraph("12.000,00 €", table_cell)],
-        [Paragraph("2. Intereses (0076) + Reparación (0077)", table_cell), Paragraph("1.200 € + 800 € = 2.000 € (≤ 12.000 € tope)", table_cell), Paragraph("2.000,00 €", table_cell)],
-        [Paragraph("3. IBI (0079) + Seguro (0081) + Comunidad (0082)", table_cell), Paragraph("600 € + 400 € + 1.000 €", table_cell), Paragraph("2.000,00 €", table_cell)],
-        [Paragraph("4. Amortización 3% Construcción (0083)", table_cell), Paragraph("3% × (120.000 € + 12.000 € gastos) = 3% × 132.000 €", table_cell), Paragraph("3.960,00 €", table_cell)],
-        [Paragraph("5. Total Gastos Deducibles (0085)", table_cell), Paragraph("2.000 € + 2.000 € + 3.960 €", table_cell), Paragraph("7.960,00 €", table_cell)],
-        [Paragraph("6. Rendimiento Neto (0086)", table_cell), Paragraph("12.000 € − 7.960 €", table_cell), Paragraph("4.040,00 €", table_cell)],
-        [Paragraph("7. Reducción Vivienda Habitual 60% (0087)", table_cell), Paragraph("4.040 € × 60%", table_cell), Paragraph("-2.424,00 €", table_cell)],
-        [Paragraph("8. Rendimiento Neto Reducido Final (0088)", table_cell), Paragraph("4.040 € − 2.424 €", table_cell), Paragraph("<b>1.616,00 €</b>", table_cell)],
+        [Paragraph("1. Ingresos Íntegros (0102)", table_cell), Paragraph("12.000,00 €", table_cell), Paragraph("12.000,00 €", table_cell)],
+        [Paragraph("2. Intereses (0105) + Reparación (0106)", table_cell), Paragraph("1.200 € + 800 € = 2.000 € (≤ 12.000 € tope)", table_cell), Paragraph("2.000,00 €", table_cell)],
+        [Paragraph("3. IBI (0115) + Seguro (0114) + Comunidad (0109)", table_cell), Paragraph("600 € + 400 € + 1.000 €", table_cell), Paragraph("2.000,00 €", table_cell)],
+        [Paragraph("4. Amortización 3% Construcción (0131)", table_cell), Paragraph("3% × (120.000 € + 12.000 € gastos) = 3% × 132.000 €", table_cell), Paragraph("3.960,00 €", table_cell)],
+        [Paragraph("5. Total Gastos Deducibles", table_cell), Paragraph("2.000 € + 2.000 € + 3.960 €", table_cell), Paragraph("7.960,00 €", table_cell)],
+        [Paragraph("6. Rendimiento Neto (0149)", table_cell), Paragraph("12.000 € − 7.960 €", table_cell), Paragraph("4.040,00 €", table_cell)],
+        [Paragraph("7. Reducción Vivienda Habitual (0150)", table_cell), Paragraph("4.040 € × 50% (o 60% pre-2024)", table_cell), Paragraph("-2.020,00 € (-2.424 €)", table_cell)],
+        [Paragraph("8. Rendimiento Neto Reducido Final (0154)", table_cell), Paragraph("4.040 € − Reducción", table_cell), Paragraph("<b>2.020,00 € (o 1.616 €)</b>", table_cell)],
     ]
 
     t_example = Table(example_data, colWidths=[180, 220, 100])

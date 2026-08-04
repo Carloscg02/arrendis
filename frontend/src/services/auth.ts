@@ -3,6 +3,7 @@ import type { TokenResponse, UserResponse, LoginInput, RegisterInput } from '../
 const API_BASE = 'http://localhost:8000/api';
 
 let accessToken: string | null = null;
+let refreshPromise: Promise<TokenResponse> | null = null;
 
 export function getAccessToken(): string | null {
   return accessToken;
@@ -45,13 +46,25 @@ export async function login(data: LoginInput): Promise<TokenResponse> {
 }
 
 export async function refresh(): Promise<TokenResponse> {
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-  const result = await handleAuthResponse(res);
-  accessToken = result.access_token;
-  return result;
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const result = await handleAuthResponse(res);
+      accessToken = result.access_token;
+      return result;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 export async function logout(): Promise<void> {

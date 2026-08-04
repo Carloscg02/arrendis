@@ -25,8 +25,9 @@ from backend.domain.entities import (
     User,
     LeaseContract,
     LeaseType,
+    FiscalCarryforward,
 )
-from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, LeaseContractRepository
+from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, LeaseContractRepository, FiscalCarryforwardRepository
 from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost
 
 
@@ -176,6 +177,19 @@ class SQLiteConnection:
             cursor.execute("ALTER TABLE expenses ADD COLUMN fiscal_category TEXT DEFAULT NULL")
         except sqlite3.OperationalError:
             pass
+
+        # Tabla de excesos pendientes
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fiscal_carryforwards (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                year_generated INTEGER NOT NULL,
+                original_amount TEXT NOT NULL,
+                amount_applied TEXT NOT NULL DEFAULT '0',
+                FOREIGN KEY (property_id) REFERENCES properties(id),
+                UNIQUE(property_id, year_generated)
+            )
+        """)
 
         self._connection.commit()
 
@@ -646,4 +660,65 @@ class SQLiteLeaseContractRepository(LeaseContractRepository):
             end_date=end_date,
             monthly_rent=Money(Decimal(row["monthly_rent_amount"]), row["monthly_rent_currency"]),
             lease_type=LeaseType(row["lease_type"]),
+        )
+
+
+class SQLiteFiscalCarryforwardRepository(FiscalCarryforwardRepository):
+    """Implementación de FiscalCarryforwardRepository usando SQLite."""
+
+    def __init__(self, connection: SQLiteConnection) -> None:
+        self._conn = connection.connection
+
+    def save(self, carryforward: FiscalCarryforward) -> None:
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO fiscal_carryforwards
+                (id, property_id, year_generated, original_amount, amount_applied)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                carryforward.id,
+                carryforward.property_id,
+                carryforward.year_generated,
+                str(carryforward.original_amount),
+                str(carryforward.amount_applied),
+            )
+        )
+        self._conn.commit()
+
+    def find_by_property_and_year(self, property_id: str, year_generated: int) -> FiscalCarryforward | None:
+        cursor = self._conn.execute(
+            "SELECT * FROM fiscal_carryforwards WHERE property_id = ? AND year_generated = ?",
+            (property_id, year_generated)
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
+    def find_available_for_year(self, property_id: str, fiscal_year: int) -> list[FiscalCarryforward]:
+        # Según la ley, los excesos caducan a los 4 años. 
+        # Entonces year_generated >= fiscal_year - 4, y year_generated < fiscal_year
+        cursor = self._conn.execute(
+            """
+            SELECT * FROM fiscal_carryforwards 
+            WHERE property_id = ? 
+              AND year_generated >= ? 
+              AND year_generated < ?
+            ORDER BY year_generated ASC
+            """,
+            (property_id, fiscal_year - 4, fiscal_year)
+        )
+        carryforwards = [self._row_to_entity(row) for row in cursor.fetchall()]
+        # Filtrar solo los que tienen saldo
+        return [cf for cf in carryforwards if cf.amount_remaining > 0]
+
+    @staticmethod
+    def _row_to_entity(row: sqlite3.Row) -> FiscalCarryforward:
+        return FiscalCarryforward(
+            id=row["id"],
+            property_id=row["property_id"],
+            year_generated=row["year_generated"],
+            original_amount=Decimal(row["original_amount"]),
+            amount_applied=Decimal(row["amount_applied"]),
         )

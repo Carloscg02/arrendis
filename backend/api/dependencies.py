@@ -18,6 +18,7 @@ from backend.adapters.sqlite_adapter import (
     SQLitePropertyRepository,
     SQLiteUserRepository,
     SQLiteLeaseContractRepository,
+    SQLiteFiscalCarryforwardRepository,
 )
 from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository
 
@@ -49,6 +50,11 @@ def get_user_repo(db: SQLiteConnection = Depends(get_db)) -> SQLiteUserRepositor
 def get_contract_repo(db: SQLiteConnection = Depends(get_db)) -> SQLiteLeaseContractRepository:
     """Retorna el repositorio de contratos con la conexión activa."""
     return SQLiteLeaseContractRepository(db)
+
+
+def get_carryforward_repo(db: SQLiteConnection = Depends(get_db)) -> SQLiteFiscalCarryforwardRepository:
+    """Retorna el repositorio de excesos pendientes con la conexión activa."""
+    return SQLiteFiscalCarryforwardRepository(db)
 
 
 def get_hasher() -> BcryptPasswordHasherAdapter:

@@ -11,6 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
+from decimal import Decimal
 
 from backend.domain.value_objects import Address, Email, Money, PasswordHash, CadastralBreakdown, AcquisitionCost
 
@@ -70,8 +71,10 @@ class FiscalExpenseCategory(Enum):
     SERVICIOS_SUMINISTROS = "servicios_suministros"
     FORMALIZACION = "formalizacion"
     DUDOSO_COBRO = "dudoso_cobro"
+    AMORTIZACION_MUEBLES = "amortizacion_muebles"
     OTROS_DEDUCIBLES = "otros_deducibles"
     NO_DEDUCIBLE = "no_deducible"
+
 
 
 class FiscalIncomeCategory(Enum):
@@ -305,3 +308,31 @@ class LeaseContract:
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+
+@dataclass
+class FiscalCarryforward:
+    """Exceso de gastos de intereses+reparación pendiente de deducir de ejercicios anteriores.
+    
+    Según Art. 23.1.a LIRPF, el exceso no deducido puede aplicarse en los 4 años
+    siguientes, respetando el límite de cada ejercicio.
+    """
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    property_id: str = ""
+    year_generated: int = 0          # Año fiscal en que se generó el exceso
+    original_amount: Decimal = field(default_factory=lambda: Decimal("0"))   # Importe original del exceso
+    amount_applied: Decimal = field(default_factory=lambda: Decimal("0"))    # Importe ya aplicado en años posteriores
+    
+    @property
+    def amount_remaining(self) -> Decimal:
+        return self.original_amount - self.amount_applied
+    
+    @property
+    def is_expired(self) -> bool:
+        """El exceso caduca a los 4 años."""
+        from datetime import date
+        return date.today().year - self.year_generated > 4
+    
+    @property 
+    def expiry_year(self) -> int:
+        return self.year_generated + 4

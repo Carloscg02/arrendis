@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from datetime import date
-from backend.domain.entities import Expense, Income, Property, User, LeaseContract
+from backend.domain.entities import Expense, Income, Property, User, LeaseContract, FiscalCarryforward
 from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport
 
 
@@ -180,3 +180,22 @@ class FiscalReportRendererPort(ABC):
         """Retorna la extensión del archivo (e.g., 'pdf')."""
         ...
 
+
+class FiscalCarryforwardRepository(ABC):
+    """Puerto de salida para persistir excesos pendientes de deducir."""
+    
+    @abstractmethod
+    def save(self, carryforward: 'FiscalCarryforward') -> None:
+        """Guarda o actualiza un registro de exceso."""
+        ...
+    
+    @abstractmethod
+    def find_by_property_and_year(self, property_id: str, year_generated: int) -> 'FiscalCarryforward | None':
+        """Busca un exceso por propiedad y año de generación."""
+        ...
+    
+    @abstractmethod
+    def find_available_for_year(self, property_id: str, fiscal_year: int) -> list['FiscalCarryforward']:
+        """Retorna excesos disponibles (no caducados, con saldo) para aplicar en un año fiscal.
+        Solo incluye excesos de los 4 años anteriores con amount_remaining > 0."""
+        ...

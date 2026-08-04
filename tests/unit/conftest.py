@@ -178,3 +178,10 @@ class InMemoryLeaseContractRepository(LeaseContractRepository):
 @pytest.fixture
 def lease_contract_repo() -> InMemoryLeaseContractRepository:
     return InMemoryLeaseContractRepository()
+
+@pytest.fixture
+def sqlite_connection():
+    from backend.adapters.sqlite_adapter import SQLiteConnection
+    conn = SQLiteConnection(db_path=":memory:")
+    yield conn
+    conn.close()

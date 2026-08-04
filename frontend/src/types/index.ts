@@ -162,6 +162,7 @@ export type FiscalExpenseCategory =
   | "servicios_suministros"
   | "formalizacion"
   | "dudoso_cobro"
+  | "amortizacion_muebles"
   | "otros_deducibles"
   | "no_deducible";
 
@@ -196,14 +197,18 @@ export interface FiscalReport {
   expenses_reparacion: string;
   expenses_tributos: string;
   expenses_seguros: string;
+  expenses_comunidad: string;
   expenses_suministros: string;
   expenses_formalizacion: string;
   expenses_dudoso_cobro: string;
+  expenses_muebles: string;
   expenses_otros: string;
   repair_interest_raw: string;
   repair_interest_cap: string;
   repair_interest_applied: string;
   repair_interest_excess: string;
+  prior_excess_available: string;
+  prior_excess_applied: string;
   amortization_base: string;
   amortization_rate: string;
   amortization_full_year: string;
