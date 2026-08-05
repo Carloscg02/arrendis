@@ -44,6 +44,9 @@ class PropertyResponse(BaseModel):
     status: str
     image_url: str | None = None
     has_fiscal_data: bool = False
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
 
 
 # ──────────────────────────────────────────────
@@ -78,6 +81,15 @@ class IncomeResponse(BaseModel):
 # Expense Schemas
 # ──────────────────────────────────────────────
 
+class UtilityInvoiceDataSchema(BaseModel):
+    cups: str
+    amount: Decimal
+    issue_date: date
+    provider_name: str
+    utility_type: str
+    invoice_number: str | None = None
+    extraction_confidence: str
+
 class ExpenseCreate(BaseModel):
     """Request body para registrar un gasto."""
 
@@ -100,6 +112,10 @@ class ExpenseResponse(BaseModel):
     category: str
     description: str
     fiscal_category: str | None = None
+    is_verified: bool = True
+    source: str = "manual"
+    receipt_path: str | None = None
+    utility_data: UtilityInvoiceDataSchema | None = None
 
 
 # ──────────────────────────────────────────────
@@ -181,6 +197,11 @@ class FiscalDataResponse(BaseModel):
     acquisition_cost: AcquisitionCostSchema | None = None
     acquisition_date: date | None = None
     has_fiscal_data: bool
+
+class PropertyCupsUpdate(BaseModel):
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
 
 
 # ──────────────────────────────────────────────

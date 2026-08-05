@@ -13,12 +13,29 @@ from datetime import date
 from enum import Enum
 from decimal import Decimal
 
-from backend.domain.value_objects import Address, Email, Money, PasswordHash, CadastralBreakdown, AcquisitionCost
-
-
 # ──────────────────────────────────────────────
 # Enumeraciones
 # ──────────────────────────────────────────────
+
+class UtilityType(Enum):
+    """Clasificación del tipo de suministro."""
+    ELECTRICITY = "electricity"
+    GAS = "gas"
+    WATER = "water"
+
+
+class ExpenseSource(Enum):
+    """Origen de un gasto: manual o auto-importado desde PDF."""
+    MANUAL = "manual"
+    AUTO_IMPORT = "auto_import"
+
+
+class ExtractionConfidence(Enum):
+    """Nivel de confianza de la extracción automática de datos."""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
 
 class PropertyType(Enum):
     """Clasificación del tipo de propiedad."""
@@ -83,6 +100,17 @@ class FiscalIncomeCategory(Enum):
     OTROS_INGRESOS = "otros_ingresos"
 
 
+from backend.domain.value_objects import (
+    Address,
+    Email,
+    Money,
+    PasswordHash,
+    CadastralBreakdown,
+    AcquisitionCost,
+    UtilityInvoiceData,
+)
+
+
 # ──────────────────────────────────────────────
 # Entidades
 # ──────────────────────────────────────────────
@@ -104,9 +132,13 @@ class Property:
     cadastral_breakdown: CadastralBreakdown | None = None
     acquisition_cost: AcquisitionCost | None = None
     acquisition_date: date | None = None
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
+        import re
         # Validar que el nombre no esté vacío
         if not self.name or not self.name.strip():
             raise ValueError("El nombre de la propiedad (name) no puede estar vacío.")
@@ -117,6 +149,14 @@ class Property:
             if len(ref) != 20:
                 raise ValueError(
                     f"La referencia catastral debe tener 20 caracteres, tiene {len(ref)}."
+                )
+
+        _CUPS_PATTERN = re.compile(r'^ES\d{16,18}[A-Z0-9]{0,4}$')
+        for field_name in ("cups_electricity", "cups_gas", "cups_water"):
+            value = getattr(self, field_name)
+            if value is not None and not _CUPS_PATTERN.match(value):
+                raise ValueError(
+                    f"{field_name} no tiene formato CUPS válido: '{value}'"
                 )
 
     @property
@@ -217,6 +257,10 @@ class Expense:
     category: ExpenseCategory
     description: str = ""
     fiscal_category: FiscalExpenseCategory | None = None
+    is_verified: bool = True
+    source: ExpenseSource = ExpenseSource.MANUAL
+    receipt_path: str | None = None
+    utility_data: UtilityInvoiceData | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:

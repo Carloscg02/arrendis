@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 
 from backend.adapters.sqlite_adapter import SQLiteConnection, SQLitePropertyRepository, SQLiteIncomeRepository, SQLiteExpenseRepository, SQLiteLeaseContractRepository, SQLiteFiscalCarryforwardRepository
 from backend.adapters.aeat_pdf_renderer_adapter import AEATPdfRendererAdapter
-from backend.api.schemas import AddressSchema, PropertyCreate, PropertyResponse, FiscalDataUpdate, FiscalDataResponse, CadastralBreakdownSchema, AcquisitionCostSchema, FiscalSuggestionsResponse, FiscalReportResponse
+from backend.api.schemas import AddressSchema, PropertyCreate, PropertyResponse, FiscalDataUpdate, FiscalDataResponse, CadastralBreakdownSchema, AcquisitionCostSchema, FiscalSuggestionsResponse, FiscalReportResponse, PropertyCupsUpdate
 from backend.application.use_cases import CreatePropertyUseCase, ListPropertiesUseCase, GetPropertyUseCase, UpdatePropertyFiscalDataUseCase, GetPropertyFiscalDataUseCase, SuggestFiscalCategoriesUseCase, GenerateFiscalReportUseCase, DownloadFiscalReportPdfUseCase
 from backend.domain.entities import Property, User
 from backend.api.dependencies import get_db, get_property_repo, get_income_repo, get_expense_repo, get_current_user, get_contract_repo, get_fiscal_report_renderer, get_carryforward_repo
@@ -37,6 +37,9 @@ def _entity_to_response(prop: Property) -> PropertyResponse:
         status=prop.status.value,
         image_url=image_url,
         has_fiscal_data=prop.has_fiscal_data,
+        cups_electricity=prop.cups_electricity,
+        cups_gas=prop.cups_gas,
+        cups_water=prop.cups_water,
     )
 
 
@@ -106,6 +109,40 @@ def delete_property(
         
     property_repo.delete(property_id)
     return {"detail": f"Property '{property_id}' deleted"}
+
+
+@router.put("/{property_id}/cups", response_model=PropertyResponse)
+def update_property_cups(
+    property_id: str,
+    body: PropertyCupsUpdate,
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    current_user: User = Depends(get_current_user),
+) -> PropertyResponse:
+    """Actualiza los CUPS de una propiedad."""
+    # Verificar propiedad
+    try:
+        prop = GetPropertyUseCase(property_repo).execute(property_id, current_user.id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Propiedad no encontrada")
+
+    # Validate pattern reusing entity validations
+    try:
+        prop.cups_electricity = body.cups_electricity
+        prop.cups_gas = body.cups_gas
+        prop.cups_water = body.cups_water
+        prop.__post_init__()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    property_repo.update_cups(
+        property_id,
+        body.cups_electricity,
+        body.cups_gas,
+        body.cups_water,
+    )
+
+    updated_prop = GetPropertyUseCase(property_repo).execute(property_id, current_user.id)
+    return _entity_to_response(updated_prop)
 
 
 @router.post("/{property_id}/image", response_model=PropertyResponse)

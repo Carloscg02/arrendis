@@ -171,3 +171,30 @@ En la feature F-12 hemos construido la pieza central de toda la Épica Fiscal (E
 - Compilación en TypeScript perfecta (`npm run build` en 490ms).
 - Se crearon 27 tests nuevos (17 unitarios del motor fiscal, 2 del VO `FiscalReport`, 3 del use case y 5 de integración de la API).
 - Toda la suite del Backend pasa **210 tests en verde** en 4.06s.
+
+---
+
+# Walkthrough y Resumen - Feature F-16
+
+## Resumen del Trabajo Realizado (Modelo de Dominio de Suministros)
+
+En la feature F-16 hemos sentado las bases del dominio para la Épica E-02 (Automatización de Gastos de Suministros), extendiendo las entidades de `Property` y `Expense` y creando los Value Objects y estructuras necesarias para soportar la ingesta y verificación de facturas de suministros.
+
+### Cambios en Dominio y Casos de Uso
+- **Enums**: Creados `UtilityType` (`ELECTRICITY`, `GAS`, `WATER`), `ExpenseSource` (`MANUAL`, `AUTO_IMPORT`) y `ExtractionConfidence` (`HIGH`, `MEDIUM`, `LOW`).
+- **Value Object `UtilityInvoiceData`**: VO inmutable que encapsula los datos extraídos de facturas (`cups`, `amount`, `issue_date`, `provider_name`, `utility_type`, `invoice_number`, `extraction_confidence`) con validación estricta de formato CUPS español (20-22 alfanuméricos), importe positivo y fecha no futura (>60 días).
+- **Entidad `Property`**: Extendida con campos opcionales `cups_electricity`, `cups_gas`, `cups_water` con validación de formato CUPS en `__post_init__`.
+- **Entidad `Expense`**: Extendida con campos retrocompatibles `is_verified` (default `True`), `source` (default `MANUAL`), `receipt_path` y `utility_data`.
+- **Regla Fiscal de Dominio**: Modificado `FiscalCalculatorService` para garantizar que los gastos no verificados (`is_verified = False`) se excluyan del cálculo fiscal.
+- **Puerto `PropertyRepository`**: Añadidos métodos `find_by_cups(cups, user_id)` y `update_cups(...)`.
+
+### Adaptadores y API
+- **SQLite**: Migraciones idempotentes (`ALTER TABLE`) para añadir columnas CUPS a `properties` y columnas de verificación/datos de suministro a `expenses`. Implementado `find_by_cups()` y `update_cups()`.
+- **FastAPI**:
+  - `PUT /api/properties/{property_id}/cups`: Endpoint para actualizar los CUPS de un inmueble.
+  - Actualizados `ExpenseResponse` y `PropertyResponse` para exponer los nuevos campos.
+
+## Verificación Final
+- Cero violaciones de arquitectura (0 imports externos en `backend/domain/`).
+- 259 tests pasados exitosamente en verde en 6.66s.
+
