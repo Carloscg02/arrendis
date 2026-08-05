@@ -51,6 +51,27 @@ class InMemoryPropertyRepository(PropertyRepository):
             prop.acquisition_cost = acquisition_cost
             prop.acquisition_date = acquisition_date
 
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        for p in self._store.values():
+            if p.user_id == user_id and (
+                p.cups_electricity == cups or p.cups_gas == cups or p.cups_water == cups
+            ):
+                return p
+        return None
+
+    def update_cups(
+        self,
+        property_id: str,
+        cups_electricity: str | None,
+        cups_gas: str | None,
+        cups_water: str | None,
+    ) -> None:
+        prop = self._store.get(property_id)
+        if prop:
+            prop.cups_electricity = cups_electricity
+            prop.cups_gas = cups_gas
+            prop.cups_water = cups_water
+
 
 class InMemoryIncomeRepository(IncomeRepository):
     """Implementación in-memory de IncomeRepository para tests unitarios."""

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from datetime import date
+from backend.domain.entities import UtilityType, ExtractionConfidence
 
 
 @dataclass(frozen=True)
@@ -247,3 +249,37 @@ class FiscalReport:
     unclassified_income_count: int
     unclassified_expense_count: int
     has_warnings: bool
+
+
+@dataclass(frozen=True)
+class UtilityInvoiceData:
+    """Datos estructurados extraídos de una factura de suministros."""
+    cups: str
+    amount: Decimal
+    issue_date: date
+    provider_name: str
+    utility_type: 'UtilityType'
+    invoice_number: str | None = None
+    extraction_confidence: 'ExtractionConfidence' = ExtractionConfidence.HIGH
+
+    def __post_init__(self) -> None:
+        import re
+        from datetime import date as date_cls, timedelta
+
+        cups_pattern = r'^ES\d{16,18}[A-Z0-9]{0,4}$'
+        if not re.match(cups_pattern, self.cups):
+            raise ValueError(
+                f"CUPS no tiene formato válido (esperado ES + 16-18 dígitos + 0-2 letras): '{self.cups}'"
+            )
+
+        if self.amount <= 0:
+            raise ValueError(f"El importe de la factura debe ser positivo: {self.amount}")
+
+        max_future = date_cls.today() + timedelta(days=60)
+        if self.issue_date > max_future:
+            raise ValueError(
+                f"La fecha de emisión no puede ser tan futura: {self.issue_date}"
+            )
+
+        if not self.provider_name or not self.provider_name.strip():
+            raise ValueError("El nombre del proveedor no puede estar vacío.")

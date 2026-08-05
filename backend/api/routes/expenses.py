@@ -15,7 +15,7 @@ from backend.adapters.sqlite_adapter import (
     SQLitePropertyRepository,
 )
 from backend.api.dependencies import get_expense_repo, get_income_repo, get_property_repo, get_current_user
-from backend.api.schemas import ExpenseCreate, ExpenseResponse
+from backend.api.schemas import ExpenseCreate, ExpenseResponse, UtilityInvoiceDataSchema
 from backend.application.use_cases import RecordExpenseUseCase, GetPropertyUseCase, UpdateFiscalCategoryUseCase
 from backend.domain.entities import Expense, User
 
@@ -33,6 +33,18 @@ def _entity_to_response(expense: Expense) -> ExpenseResponse:
         category=expense.category.value,
         description=expense.description,
         fiscal_category=expense.fiscal_category.value if expense.fiscal_category else None,
+        is_verified=expense.is_verified,
+        source=expense.source.value,
+        receipt_path=expense.receipt_path,
+        utility_data=UtilityInvoiceDataSchema(
+            cups=expense.utility_data.cups,
+            amount=expense.utility_data.amount,
+            issue_date=expense.utility_data.issue_date,
+            provider_name=expense.utility_data.provider_name,
+            utility_type=expense.utility_data.utility_type.value,
+            invoice_number=expense.utility_data.invoice_number,
+            extraction_confidence=expense.utility_data.extraction_confidence.value,
+        ) if expense.utility_data else None,
     )
 
 

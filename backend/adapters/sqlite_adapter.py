@@ -114,6 +114,17 @@ class SQLiteConnection:
             except sqlite3.OperationalError:
                 pass  # La columna ya existe
 
+        # Migración F-16: Suministros (Propiedades)
+        for col in [
+            "cups_electricity TEXT DEFAULT NULL",
+            "cups_gas TEXT DEFAULT NULL",
+            "cups_water TEXT DEFAULT NULL",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE properties ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
+
         # Tabla de ingresos
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS incomes (
@@ -141,6 +152,24 @@ class SQLiteConnection:
                 FOREIGN KEY (property_id) REFERENCES properties(id)
             )
         """)
+
+        # Migración F-16: Suministros (Gastos)
+        for col in [
+            "is_verified INTEGER NOT NULL DEFAULT 1",
+            "source TEXT NOT NULL DEFAULT 'manual'",
+            "receipt_path TEXT DEFAULT NULL",
+            "utility_cups TEXT DEFAULT NULL",
+            "utility_amount TEXT DEFAULT NULL",
+            "utility_issue_date TEXT DEFAULT NULL",
+            "utility_provider_name TEXT DEFAULT NULL",
+            "utility_type TEXT DEFAULT NULL",
+            "utility_invoice_number TEXT DEFAULT NULL",
+            "utility_extraction_confidence TEXT DEFAULT NULL",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE expenses ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
 
         # Tabla de contratos de arrendamiento
         cursor.execute("""
@@ -217,8 +246,9 @@ class SQLitePropertyRepository(PropertyRepository):
                 (id, name, street, city, postal_code, country, property_type, user_id, status, image_filename,
                  cadastral_ref, cadastral_land_value, cadastral_construction_value,
                  acquisition_purchase_price, acquisition_construction_portion, acquisition_land_portion,
-                 acquisition_transfer_tax, acquisition_notary_fees, acquisition_registry_fees, acquisition_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 acquisition_transfer_tax, acquisition_notary_fees, acquisition_registry_fees, acquisition_date,
+                 cups_electricity, cups_gas, cups_water)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 property.id,
@@ -241,6 +271,9 @@ class SQLitePropertyRepository(PropertyRepository):
                 str(property.acquisition_cost.notary_fees) if property.acquisition_cost else None,
                 str(property.acquisition_cost.registry_fees) if property.acquisition_cost else None,
                 property.acquisition_date.isoformat() if property.acquisition_date else None,
+                property.cups_electricity,
+                property.cups_gas,
+                property.cups_water,
             ),
         )
         self._conn.commit()
@@ -300,6 +333,29 @@ class SQLitePropertyRepository(PropertyRepository):
             (image_filename, property_id),
         )
         self._conn.commit()
+
+    def update_cups(self, property_id: str, cups_electricity: str | None, cups_gas: str | None, cups_water: str | None) -> None:
+        """Actualiza los CUPS de una propiedad."""
+        self._conn.execute(
+            "UPDATE properties SET cups_electricity = ?, cups_gas = ?, cups_water = ? WHERE id = ?",
+            (cups_electricity, cups_gas, cups_water, property_id),
+        )
+        self._conn.commit()
+
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        """Busca una propiedad de un usuario por cualquiera de sus CUPS."""
+        cursor = self._conn.execute(
+            """
+            SELECT * FROM properties 
+            WHERE user_id = ? AND 
+                  (cups_electricity = ? OR cups_gas = ? OR cups_water = ?)
+            """,
+            (user_id, cups, cups, cups),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
 
     def update_fiscal_data(
         self,
@@ -392,6 +448,9 @@ class SQLitePropertyRepository(PropertyRepository):
             cadastral_breakdown=cadastral_breakdown,
             acquisition_cost=acquisition_cost,
             acquisition_date=acquisition_date,
+            cups_electricity=row["cups_electricity"],
+            cups_gas=row["cups_gas"],
+            cups_water=row["cups_water"],
         )
 
 
@@ -477,8 +536,10 @@ class SQLiteExpenseRepository(ExpenseRepository):
         self._conn.execute(
             """
             INSERT OR REPLACE INTO expenses
-                (id, property_id, amount, currency, date, category, description, fiscal_category)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, property_id, amount, currency, date, category, description, fiscal_category,
+                 is_verified, source, receipt_path, utility_cups, utility_amount, utility_issue_date,
+                 utility_provider_name, utility_type, utility_invoice_number, utility_extraction_confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 expense.id,
@@ -489,6 +550,16 @@ class SQLiteExpenseRepository(ExpenseRepository):
                 expense.category.value,
                 expense.description,
                 expense.fiscal_category.value if expense.fiscal_category else None,
+                1 if expense.is_verified else 0,
+                expense.source.value,
+                expense.receipt_path,
+                expense.utility_data.cups if expense.utility_data else None,
+                str(expense.utility_data.amount) if expense.utility_data else None,
+                expense.utility_data.issue_date.isoformat() if expense.utility_data else None,
+                expense.utility_data.provider_name if expense.utility_data else None,
+                expense.utility_data.utility_type.value if expense.utility_data else None,
+                expense.utility_data.invoice_number if expense.utility_data else None,
+                expense.utility_data.extraction_confidence.value if expense.utility_data else None,
             ),
         )
         self._conn.commit()
@@ -526,6 +597,34 @@ class SQLiteExpenseRepository(ExpenseRepository):
         except IndexError:
             pass
 
+        from backend.domain.entities import ExpenseSource
+        from backend.domain.value_objects import UtilityInvoiceData
+        from backend.domain.entities import UtilityType, ExtractionConfidence
+
+        utility_data = None
+        try:
+            if row["utility_cups"] is not None:
+                utility_data = UtilityInvoiceData(
+                    cups=row["utility_cups"],
+                    amount=Decimal(row["utility_amount"]),
+                    issue_date=date.fromisoformat(row["utility_issue_date"]),
+                    provider_name=row["utility_provider_name"],
+                    utility_type=UtilityType(row["utility_type"]),
+                    invoice_number=row["utility_invoice_number"],
+                    extraction_confidence=ExtractionConfidence(row["utility_extraction_confidence"]),
+                )
+        except IndexError:
+            pass
+            
+        try:
+            is_verified = bool(row["is_verified"])
+            source = ExpenseSource(row["source"])
+            receipt_path = row["receipt_path"]
+        except IndexError:
+            is_verified = True
+            source = ExpenseSource.MANUAL
+            receipt_path = None
+
         return Expense(
             id=row["id"],
             property_id=row["property_id"],
@@ -534,6 +633,10 @@ class SQLiteExpenseRepository(ExpenseRepository):
             category=ExpenseCategory(row["category"]),
             description=row["description"],
             fiscal_category=fiscal_category,
+            is_verified=is_verified,
+            source=source,
+            receipt_path=receipt_path,
+            utility_data=utility_data,
         )
 
 

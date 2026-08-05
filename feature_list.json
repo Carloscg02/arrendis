@@ -6,6 +6,12 @@
       "title": "Sistema de Fiscalidad y Declaración de Impuestos",
       "status": "done",
       "spec": "specs/epics/E-01-fiscalidad/vision_y_dominio.md"
+    },
+    {
+      "id": "E-02",
+      "title": "Automatización de Gastos de Suministros vía Email",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-02-suministros/vision_y_dominio.md"
     }
   ],
   "features": [
@@ -23,6 +29,12 @@
     { "id": "F-12", "epic": "E-01", "title": "Motor de Cálculo Fiscal (Amortización, Reducciones, Rendimiento Neto)", "status": "done" },
     { "id": "F-13", "epic": "E-01", "title": "Informe Fiscal y Generación de PDF (Borrador AEAT)", "status": "done" },
     { "id": "F-14", "title": "Refactor Naming Conventions for Non-Repository Ports and Adapters (Port & Adapter Suffixes)", "status": "done" },
-    { "id": "F-15", "epic": "E-01", "title": "Borrador Fiscal Maestro Paginado Multi-Inmueble (PDF Consolidado AEAT)", "status": "backlog" }
+    { "id": "F-15", "epic": "E-01", "title": "Borrador Fiscal Maestro Paginado Multi-Inmueble (PDF Consolidado AEAT)", "status": "backlog" },
+    { "id": "F-16", "epic": "E-02", "title": "Modelo de Dominio de Suministros (CUPS en Property, is_verified y receipt_path en Expense, UtilityInvoiceData VO)", "status": "done" },
+    { "id": "F-17", "title": "Puerto y Adaptador Genérico de LLM (LLMProviderPort + GeminiFlashAdapter)", "status": "backlog" },
+    { "id": "F-18", "epic": "E-02", "title": "Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex + LLM Fallback) + Privacy Scrubber", "status": "backlog" },
+    { "id": "F-19", "epic": "E-02", "title": "Almacenamiento Documental de Recibos PDF y Política de Retención 5 años", "status": "deferred" },
+    { "id": "F-20", "epic": "E-02", "title": "Interfaz UI: Subida Manual de PDF, Panel de Gastos Pendientes y Confirmación 1-click", "status": "backlog" },
+    { "id": "F-21", "epic": "E-02", "title": "Ingesta Automática por Email: IMAP Polling a Carpeta Dedicada", "status": "deferred" }
   ]
 }

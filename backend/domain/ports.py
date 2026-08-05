@@ -59,6 +59,22 @@ class PropertyRepository(ABC):
         """Actualiza los datos fiscales de una propiedad."""
         ...
 
+    @abstractmethod
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        """Busca una propiedad por cualquiera de sus CUPS."""
+        ...
+
+    @abstractmethod
+    def update_cups(
+        self,
+        property_id: str,
+        cups_electricity: str | None,
+        cups_gas: str | None,
+        cups_water: str | None,
+    ) -> None:
+        """Actualiza los CUPS de una propiedad."""
+        ...
+
 
 class IncomeRepository(ABC):
     """Puerto de salida para persistir y recuperar Incomes."""
