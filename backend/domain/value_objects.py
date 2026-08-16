@@ -283,3 +283,35 @@ class UtilityInvoiceData:
 
         if not self.provider_name or not self.provider_name.strip():
             raise ValueError("El nombre del proveedor no puede estar vacío.")
+
+
+@dataclass(frozen=True)
+class LLMRequest:
+    """Petición genérica al LLM — independiente de proveedor."""
+    user_prompt: str                          # Prompt principal del usuario
+    system_prompt: str | None = None          # Instrucciones de sistema (opcional)
+    response_schema: dict | None = None       # JSON Schema esperado (para extracción estructurada)
+    temperature: float = 0.0                  # 0.0 = determinista (ideal para extracción)
+    max_output_tokens: int = 2048             # Límite de tokens de salida
+
+    def __post_init__(self) -> None:
+        if not self.user_prompt or not self.user_prompt.strip():
+            raise ValueError("user_prompt cannot be empty")
+        if not (0.0 <= self.temperature <= 2.0):
+            raise ValueError(f"temperature must be between 0.0 and 2.0, got {self.temperature}")
+        if self.max_output_tokens < 1:
+            raise ValueError(f"max_output_tokens must be positive, got {self.max_output_tokens}")
+
+
+@dataclass(frozen=True)
+class LLMResponse:
+    """Respuesta genérica del LLM — independiente de proveedor."""
+    text: str                                 # Texto crudo de la respuesta
+    parsed_data: dict | None = None           # Datos estructurados parseados (si se pidió schema)
+    model_name: str = ""                      # Nombre del modelo que respondió
+    input_tokens: int = 0                     # Tokens de entrada consumidos
+    output_tokens: int = 0                    # Tokens de salida consumidos
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens

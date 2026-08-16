@@ -20,7 +20,8 @@ from backend.adapters.sqlite_adapter import (
     SQLiteLeaseContractRepository,
     SQLiteFiscalCarryforwardRepository,
 )
-from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository
+from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort
+from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
 def get_db(request: Request) -> SQLiteConnection:
@@ -86,4 +87,8 @@ async def get_current_user(
 def get_fiscal_report_renderer() -> AEATPdfRendererAdapter:
     """Retorna el renderizador de informes fiscales (PDF AEAT por defecto)."""
     return AEATPdfRendererAdapter()
+
+def get_llm_provider(request: Request) -> LLMProviderPort | None:
+    """Retorna el proveedor de LLM configurado (almacenado en app.state), o None si no hay key."""
+    return getattr(request.app.state, "llm_provider", None)
 

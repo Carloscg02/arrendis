@@ -198,3 +198,44 @@ En la feature F-16 hemos sentado las bases del dominio para la Épica E-02 (Auto
 - Cero violaciones de arquitectura (0 imports externos en `backend/domain/`).
 - 259 tests pasados exitosamente en verde en 6.66s.
 
+---
+
+# Walkthrough y Resumen - Feature F-17
+
+## Resumen del Trabajo Realizado (Puerto y Adaptador Genérico de LLM)
+
+En la feature F-17 hemos implementado el puerto de servicio genérico e infraestructura transversal para interactuar con modelos de lenguaje (LLM), utilizando Google Gemini Flash como primer adaptador concreto, preparado para actuar como motor de fallback en la extracción de facturas (F-18) y en futuras capacidades de IA.
+
+### Cambios en Dominio y Casos de Uso
+- **Value Objects**:
+  - `LLMRequest`: Encapsula de forma inmutable la petición al LLM (`user_prompt`, `system_prompt`, `response_schema`, `temperature`, `max_output_tokens`) con validación estricta de invariantes (prompt no vacío, temperatura entre 0.0 y 2.0, tokens positivos).
+  - `LLMResponse`: Encapsula la respuesta del modelo (`text`, `parsed_data`, `model_name`, `input_tokens`, `output_tokens`) y propiedad derivada `total_tokens`.
+- **Excepciones de Dominio**:
+  - `LLMProviderError`: Excepción base para fallos no recuperables del proveedor.
+  - `RateLimitError`: Subclase para exceso de cuota / error 429 con soporte para `retry_after_seconds`.
+- **Puerto `LLMProviderPort`**: Interfaz abstracta con método único `generate(request: LLMRequest) -> LLMResponse` capaz de manejar tanto texto libre como extracción estructurada (`response_schema`).
+- **Caso de Uso**: `CheckLLMHealthUseCase` para verificar conectividad y disponibilidad del proveedor sin acoplar la API a implementaciones concretas.
+
+### Adaptadores y API
+- **Adaptador `GeminiFlashAdapter`**: Implementación de `LLMProviderPort` utilizando el SDK `google-genai` y el modelo `gemini-2.0-flash`.
+  - Soporte de Structured Outputs mediante `response_mime_type="application/json"` y `response_schema`.
+  - Resiliencia y tolerancia a fallos con política de reintentos (`exponential backoff` con `jitter` aleatorio) para mitigar transitorios 429 y 5xx sin añadir librerías externas.
+  - Inicialización limpia y segura mediante API Key desde variable de entorno `GEMINI_API_KEY`.
+- **FastAPI**:
+  - Endpoint `GET /api/llm/health` protegido por autenticación JWT (`get_current_user`) que reporta el estado del servicio (`ok`, `not_configured` o `error`).
+  - Inyección de dependencias `get_llm_provider` en `backend/api/dependencies.py`.
+
+### Tests y Verificación
+- **Tests Unitarios**:
+  - `test_llm_value_objects.py`: Cobertura de validaciones, inmutabilidad y cálculo de tokens en `LLMRequest`, `LLMResponse`, `LLMProviderError` y `RateLimitError` (T-17-01 a T-17-12).
+  - `test_llm_health_use_case.py`: Cobertura del caso de uso con dobles de prueba (T-17-13 a T-17-15).
+  - `FakeLLMProviderAdapter`: Test double en memoria en `conftest.py` para testing aislado.
+- **Tests de Integración**:
+  - `test_llm_api.py`: Validación de endpoint `GET /api/llm/health` con estados 200 (configurado y no configurado) y rechazo 401 sin autenticación (T-17-16 a T-17-18).
+
+## Verificación Final
+- Cero violaciones de arquitectura (0 imports externos en `backend/domain/`).
+- Suite Backend ejecutada con **277 tests en verde** (0 fallos, 0 regresiones).
+- Compilación de Frontend exitosa con TypeScript y Vite en 447ms.
+
+

@@ -3,7 +3,8 @@ import pytest
 from datetime import date
 from backend.domain.entities import Expense, Income, Property, User, LeaseContract
 from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, PasswordHasherPort, TokenServicePort, LeaseContractRepository
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, LLMResponse
+from backend.domain.ports import LLMProviderPort
 
 
 class InMemoryPropertyRepository(PropertyRepository):
@@ -206,3 +207,23 @@ def sqlite_connection():
     conn = SQLiteConnection(db_path=":memory:")
     yield conn
     conn.close()
+
+
+class FakeLLMProviderAdapter(LLMProviderPort):
+    """LLM falso para tests: retorna un texto fijo."""
+    def __init__(self, response_text: str = "fake response") -> None:
+        self._response_text = response_text
+
+    def generate(self, request) -> LLMResponse:
+        return LLMResponse(
+            text=self._response_text,
+            model_name="fake-model",
+            input_tokens=5,
+            output_tokens=10,
+        )
+
+
+@pytest.fixture
+def fake_llm():
+    return FakeLLMProviderAdapter()
+
