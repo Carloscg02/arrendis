@@ -316,3 +316,9 @@ class FiscalReportResponse(BaseModel):
     unclassified_income_count: int
     unclassified_expense_count: int
     has_warnings: bool
+
+
+class LLMHealthResponse(BaseModel):
+    status: str           # "ok" | "not_configured" | "error"
+    model: str | None     # Nombre del modelo si está configurado
+    message: str | None = None  # Mensaje descriptivo si hay error

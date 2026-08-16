@@ -21,6 +21,8 @@ from backend.api.routes.incomes import router as incomes_router
 from backend.api.routes.properties import router as properties_router
 from backend.api.routes.auth import router as auth_router
 from backend.api.routes.contracts import router as contracts_router
+from backend.api.routes.llm import router as llm_router
+from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
 @asynccontextmanager
@@ -33,6 +35,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db = SQLiteConnection(db_path)
     app.state.db = db
     Path("data/images").mkdir(parents=True, exist_ok=True)
+    
+    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+    app.state.llm_provider = GeminiFlashAdapter(api_key=gemini_api_key) if gemini_api_key else None
+    
     yield
     db.close()
 
@@ -63,6 +69,7 @@ app.include_router(incomes_router)
 app.include_router(expenses_router)
 app.include_router(auth_router)
 app.include_router(contracts_router)
+app.include_router(llm_router)
 
 # Mount static files para servir imágenes de propiedades
 _images_dir = Path("data/images")

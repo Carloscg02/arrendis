@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 from datetime import date
 from backend.domain.entities import Expense, Income, Property, User, LeaseContract, FiscalCarryforward
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, LLMResponse
 
 
 class PropertyRepository(ABC):
@@ -214,4 +214,26 @@ class FiscalCarryforwardRepository(ABC):
     def find_available_for_year(self, property_id: str, fiscal_year: int) -> list['FiscalCarryforward']:
         """Retorna excesos disponibles (no caducados, con saldo) para aplicar en un año fiscal.
         Solo incluye excesos de los 4 años anteriores con amount_remaining > 0."""
+        ...
+
+
+class LLMProviderPort(ABC):
+    """Puerto de salida genérico para interacciones con LLMs.
+    
+    Contrato que cualquier adaptador de LLM debe cumplir.
+    El dominio usa este puerto sin saber si detrás hay Gemini, OpenAI, Anthropic, o un mock.
+    """
+
+    @abstractmethod
+    def generate(self, request: LLMRequest) -> LLMResponse:
+        """Genera una respuesta a partir de un LLMRequest.
+        
+        - Si request.response_schema está definido, el adaptador debe solicitar
+          salida estructurada (JSON) y poblar LLMResponse.parsed_data.
+        - Debe implementar retry con exponential backoff para errores transitorios (429, 5xx).
+        
+        Raises:
+            RateLimitError: Si el proveedor rechaza por cuota tras agotar reintentos.
+            LLMProviderError: Para errores no recuperables.
+        """
         ...

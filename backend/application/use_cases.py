@@ -23,6 +23,7 @@ from backend.domain.entities import (
     User,
     LeaseContract,
     LeaseType,
+    LLMProviderError,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -34,9 +35,10 @@ from backend.domain.ports import (
     LeaseContractRepository,
     FiscalReportRendererPort,
     FiscalCarryforwardRepository,
+    LLMProviderPort,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport
+from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest
 
 class CreatePropertyUseCase:
     """Caso de uso: crear y persistir una nueva propiedad."""
@@ -692,4 +694,21 @@ class DownloadFiscalReportPdfUseCase:
         filename = f"borrador_fiscal_{safe_name}_{fiscal_year}.{self._renderer.file_extension()}"
 
         return pdf_bytes, self._renderer.content_type(), filename
+
+
+class CheckLLMHealthUseCase:
+    """Verifica la disponibilidad del proveedor de LLM."""
+    
+    def __init__(self, llm_provider: LLMProviderPort | None):
+        self._llm = llm_provider
+    
+    def execute(self) -> dict:
+        if self._llm is None:
+            return {"status": "not_configured", "model": None}
+        # Intenta una generación trivial para verificar conectividad
+        try:
+            response = self._llm.generate(LLMRequest(user_prompt="ping"))
+            return {"status": "ok", "model": response.model_name}
+        except LLMProviderError as e:
+            return {"status": "error", "model": None, "message": str(e)}
 

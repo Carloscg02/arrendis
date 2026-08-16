@@ -380,3 +380,19 @@ class FiscalCarryforward:
     @property 
     def expiry_year(self) -> int:
         return self.year_generated + 4
+
+
+class LLMProviderError(Exception):
+    """Error genérico no recuperable del proveedor de LLM."""
+    def __init__(self, message: str, provider: str = "unknown"):
+        self.provider = provider
+        super().__init__(f"[{provider}] {message}")
+
+class RateLimitError(LLMProviderError):
+    """El proveedor rechazó la petición por exceso de cuota (429)."""
+    def __init__(self, provider: str = "unknown", retry_after_seconds: int | None = None):
+        self.retry_after_seconds = retry_after_seconds
+        msg = "Rate limit exceeded"
+        if retry_after_seconds:
+            msg += f" (retry after {retry_after_seconds}s)"
+        super().__init__(msg, provider)
