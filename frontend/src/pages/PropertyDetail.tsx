@@ -47,6 +47,7 @@ import FiscalReportView from "../components/FiscalReportView";
 import { ContractSection } from "../components/ContractSection";
 import Modal from "../components/Modal";
 import InvoiceUploadModal from "../components/InvoiceUploadModal";
+import CupsModal from "../components/CupsModal";
 import { useToast } from "../components/Toast";
 import { KPICard } from "../components/KPICard";
 import { SkeletonLoader } from "../components/SkeletonLoader";
@@ -67,6 +68,7 @@ export default function PropertyDetail() {
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isCupsModalOpen, setIsCupsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
@@ -373,6 +375,14 @@ export default function PropertyDetail() {
                 <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn btn-sm btn-secondary"
+                    onClick={() => setIsCupsModalOpen(true)}
+                    title={property.cups_electricity ? `CUPS Luz: ${property.cups_electricity}` : "Configurar código CUPS de luz, gas o agua"}
+                  >
+                    <Zap size={14} style={{ marginRight: '0.3rem', color: property.cups_electricity ? '#d97706' : undefined }} />
+                    {property.cups_electricity ? "CUPS Configurado" : "Configurar CUPS"}
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
                     onClick={() => setIsUploadModalOpen(true)}
                     title="Importar una o varias facturas de suministros en PDF"
                   >
@@ -521,6 +531,21 @@ export default function PropertyDetail() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={loadData}
+      />
+
+      <CupsModal
+        isOpen={isCupsModalOpen}
+        onClose={() => setIsCupsModalOpen(false)}
+        propertyId={property.id}
+        initialCups={{
+          cups_electricity: property.cups_electricity,
+          cups_gas: property.cups_gas,
+          cups_water: property.cups_water,
+        }}
+        onSuccess={() => {
+          toast.success("Códigos CUPS actualizados correctamente");
+          loadData();
+        }}
       />
 
       <ConfirmDialog
