@@ -118,6 +118,27 @@ class ExpenseResponse(BaseModel):
     utility_data: UtilityInvoiceDataSchema | None = None
 
 
+class InvoiceUploadItemResultSchema(BaseModel):
+    """Resultado individual dentro de una subida por lotes."""
+    filename: str
+    status: str  # "success" | "duplicate" | "error"
+    expense: ExpenseResponse | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+class BatchInvoiceUploadResponse(BaseModel):
+    """Respuesta consolidada de una subida por lotes de facturas."""
+    total_processed: int
+    successful_count: int
+    duplicate_count: int
+    error_count: int
+    total_amount_imported: Decimal
+    items: list[InvoiceUploadItemResultSchema]
+
+
 # ──────────────────────────────────────────────
 # Profit Report Schema
 # ──────────────────────────────────────────────
