@@ -202,3 +202,67 @@ def test_t_f21_api_05_get_and_update_forwarding_email(client: TestClient):
         headers=headers,
     )
     assert bad_res.status_code == 400
+
+
+def test_t_f21_api_06_webhook_duplicate_detection(client: TestClient, sample_pdf_bytes):
+    """T-F21-API-06: El Webhook detecta facturas ya importadas y retorna duplicate sin error de sistema (Idempotencia)."""
+    token, user_id, prop_id = _register_and_create_property(client, email="carlos.cano@example.com")
+
+    # Envío inicial: Éxito
+    res1 = client.post(
+        "/api/webhooks/inbound-email",
+        data={"from": "carlos.cano@example.com", "to": "facturas@rental-handler.com", "subject": "Factura 1"},
+        files={"files": ("factura.pdf", sample_pdf_bytes, "application/pdf")},
+        headers={"X-Webhook-Secret": WEBHOOK_SECRET},
+    )
+    assert res1.status_code == 200
+    assert res1.json()["status"] == "success"
+    assert res1.json()["processed_count"] == 1
+
+    # Reenvío de la misma factura: Duplicado detectado
+    res2 = client.post(
+        "/api/webhooks/inbound-email",
+        data={"from": "carlos.cano@example.com", "to": "facturas@rental-handler.com", "subject": "Factura 1 reenviada"},
+        files={"files": ("factura.pdf", sample_pdf_bytes, "application/pdf")},
+        headers={"X-Webhook-Secret": WEBHOOK_SECRET},
+    )
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert data2["status"] == "success"
+    assert data2["processed_count"] == 0
+    assert data2["duplicate_count"] == 1
+    assert data2["items"][0]["status"] == "duplicate"
+    assert "ya fue importada previamente" in data2["items"][0]["message"]
+
+
+def test_t_f21_api_07_webhook_authorized_by_forwarding_email(client: TestClient, sample_pdf_bytes):
+    """T-F21-API-07: El Webhook acepta correos enviados desde el email alternativo configurado por el usuario."""
+    token, user_id, prop_id = _register_and_create_property(client, email="login.account@empresa.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Configurar email alternativo de facturas
+    client.put(
+        "/api/auth/forwarding-email",
+        json={"forwarding_email": "facturas.personales@gmail.com"},
+        headers=headers,
+    )
+
+    # El correo al webhook llega desde el email alternativo
+    response = client.post(
+        "/api/webhooks/inbound-email",
+        data={
+            "from": "Carlos Personal <facturas.personales@gmail.com>",
+            "to": "facturas@rental-handler.com",
+            "subject": "Reenvío automático desde Gmail",
+        },
+        files={"files": ("factura.pdf", sample_pdf_bytes, "application/pdf")},
+        headers={"X-Webhook-Secret": WEBHOOK_SECRET},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["sender"] == "facturas.personales@gmail.com"
+    assert data["processed_count"] == 1
+    assert data["items"][0]["status"] == "success"
+    assert data["items"][0]["cups"] == REPSOL_CUPS
