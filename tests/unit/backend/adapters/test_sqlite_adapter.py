@@ -169,13 +169,19 @@ def test_delete_income(sqlite_connection):
     )
     income_repo.save(income)
 
-    # Verificar que existe
+    # Verificar que existe por find_by_id y find_by_property_id
+    found_by_id = income_repo.find_by_id("income-del-001")
+    assert found_by_id is not None
+    assert found_by_id.amount.amount == Decimal("500.00")
+
     found = income_repo.find_by_property_id("prop-del-income")
     assert len(found) == 1
 
     income_repo.delete("income-del-001")
     found_after = income_repo.find_by_property_id("prop-del-income")
     assert len(found_after) == 0
+    assert income_repo.find_by_id("income-del-001") is None
+
 
 
 from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
