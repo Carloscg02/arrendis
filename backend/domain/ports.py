@@ -237,3 +237,28 @@ class LLMProviderPort(ABC):
             LLMProviderError: Para errores no recuperables.
         """
         ...
+
+
+class PDFTextExtractorPort(ABC):
+    """Puerto de salida para la extracción de texto plano desde archivos PDF binarios.
+    
+    El dominio define QUÉ necesita (texto del documento) sin atarse a ninguna
+    librería concreta (PyMuPDF, PDFMiner, pypdf, etc.).
+    """
+
+    @abstractmethod
+    def extract_text(self, pdf_bytes: bytes) -> str:
+        """Extrae el contenido textual ordenado de las páginas del PDF.
+        
+        Args:
+            pdf_bytes: Bytes del archivo PDF en memoria.
+            
+        Returns:
+            Cadena de texto con el contenido concatenado de todas las páginas.
+            
+        Raises:
+            EmptyPDFTextError: Si el archivo es válido pero no contiene texto vectorial.
+            PDFExtractionError: Si el documento está corrupto o protegido por contraseña.
+        """
+        ...
+
