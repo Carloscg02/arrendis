@@ -10,8 +10,10 @@ import {
   Wallet, 
   FileText, 
   ReceiptText, 
-  Plus 
+  Plus,
+  ChevronRight
 } from "lucide-react";
+import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
   Property,
   Income,
@@ -61,6 +63,8 @@ export default function PropertyDetail() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
+  const [isIncomesOpen, setIsIncomesOpen] = useState(false);
+  const [isExpensesOpen, setIsExpensesOpen] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -255,86 +259,146 @@ export default function PropertyDetail() {
         </div>
 
         {activeTab === "dashboard" ? (
-          <div className="dashboard-grid">
-            {/* Incomes Section */}
-            <div className="data-section">
-            <div className="section-header">
-              <h3>Ingresos</h3>
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={() => setIsIncomeModalOpen(true)}
+          <div className="finance-sections">
+            {/* Collapsible Incomes Section */}
+            <div className={`data-section collapsible ${isIncomesOpen ? "open" : "collapsed"}`}>
+              <div
+                className="collapsible-header"
+                onClick={() => setIsIncomesOpen(!isIncomesOpen)}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isIncomesOpen}
               >
-                <Plus size={14} style={{ marginRight: '0.3rem' }} />
-                Registrar Ingreso
-              </button>
-            </div>
-            {incomes.length === 0 ? (
-              <p className="empty-text">Aún no hay ingresos registrados.</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th className="text-right">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incomes.map((inc) => (
-                    <tr key={inc.id}>
-                      <td>{inc.date}</td>
-                      <td><span className="badge badge-neutral">{inc.category}</span></td>
-                      <td>{inc.description}</td>
-                      <td className="text-right text-success">
-                        +{parseFloat(inc.amount).toFixed(2)} €
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                <div className="collapsible-header-left">
+                  <span className={`collapsible-chevron ${isIncomesOpen ? "open" : ""}`}>
+                    <ChevronRight size={18} />
+                  </span>
+                  <div className="collapsible-title-group">
+                    <h3>Ingresos</h3>
+                    <span className="badge badge-neutral">
+                      {incomes.length} {incomes.length === 1 ? "registro" : "registros"}
+                    </span>
+                    <span className="collapsible-total text-success">
+                      +{totalIncomes.toFixed(2)} €
+                    </span>
+                  </div>
+                </div>
+                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => setIsIncomeModalOpen(true)}
+                  >
+                    <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                    Registrar Ingreso
+                  </button>
+                </div>
+              </div>
 
-          {/* Expenses Section */}
-          <div className="data-section">
-            <div className="section-header">
-              <h3>Gastos</h3>
-              <button
-                className="btn btn-sm btn-secondary"
-                onClick={() => setIsExpenseModalOpen(true)}
-              >
-                <Plus size={14} style={{ marginRight: '0.3rem' }} />
-                Registrar Gasto
-              </button>
+              {isIncomesOpen && (
+                <div className="collapsible-content">
+                  {incomes.length === 0 ? (
+                    <p className="empty-text">Aún no hay ingresos registrados.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Categoría</th>
+                          <th>Descripción</th>
+                          <th className="text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incomes.map((inc) => (
+                          <tr key={inc.id}>
+                            <td>{inc.date}</td>
+                            <td>
+                              <span className="badge badge-neutral">
+                                {translateIncomeCategory(inc.category)}
+                              </span>
+                            </td>
+                            <td>{inc.description || "—"}</td>
+                            <td className="text-right text-success">
+                              +{parseFloat(inc.amount).toFixed(2)} €
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
             </div>
-            {expenses.length === 0 ? (
-              <p className="empty-text">Aún no hay gastos registrados.</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th className="text-right">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map((exp) => (
-                    <tr key={exp.id}>
-                      <td>{exp.date}</td>
-                      <td><span className="badge badge-warning">{exp.category}</span></td>
-                      <td>{exp.description}</td>
-                      <td className="text-right text-danger">
-                        -{parseFloat(exp.amount).toFixed(2)} €
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+
+            {/* Collapsible Expenses Section */}
+            <div className={`data-section collapsible ${isExpensesOpen ? "open" : "collapsed"}`}>
+              <div
+                className="collapsible-header"
+                onClick={() => setIsExpensesOpen(!isExpensesOpen)}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpensesOpen}
+              >
+                <div className="collapsible-header-left">
+                  <span className={`collapsible-chevron ${isExpensesOpen ? "open" : ""}`}>
+                    <ChevronRight size={18} />
+                  </span>
+                  <div className="collapsible-title-group">
+                    <h3>Gastos</h3>
+                    <span className="badge badge-neutral">
+                      {expenses.length} {expenses.length === 1 ? "registro" : "registros"}
+                    </span>
+                    <span className="collapsible-total text-danger">
+                      -{totalExpenses.toFixed(2)} €
+                    </span>
+                  </div>
+                </div>
+                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => setIsExpenseModalOpen(true)}
+                  >
+                    <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                    Registrar Gasto
+                  </button>
+                </div>
+              </div>
+
+              {isExpensesOpen && (
+                <div className="collapsible-content">
+                  {expenses.length === 0 ? (
+                    <p className="empty-text">Aún no hay gastos registrados.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Categoría</th>
+                          <th>Descripción</th>
+                          <th className="text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expenses.map((exp) => (
+                          <tr key={exp.id}>
+                            <td>{exp.date}</td>
+                            <td>
+                              <span className="badge badge-warning">
+                                {translateExpenseCategory(exp.category)}
+                              </span>
+                            </td>
+                            <td>{exp.description || "—"}</td>
+                            <td className="text-right text-danger">
+                              -{parseFloat(exp.amount).toFixed(2)} €
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : activeTab === "contracts" ? (
           <div className="contracts-tab-content">
