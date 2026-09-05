@@ -73,10 +73,10 @@ export default function PropertyDetail() {
   const [isIncomesOpen, setIsIncomesOpen] = useState(false);
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isInitial = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const [propData, incData, expData, profData] = await Promise.all([
         getPropertyById(id),
         getIncomes(id),
@@ -90,14 +90,14 @@ export default function PropertyDetail() {
     } catch (error) {
       console.error("Failed to load property data", error);
       toast.error("Error al cargar los datos de la propiedad");
-      navigate("/");
+      if (isInitial) navigate("/");
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [id]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,7 +106,7 @@ export default function PropertyDetail() {
     try {
       await uploadPropertyImage(id!, file);
       toast.success("Foto subida correctamente");
-      loadData();
+      loadData(false);
     } catch (error: any) {
       toast.error(error.message || "Error al subir la foto");
     }
@@ -118,7 +118,8 @@ export default function PropertyDetail() {
     try {
       await createIncome(data);
       setIsIncomeModalOpen(false);
-      loadData();
+      setIsIncomesOpen(true);
+      loadData(false);
       toast.success("Ingreso registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el ingreso");
@@ -129,7 +130,8 @@ export default function PropertyDetail() {
     try {
       await createExpense(data);
       setIsExpenseModalOpen(false);
-      loadData();
+      setIsExpensesOpen(true);
+      loadData(false);
       toast.success("Gasto registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el gasto");
@@ -140,7 +142,7 @@ export default function PropertyDetail() {
     try {
       await deleteExpense(expenseId);
       toast.success("Gasto eliminado correctamente");
-      loadData();
+      loadData(false);
     } catch (error: any) {
       toast.error(error.message || "Error al eliminar el gasto");
     }
@@ -515,7 +517,10 @@ export default function PropertyDetail() {
       <InvoiceUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={loadData}
+        onSuccess={() => {
+          setIsExpensesOpen(true);
+          loadData(false);
+        }}
       />
 
       <CupsModal
@@ -529,7 +534,7 @@ export default function PropertyDetail() {
         }}
         onSuccess={() => {
           toast.success("Códigos CUPS actualizados correctamente");
-          loadData();
+          loadData(false);
         }}
       />
 

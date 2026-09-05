@@ -29,10 +29,12 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         // give it a tiny tick to render
         setTimeout(() => focusableElements[0].focus(), 100);
       }
+    } else {
+      document.body.style.overflow = "unset";
     }
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "auto";
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
