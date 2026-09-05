@@ -31,9 +31,10 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<BatchInvoiceUploadResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasImported, setHasImported] = useState(false);
 
   // Email Ingestion Automation State
-  const [inboundAddress, setInboundAddress] = useState<string>('facturas@rental-handler.com');
+  const [inboundAddress, setInboundAddress] = useState<string>('facturas@arrendis.com');
   const [forwardingEmailInput, setForwardingEmailInput] = useState<string>('');
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
     setActiveTab('upload');
     setSaveMessage(null);
     setCopied(false);
+    setHasImported(false);
   };
 
   const handleCopyAddress = () => {
@@ -85,9 +87,9 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
   };
 
   const handleClose = () => {
-    const hasImported = result && result.successful_count > 0;
+    const wasImported = hasImported || (result && result.successful_count > 0);
     onClose();
-    if (hasImported) {
+    if (wasImported) {
       onSuccess();
     }
     setTimeout(() => {
@@ -140,6 +142,9 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
     try {
       const response = await uploadUtilityInvoices(selectedFiles);
       setResult(response);
+      if (response.successful_count > 0) {
+        setHasImported(true);
+      }
     } catch (err: any) {
       setErrorMessage(err.message || "Ocurrió un error al procesar las facturas.");
     } finally {
@@ -372,6 +377,46 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
                   <span>{errorMessage}</span>
                 </div>
               )}
+
+              {/* Automation Discovery Prompt in Upload Tab */}
+              <div
+                style={{
+                  padding: "0.65rem 0.85rem",
+                  backgroundColor: "var(--bg-tertiary)",
+                  border: "1px solid var(--panel-border)",
+                  borderRadius: "var(--radius-md)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Mail size={14} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />
+                  <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                    ¿Prefieres automatizarlo? Reenvía tus facturas a <code style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)", padding: "0.1rem 0.3rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--panel-border)" }}>{inboundAddress}</code>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("email")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--accent-secondary, #2563eb)",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    padding: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                  }}
+                >
+                  Configurar <ArrowRight size={12} />
+                </button>
+              </div>
 
               {/* Actions */}
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
@@ -614,6 +659,84 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Automation Discovery Tip Banner */}
+            <div
+              style={{
+                padding: "0.85rem 1rem",
+                backgroundColor: "var(--bg-tertiary)",
+                border: "1px solid var(--panel-border)",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.75rem",
+              }}
+            >
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "var(--radius-sm)",
+                  backgroundColor: "var(--bg-secondary)",
+                  border: "1px solid var(--panel-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-primary)",
+                  flexShrink: 0,
+                  marginTop: "1px",
+                }}
+              >
+                <Mail size={15} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: 1 }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  ¿Sabías que puedes automatizar esto?
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.45 }}>
+                  Configura el envío de facturas a{" "}
+                  <code
+                    style={{
+                      fontFamily: "monospace",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      backgroundColor: "var(--bg-secondary)",
+                      padding: "0.1rem 0.35rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--panel-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {inboundAddress}
+                  </code>{" "}
+                  o crea una regla de reenvío en tu correo. El sistema las asignará automáticamente a tu propiedad mediante el CUPS.
+                </p>
+                <div style={{ marginTop: "0.25rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResult(null);
+                      setActiveTab("email");
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      color: "var(--accent-secondary, #2563eb)",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                    }}
+                  >
+                    <span>Configurar regla de reenvío</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* List of item details */}
