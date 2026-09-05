@@ -7,12 +7,14 @@ crean entidades y value objects internamente, y llaman a los repositorios (puert
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
 from backend.domain.entities import (
     Expense,
     ExpenseCategory,
+    ExpenseSource,
     FiscalExpenseCategory,
     Income,
     IncomeCategory,
@@ -24,6 +26,10 @@ from backend.domain.entities import (
     LeaseContract,
     LeaseType,
     LLMProviderError,
+    UtilityExtractionError,
+    EmptyPDFTextError,
+    ExtractionFailedError,
+    PropertyNotFoundForCUPSError,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -36,9 +42,11 @@ from backend.domain.ports import (
     FiscalReportRendererPort,
     FiscalCarryforwardRepository,
     LLMProviderPort,
+    PDFTextExtractorPort,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest
+from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, UtilityInvoiceData
+from backend.domain.extraction import ExtractionStrategy, UtilityExtractorRegistry
 
 class CreatePropertyUseCase:
     """Caso de uso: crear y persistir una nueva propiedad."""
@@ -711,4 +719,105 @@ class CheckLLMHealthUseCase:
             return {"status": "ok", "model": response.model_name}
         except LLMProviderError as e:
             return {"status": "error", "model": None, "message": str(e)}
+
+
+@dataclass(frozen=True)
+class ProcessUtilityInvoiceResult:
+    """DTO de resultado de la ingesta y extracción de una factura de suministros."""
+    expense: Expense
+    property: Property
+    invoice_data: UtilityInvoiceData
+    strategy_used: str
+
+
+class ProcessUtilityInvoiceUseCase:
+    """Caso de uso: procesar una factura PDF, extraer sus datos y registrar el gasto pendiente."""
+
+    def __init__(
+        self,
+        pdf_extractor: PDFTextExtractorPort,
+        registry: UtilityExtractorRegistry,
+        property_repo: PropertyRepository,
+        expense_repo: ExpenseRepository,
+        fallback_strategy: ExtractionStrategy | None = None,
+    ) -> None:
+        self._pdf_extractor = pdf_extractor
+        self._registry = registry
+        self._property_repo = property_repo
+        self._expense_repo = expense_repo
+        self._fallback_strategy = fallback_strategy
+
+    def execute(self, pdf_bytes: bytes, user_id: str) -> ProcessUtilityInvoiceResult:
+        """Procesa una factura PDF y crea un Expense pendiente de verificación.
+
+        Args:
+            pdf_bytes: Bytes del archivo PDF de la factura.
+            user_id: ID del usuario autenticado (para matching multi-tenant).
+
+        Returns:
+            ProcessUtilityInvoiceResult con el gasto creado y metadatos.
+
+        Raises:
+            EmptyPDFTextError: Si el PDF no contiene texto digital extraíble.
+            ExtractionFailedError: Si ni Regex ni IA lograron extraer los datos requeridos.
+            PropertyNotFoundForCUPSError: Si el CUPS extraído no pertenece a ninguna propiedad del usuario.
+        """
+        # 1. Extraer texto plano con PyMuPDF
+        raw_text = self._pdf_extractor.extract_text(pdf_bytes)
+
+        # 2. Intentar estrategia Regex según comercializadora
+        invoice_data: UtilityInvoiceData | None = None
+        strategy_used = "unknown"
+        strategy = self._registry.find_strategy(raw_text)
+
+        if strategy is not None:
+            invoice_data = strategy.extract(raw_text)
+            if invoice_data is not None:
+                strategy_used = strategy.provider_name
+
+        # 3. Fallback a IA si no hubo coincidencia Regex o falló la extracción
+        if invoice_data is None:
+            if self._fallback_strategy is None:
+                raise ExtractionFailedError(
+                    "No se pudo extraer la factura con reglas Regex y no hay estrategia de IA configurada."
+                )
+            invoice_data = self._fallback_strategy.extract(raw_text)
+            if invoice_data is None:
+                raise ExtractionFailedError(
+                    "La extracción de la factura no pudo completarse ni por Regex ni por IA."
+                )
+            strategy_used = self._fallback_strategy.provider_name
+
+        # 4. Matching unívoco CUPS -> Property del usuario
+        prop = self._property_repo.find_by_cups(invoice_data.cups, user_id=user_id)
+        if prop is None:
+            raise PropertyNotFoundForCUPSError(
+                f"No se encontró ningún inmueble del usuario con el CUPS '{invoice_data.cups}'.",
+                cups=invoice_data.cups,
+                invoice_data=invoice_data,
+            )
+
+        # 5. Crear Expense en estado no verificado (AUTO_IMPORT)
+        expense = Expense(
+            property_id=prop.id,
+            amount=Money(invoice_data.amount, "EUR"),
+            date=invoice_data.issue_date,
+            category=ExpenseCategory.UTILITY,
+            description=f"Factura {invoice_data.provider_name} - {invoice_data.invoice_number or invoice_data.cups}",
+            fiscal_category=FiscalExpenseCategory.SERVICIOS_SUMINISTROS,
+            is_verified=False,
+            source=ExpenseSource.AUTO_IMPORT,
+            utility_data=invoice_data,
+        )
+
+        # 6. Persistir el gasto
+        self._expense_repo.save(expense)
+
+        return ProcessUtilityInvoiceResult(
+            expense=expense,
+            property=prop,
+            invoice_data=invoice_data,
+            strategy_used=strategy_used,
+        )
+
 

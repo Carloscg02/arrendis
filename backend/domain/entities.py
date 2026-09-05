@@ -396,3 +396,36 @@ class RateLimitError(LLMProviderError):
         if retry_after_seconds:
             msg += f" (retry after {retry_after_seconds}s)"
         super().__init__(msg, provider)
+
+
+# ──────────────────────────────────────────────
+# Excepciones de Suministros (E-02 / F-18)
+# ──────────────────────────────────────────────
+
+class UtilityExtractionError(Exception):
+    """Clase base para errores en el motor de extracción de suministros."""
+    pass
+
+
+class EmptyPDFTextError(UtilityExtractionError):
+    """El PDF está vacío o no contiene capa de texto vectorial digital."""
+    pass
+
+
+class PDFExtractionError(UtilityExtractionError):
+    """Error al abrir o decodificar el archivo PDF."""
+    pass
+
+
+class ExtractionFailedError(UtilityExtractionError):
+    """Ni Regex ni IA lograron extraer los campos mínimos obligatorios."""
+    pass
+
+
+class PropertyNotFoundForCUPSError(UtilityExtractionError):
+    """Los datos fueron extraídos pero el CUPS no está registrado en los inmuebles del usuario."""
+    def __init__(self, message: str, cups: str, invoice_data: any = None) -> None:
+        super().__init__(message)
+        self.cups = cups
+        self.invoice_data = invoice_data
+
