@@ -19,4 +19,6 @@ data/images/
 .agent/skills/*
 !.agent/skills/anti-slop-ui/
 .gemini/
-.impeccable/
+.impeccable/*.db-shm
+*.db-wal
+data/*.db*
