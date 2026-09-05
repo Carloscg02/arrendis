@@ -118,13 +118,13 @@ def find_by_cups_global(self, cups: str) -> Property | None:
     ...
 ```
 
-### 4.2 Caso de Uso: `ProcessInboundEmailUseCase` y Capa Anti-Spoofing
+### 4.2 Caso de Uso: `ProcessInboundEmailUseCase` y Capa Anti-Spoofing de Remitente
 
 En [`backend/application/use_cases.py`](file:///home/carlos/rental-handler/backend/application/use_cases.py):
 
 ```python
 class ProcessInboundEmailUseCase:
-    """Caso de uso para procesar correos entrantes con facturas adjuntas y protección anti-spoofing."""
+    """Caso de uso para procesar correos entrantes reenviados por usuarios con facturas adjuntas."""
 
     def __init__(
         self,
@@ -150,53 +150,33 @@ class ProcessInboundEmailUseCase:
         ...
 ```
 
-#### 🛡️ Modelo de Amenazas y Reglas de Autorización Anti-Spoofing
+#### 🛡️ Modelo de Seguridad: Reenvío Autorizado por Remitente y Mapeo de Correo Origen
 
-El vector de ataque principal consiste en que **un tercero malicioso conozca el CUPS de una propiedad ajena** (obtenido físicamente en un cuarto de contadores, rellano de comunidad o contrato antiguo) y envíe un PDF falso a `facturas@midominio.com` para inyectar gastos fraudulentos.
+Por diseño de producto y privacidad, **nunca se le pide al usuario que cambie su correo personal en la compañía eléctrica** por el de la app. El usuario siempre recibe las facturas en su propio buzón de correo y las reenvía (manualmente o mediante una regla de filtro automático en Gmail/Outlook) a `facturas@midominio.com`.
 
-Para neutralizar completamente esta amenaza, el caso de uso aplica una **Doble Barrera de Autorización de Origen**:
+Para evitar cualquier tipo de inyección ilegítima o spoofing de CUPS por parte de terceros:
 
-```
-                              ¿A qué dirección llegó el correo?
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      ▼                                               ▼
-         A buzón general de reenvío                    A dirección privada de propiedad
-         (`facturas@midominio.com`)                    (`prop-{property_id}@midominio.com`)
-                      │                                               │
-                      ▼                                               ▼
-        ¿`sender` coincide con el email              ¿La propiedad del recipient existe
-       del propietario de ese CUPS?                   Y su CUPS coincide con el del PDF?
-                      │                                               │
-             ┌────────┴────────┐                             ┌────────┴────────┐
-             ▼                 ▼                             ▼                 ▼
-          🟢 SÍ             🔴 NO                         🟢 SÍ             🔴 NO
-       (Autorizado)       (RECHAZADO:                  (Autorizado)       (RECHAZADO:
-        Contabilizar    UNAUTHORIZED_SENDER)            Contabilizar     CUPS_MISMATCH)
-```
-
-1. **Vía 1: Reenvío por el Propietario (`To: facturas@midominio.com`):**
-   - El propietario crea una regla de reenvío automático en su correo personal (ej. `carlos@gmail.com`).
-   - El backend busca el usuario por remitente: `sender_user = self._user_repo.find_by_email(sender)`.
-   - Se resuelve el CUPS del PDF y se busca el inmueble con `find_by_cups_global(cups)`.
-   - **Verificación de pertenencia:** Se comprueba `property.user_id == sender_user.id`.
-   - Si un atacante (`hacker@gmail.com`) envía un PDF con el CUPS de Carlos a `facturas@midominio.com`, la verificación falla inmediatamente -> Estado `UNAUTHORIZED_SENDER`, **el gasto se descarta por completo y se alerta en el reporte**.
-
-2. **Vía 2: Envío Directo por Comercializadora (`To: prop-{property_id}@midominio.com`):**
-   - Si el usuario configura en Endesa/Repsol que envíen la factura directamente a la app, el remitente será la comercializadora (`factura@repsol.com`).
-   - En este caso, el destinatario contiene el identificador privado de su inmueble (ej. `prop-796adc13@midominio.com` o `inmueble-{token}@midominio.com`).
-   - **Verificación de doble concordancia:** Se busca la propiedad por el ID/token del destinatario, y se exige que el CUPS del PDF coincida con el CUPS configurado en ese inmueble (`invoice_data.cups in (prop.cups_electricity, prop.cups_gas, prop.cups_water)`).
-   - Un atacante que solo conoce el CUPS no conoce la dirección privada del inmueble; y si intenta enviar un PDF con otro CUPS a esa dirección, es rechazado con `CUPS_MISMATCH`.
-
+1. **Mapeo de Correo de Origen Autorizado (`find_by_sender_email`):**
+   - El sistema analiza la cabecera `From` del correo y extrae la dirección de email limpia (ej. de `Carlos Cano <carlos@gmail.com>` a `carlos@gmail.com`).
+   - Busca en la base de datos si el remitente coincide con:
+     - El email de registro/login del usuario (`user.email`), **O BIEN**
+     - El email de facturas alternativo configurado por el usuario (`user.forwarding_email`), por si sus facturas le llegan a una cuenta de correo distinta a la que usó para registrarse.
+   - Si no existe ningún usuario autorizado con ese remitente -> **Rechazo inmediato** (`status: "unauthorized_sender"`, sin crear gastos).
+2. **Validación de Propiedad por CUPS (`find_by_cups(cups, user_id=user.id)`):**
+   - Si el remitente es un usuario legítimo, se extrae el CUPS del PDF.
+   - La búsqueda del inmueble se realiza **exclusivamente dentro de las propiedades del usuario remitente** (`user_id=user.id`).
+   - Si el PDF contiene un CUPS de otra persona o un CUPS manipulado que no le pertenece -> **Rechazo inmediato** (`status: "cups_not_owned"`).
 3. **Filtro de archivos y Privacidad:**
-   - Se descartan archivos que no sean PDF (`.pdf`). Si no hay PDFs, retorna `status="ignored"`.
+   - Descarta archivos que no sean PDF (`.pdf`). Si no hay PDFs, retorna `status="ignored"`.
    - Se ejecuta el pipeline de extracción (PyMuPDF + Regex/IA con privacidad).
-
 4. **Idempotencia y Anti-Duplicados:**
    - Comprueba si en los gastos de esa propiedad ya existe una factura con el mismo número o misma fecha e importe. Si existe, estado `DUPLICATE` y omite inserción.
+5. **Contabilización Directa:**
+   - Si es válida y nueva: inserta el gasto con `is_verified = True`, `source = ExpenseSource.AUTO_IMPORT`, y `fiscal_category = FiscalExpenseCategory.SERVICIOS_SUMINISTROS`.
 
-5. **Contabilización Directa de Facturas Legítimas:**
-   - Si supera la autorización y es nueva: inserta el gasto con `is_verified = True`, `source = ExpenseSource.AUTO_IMPORT`, y `fiscal_category = FiscalExpenseCategory.SERVICIOS_SUMINISTROS`.
+#### ⚖️ Consentimiento Explícito (GDPR / Buenas Prácticas)
+En la interfaz del usuario donde se muestra la dirección `facturas@midominio.com` y se permite configurar el email de origen alternativo, se incluye obligatoriamente el texto legal:
+> *"Al reenviar correos a esta dirección, autorizas el procesamiento automatizado del documento para extraer los datos de la factura."*
 
 
 ### 4.3 Endpoint de Webhook REST: `POST /api/webhooks/inbound-email`
