@@ -358,3 +358,40 @@ def test_get_fiscal_suggestions(client: TestClient, auth_user):
     
     assert len(data["unclassified_expenses"]) == 1
     assert data["unclassified_expenses"][0]["suggested_fiscal_category"] == "reparacion_conservacion"
+
+
+def test_concurrent_property_detail_requests(client: TestClient, auth_user):
+    """Verifica que peticiones concurrentes a los endpoints de detalle de propiedad no interfieran entre sí."""
+    import concurrent.futures
+
+    res = client.post("/api/properties", json=VALID_PROPERTY_PAYLOAD)
+    prop_id = res.json()["id"]
+
+    client.post("/api/incomes", json={
+        "property_id": prop_id,
+        "amount": 1000.00,
+        "date": "2026-07-01",
+        "category": "rent"
+    })
+    client.post("/api/expenses", json={
+        "property_id": prop_id,
+        "amount": 250.00,
+        "date": "2026-07-05",
+        "category": "community"
+    })
+
+    urls = [
+        f"/api/properties/{prop_id}",
+        f"/api/properties/{prop_id}/incomes",
+        f"/api/properties/{prop_id}/expenses",
+        f"/api/properties/{prop_id}/profit",
+    ]
+
+    def fetch(url):
+        return client.get(url).status_code
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(fetch, urls * 5))
+
+    assert all(status == 200 for status in results)
+

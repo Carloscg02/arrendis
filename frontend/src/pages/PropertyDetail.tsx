@@ -73,11 +73,13 @@ export default function PropertyDetail() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
   const [isIncomesOpen, setIsIncomesOpen] = useState(false);
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async (isInitial = false) => {
     if (!id) return;
     try {
       if (isInitial) setLoading(true);
+      setLoadError(null);
       const [propData, incData, expData, profData] = await Promise.all([
         getPropertyById(id),
         getIncomes(id),
@@ -88,10 +90,10 @@ export default function PropertyDetail() {
       setIncomes(incData);
       setExpenses(expData);
       setProfit(profData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load property data", error);
+      setLoadError(error.message || "Error al cargar los datos de la propiedad");
       toast.error("Error al cargar los datos de la propiedad");
-      if (isInitial) navigate("/");
     } finally {
       if (isInitial) setLoading(false);
     }
@@ -180,6 +182,27 @@ export default function PropertyDetail() {
       setIsConfirmOpen(false);
     }
   };
+
+  if (loadError && !property) {
+    return (
+      <div className="page-container" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+        <h3 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>
+          No se pudieron cargar los datos de la propiedad
+        </h3>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+          {loadError}
+        </p>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+          <button className="btn btn-secondary" onClick={() => navigate("/")}>
+            Volver al Portafolio
+          </button>
+          <button className="btn btn-primary" onClick={() => loadData(true)}>
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !property) {
     return (

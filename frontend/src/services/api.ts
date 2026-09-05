@@ -26,14 +26,30 @@ async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
   let res = await fetch(url, { ...options, headers });
   
   if (res.status === 401) {
-    try {
-      await authService.refresh();
-      token = authService.getAccessToken();
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
+    const originalToken = token;
+    const currentToken = authService.getAccessToken();
+
+    // Si otra petición concurrente ya refrescó el token mientras esta estaba en vuelo, reutilizarlo
+    if (currentToken && currentToken !== originalToken) {
+      token = currentToken;
+    } else {
+      try {
+        await authService.refresh();
+        token = authService.getAccessToken();
+      } catch {
+        authService.clearSession();
+        window.location.href = '/login';
+        return res;
       }
-      res = await fetch(url, { ...options, headers });
-    } catch (e) {
+    }
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    res = await fetch(url, { ...options, headers });
+
+    // Si aún después de refrescar persiste el 401, la sesión es verdaderamente inválida
+    if (res.status === 401) {
       authService.clearSession();
       window.location.href = '/login';
     }

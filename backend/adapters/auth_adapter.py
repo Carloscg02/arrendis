@@ -1,5 +1,6 @@
 """Adaptadores de autenticación — implementaciones de PasswordHasherPort y TokenServicePort."""
 from __future__ import annotations
+import os
 import datetime
 import bcrypt
 import jwt
@@ -16,9 +17,10 @@ class BcryptPasswordHasherAdapter(PasswordHasherPort):
 
 class JWTTokenServiceAdapter(TokenServicePort):
     def __init__(self, secret_key: str = "dev-secret-key-change-in-production",
-                 access_ttl_minutes: int = 15, refresh_ttl_days: int = 7) -> None:
+                 access_ttl_minutes: int | None = None, refresh_ttl_days: int = 7) -> None:
         self._secret_key = secret_key
-        self._access_ttl = datetime.timedelta(minutes=access_ttl_minutes)
+        ttl_minutes = access_ttl_minutes if access_ttl_minutes is not None else int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+        self._access_ttl = datetime.timedelta(minutes=ttl_minutes)
         self._refresh_ttl = datetime.timedelta(days=refresh_ttl_days)
         self._algorithm = "HS256"
 
