@@ -37,11 +37,13 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
 
   const handleClose = () => {
     const hasImported = result && result.successful_count > 0;
-    resetState();
     onClose();
     if (hasImported) {
       onSuccess();
     }
+    setTimeout(() => {
+      resetState();
+    }, 200);
   };
 
   const handleFilesAdded = (files: FileList | File[]) => {

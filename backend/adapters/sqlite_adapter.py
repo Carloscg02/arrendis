@@ -51,10 +51,13 @@ class SQLiteConnection:
         if db_path != ":memory:":
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self._connection = sqlite3.connect(db_path, check_same_thread=False)
+        self._connection = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
-        # Activar claves foráneas
+        # Activar claves foráneas y modo WAL para evitar bloqueos por concurrencia
         self._connection.execute("PRAGMA foreign_keys = ON")
+        if db_path != ":memory:":
+            self._connection.execute("PRAGMA journal_mode = WAL")
+            self._connection.execute("PRAGMA busy_timeout = 15000")
         self._create_tables()
 
     def _create_tables(self) -> None:
