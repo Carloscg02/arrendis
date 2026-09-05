@@ -3,6 +3,11 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import { getFiscalSuggestions, updateIncomeFiscalCategory, updateExpenseFiscalCategory } from "../services/api";
 import type { FiscalSuggestionsResponse } from "../types";
 import { useToast } from "./Toast";
+import { 
+  translateIncomeCategory, 
+  translateExpenseCategory, 
+  translateFiscalCategory 
+} from "../utils/translations";
 
 interface Props {
   propertyId: string;
@@ -76,10 +81,10 @@ export default function FiscalClassificationPanel({ propertyId, onClassified }: 
                   <ul className="suggestion-list">
                     {suggestions.unclassified_incomes.map(inc => (
                       <li key={inc.id} className="suggestion-item">
-                        <span>{inc.description || inc.category} ({inc.amount} €)</span>
+                        <span>{inc.description || translateIncomeCategory(inc.category)} ({inc.amount} €)</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <ArrowRight size={14} style={{ color: 'var(--text-muted)' }} />
-                          <span className="badge badge-success">{inc.suggested_fiscal_category}</span>
+                          <span className="badge badge-success">{translateFiscalCategory(inc.suggested_fiscal_category)}</span>
                         </div>
                       </li>
                     ))}
@@ -93,10 +98,10 @@ export default function FiscalClassificationPanel({ propertyId, onClassified }: 
                   <ul className="suggestion-list">
                     {suggestions.unclassified_expenses.map(exp => (
                       <li key={exp.id} className="suggestion-item">
-                        <span>{exp.description || exp.category} ({exp.amount} €)</span>
+                        <span>{exp.description || translateExpenseCategory(exp.category)} ({exp.amount} €)</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <ArrowRight size={14} style={{ color: 'var(--text-muted)' }} />
-                          <span className="badge badge-neutral">{exp.suggested_fiscal_category}</span>
+                          <span className="badge badge-neutral">{translateFiscalCategory(exp.suggested_fiscal_category)}</span>
                         </div>
                       </li>
                     ))}
