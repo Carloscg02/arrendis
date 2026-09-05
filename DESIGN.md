@@ -1,28 +1,28 @@
 ---
 name: Rental Handler
-description: Modern, professional rental property and Spanish fiscal management platform with editorial craft and de-slopped UI.
+description: Modern, professional rental property and Spanish fiscal management platform with editorial craft, crisp light porcelain aesthetic, and de-slopped UI.
 colors:
-  bg-primary: "#090a0c"
-  bg-secondary: "#111317"
-  bg-tertiary: "#181b20"
-  surface: "#14171d"
-  surface-subtle: "#1c2027"
-  border-subtle: "rgba(255, 255, 255, 0.08)"
-  border-hover: "rgba(255, 255, 255, 0.16)"
-  border-active: "rgba(255, 255, 255, 0.28)"
-  accent-primary: "#f3f4f6"
-  accent-primary-hover: "#ffffff"
-  accent-primary-fg: "#090a0c"
-  accent-muted: "#38bdf8"
-  text-primary: "#f9fafb"
-  text-secondary: "#9ca3af"
-  text-muted: "#6b7280"
-  danger: "#f87171"
-  danger-subtle: "rgba(248, 113, 113, 0.12)"
-  warning: "#fbbf24"
-  warning-subtle: "rgba(251, 191, 36, 0.12)"
-  success: "#34d399"
-  success-subtle: "rgba(52, 211, 153, 0.12)"
+  bg-primary: "#f8fafc"
+  bg-secondary: "#ffffff"
+  bg-tertiary: "#f1f5f9"
+  surface: "#ffffff"
+  surface-subtle: "#f8fafc"
+  border-subtle: "#e2e8f0"
+  border-hover: "#cbd5e1"
+  border-active: "#94a3b8"
+  accent-primary: "#0f172a"
+  accent-primary-hover: "#1e293b"
+  accent-primary-fg: "#ffffff"
+  accent-muted: "#0284c7"
+  text-primary: "#0f172a"
+  text-secondary: "#475569"
+  text-muted: "#94a3b8"
+  danger: "#dc2626"
+  danger-subtle: "rgba(220, 38, 38, 0.08)"
+  warning: "#d97706"
+  warning-subtle: "rgba(217, 119, 6, 0.08)"
+  success: "#059669"
+  success-subtle: "rgba(5, 150, 105, 0.08)"
 typography:
   display:
     fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -83,31 +83,31 @@ components:
   button-primary-hover:
     backgroundColor: "{colors.accent-primary-hover}"
   button-secondary:
-    backgroundColor: "transparent"
+    backgroundColor: "{colors.bg-secondary}"
     textColor: "{colors.text-primary}"
     rounded: "{rounded.md}"
     padding: "10px 20px"
 ---
 
-# Design System & Guidelines: Rental Handler
+# Design System & Guidelines: Rental Handler (Light Theme)
 
 ## Overview
 
-Rental Handler is a high-precision real estate and Spanish fiscal calculation platform. Its visual design language rejects generic AI-generated aesthetics ("AI Slop"—unnecessary nested cards, heavy borders, neon gradients, and redundant microcopy) in favor of an understated, confident, high-craft interface inspired by Stripe and Vercel.
+Rental Handler is a high-precision real estate and Spanish fiscal calculation platform. Its visual design language rejects generic AI-generated aesthetics ("AI Slop"—unnecessary nested cards, heavy borders, neon gradients, and redundant microcopy) in favor of an understated, confident, high-craft light interface inspired by Stripe, Vercel, and Linear.
 
 Key visual attributes:
-- **Quiet Authority**: Dark obsidian surfaces (`#090a0c`) with crisp typographic hierarchy and restrained contrast.
+- **Quiet Authority**: Crisp porcelain/snow surfaces (`#f8fafc`, `#ffffff`) with deep slate typography (`#0f172a`) and restrained contrast.
 - **De-carded Structure**: Flat layouts and natural white space separate distinct functional zones instead of stacking borders and nested cards.
 - **Data Density with Breathability**: Monospace values for financial precision, cleanly aligned metadata tables, and compact contextual actions.
 - **Smooth, Organic Transitions**: High-performance exponential easing (`cubic-bezier(0.16, 1, 0.3, 1)`); strict ban on bounce or spring wobbles and layout property animation.
 
 ## Colors
 
-- **Backgrounds**: Rooted in deep slate-black (`#090a0c`, `#111317`, `#181b20`), providing an immersive dark canvas that reduces eye fatigue for data-heavy operations.
-- **Surfaces**: Tonal subtle elevation (`#14171d`, `#1c2027`) used sparingly for focused modals or dropdowns.
-- **Borders**: Highly restrained semi-transparent borders (`rgba(255, 255, 255, 0.08)`) only when separation is functionally critical. No double borders or borders within cards.
-- **Accents**: Monochromatic primary accent (`#f3f4f6` off-white text on dark, dark on white buttons), paired with restrained semantic accents (Emerald green for positive yield, Amber for deductions, Coral red for liabilities or deletions).
-- **No Neon Gradients**: Pure, solid or subtle radial light washes only. No purple-to-blue saturated meshes or floating glow blobs.
+- **Backgrounds**: Rooted in crisp, clean whites and porcelain slates (`#f8fafc`, `#ffffff`, `#f1f5f9`), providing an airy, premium canvas.
+- **Surfaces**: Pure white (`#ffffff`) for elevated panels, tables, and modals.
+- **Borders**: Highly restrained hairline borders (`#e2e8f0` / `rgba(0, 0, 0, 0.08)`) only when separation is functionally critical. No double borders or borders within cards.
+- **Accents**: Monochromatic primary accent (`#0f172a` deep obsidian button on white canvas), paired with restrained semantic accents (Emerald `#059669` for positive yield, Amber `#d97706` for deductions, Crimson `#dc2626` for liabilities or deletions).
+- **No Neon Gradients**: Pure, solid or subtle tonal contrast only.
 
 ## Typography
 
@@ -118,19 +118,19 @@ Key visual attributes:
   - `H2` (1.35rem / 21px, weight 500, line-height 1.3, tracking -0.015em): Section headings.
   - `Body` (0.9375rem / 15px, weight 400, line-height 1.55): Content text and table values.
   - `Body Small / Label` (0.8125rem / 13px, weight 500, line-height 1.5, uppercase tracking 0.04em): Form labels and status badges.
-- **Anti-Slop Rule**: Delete redundant explanatory subtitles beneath self-evident titles (e.g., replace "Propiedades: Administra aquí tus propiedades" with simply "Propiedades").
+- **Anti-Slop Rule**: Delete redundant explanatory subtitles beneath self-evident titles.
 
 ## Layout
 
 - **Maximum Width**: 1280px centered (`margin: 0 auto; padding: 0 1.5rem;`).
-- **De-carding Protocol**: Lists of items (properties, contracts, expenses) are rendered as clean tabular rows or minimalist flat panels separated by vertical whitespace and single hairline dividers, not floating boxes with heavy shadows.
+- **De-carding Protocol**: Lists of items (properties, contracts, expenses) are rendered as clean tabular rows or minimalist flat panels separated by vertical whitespace and hairline dividers, not floating boxes with heavy shadows.
 - **Spacing Rhythm**: Consistent 8px grid (`8px`, `16px`, `24px`, `32px`, `48px`, `64px`).
 
 ## Elevation & Depth
 
-- **Flat Tonal Hierarchy**: Depth is achieved through tonal contrast (e.g. `#090a0c` canvas vs `#111317` surface), not heavy blurred drop-shadows.
+- **Flat Tonal Hierarchy**: Depth is achieved through crisp hairline borders (`#e2e8f0`) and subtle canvas contrast (`#f8fafc` canvas vs `#ffffff` surface), not heavy blurred drop-shadows.
 - **Shadows**:
-  - Flyout / Dropdown / Modal: `0 16px 40px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08)`.
+  - Flyout / Dropdown / Modal: `0 16px 36px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)`.
   - No shadows on flat cards or inline lists.
 
 ## Shapes
@@ -144,17 +144,17 @@ Key visual attributes:
 ## Components
 
 - **Buttons**:
-  - Primary: Off-white background, deep black text, slight brightness bump on hover (`transform: translateY(-1px)` maximum, no extreme scaling).
-  - Secondary / Outline: Transparent background with subtle border, becoming slightly brighter on hover.
+  - Primary: Deep slate background (`#0f172a`), pure white text, slight brightness bump on hover (`background: #1e293b`).
+  - Secondary / Outline: Pure white background with hairline border (`#e2e8f0`), text `#0f172a`, hover background `#f8fafc`.
   - Ghost / Link: No border, text-secondary shifting to text-primary.
 - **Inputs & Selects**:
-  - Understated background (`#090a0c`), 1px subtle border, soft focus ring with 0.08 alpha glow.
+  - Crisp white background (`#ffffff`), 1px border (`#e2e8f0`), soft focus ring (`rgba(15, 23, 42, 0.08)`).
 - **Modals & Overlays**:
-  - Darkened backdrop with blur (`rgba(0,0,0,0.75)` + `backdrop-filter: blur(8px)`).
-  - Modal window uses `#111317`, crisp 1px border, smooth enter transition via opacity + translateY(6px), no bounce springs.
+  - Darkened backdrop with blur (`rgba(15, 23, 42, 0.35)` + `backdrop-filter: blur(4px)`).
+  - Modal window uses `#ffffff`, crisp 1px border (`#e2e8f0`), smooth enter transition via opacity + translateY(6px), no bounce springs.
 - **Tables & Lists**:
-  - Clean edge-to-edge layout, header labels muted and uppercase, hover states subtle (`rgba(255, 255, 255, 0.02)`).
-  - Secondary actions (edit, delete, view contract) concealed behind an overflow button or aligned quietly at the end of the row.
+  - Clean edge-to-edge layout, header labels muted and uppercase, hover states subtle (`rgba(0, 0, 0, 0.02)`).
+  - Secondary actions concealed behind an overflow button or aligned quietly at the end of the row.
 
 ## Do's and Don'ts
 
@@ -166,7 +166,7 @@ Key visual attributes:
 
 ### Don't
 - DO NOT wrap every piece of information in an isolated `glass-panel` or card with its own border and shadow.
-- DO NOT use bouncy spring cubic-bezier easing (`cubic-bezier(0.175, 0.885, 0.32, 1.275)`). Use smooth exponential deceleration (`cubic-bezier(0.16, 1, 0.3, 1)`).
-- DO NOT animate layout properties (`width`, `height`, `margin`, `padding`). Animate `transform` and `opacity`.
+- DO NOT use bouncy spring cubic-bezier easing.
+- DO NOT animate layout properties (`width`, `height`, `margin`, `padding`).
 - DO NOT place obvious subtitle text under headings explaining the purpose of a button or page.
 - DO NOT crowd rows with 4+ visible action buttons; tuck secondary actions into context menus or detail views.
