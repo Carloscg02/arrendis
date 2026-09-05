@@ -1,30 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #090a0c;
-  --bg-secondary: #111317;
-  --bg-tertiary: #181b20;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
   
-  --panel-bg: #111317;
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --panel-border-hover: rgba(255, 255, 255, 0.16);
+  --panel-bg: #ffffff;
+  --panel-border: #e2e8f0;
+  --panel-border-hover: #cbd5e1;
   
-  --accent-primary: #f3f4f6;
-  --accent-primary-hover: #ffffff;
-  --accent-primary-fg: #090a0c;
+  --accent-primary: #0f172a;
+  --accent-primary-hover: #1e293b;
+  --accent-primary-fg: #ffffff;
   
-  --accent-secondary: #38bdf8; 
+  --accent-secondary: #0284c7; 
   
-  --danger: #f87171;
-  --danger-hover: #ef4444;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
   
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
   
-  --toast-success-bg: rgba(255, 255, 255, 0.05);
-  --toast-error-bg: rgba(248, 113, 113, 0.1);
-  --toast-info-bg: rgba(56, 189, 248, 0.1);
+  --toast-success-bg: #ffffff;
+  --toast-error-bg: #fef2f2;
+  --toast-info-bg: #f0f9ff;
 
   --radius-xl: 16px;
   --radius-lg: 12px;
@@ -32,9 +32,9 @@
   --radius-sm: 4px;
   --radius-pill: 9999px;
 
-  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
-  --shadow-card-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 20px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(15, 23, 42, 0.05);
   
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -81,7 +81,7 @@ h3 {
 
 p, div { 
   font-size: 1rem; 
-  font-weight: 300; 
+  font-weight: 400; 
 }
 
 label { 
@@ -108,6 +108,7 @@ label {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .btn {
@@ -119,14 +120,14 @@ label {
   border-radius: var(--radius-md);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.3s var(--ease-out);
+  transition: all 0.2s var(--ease-out);
   font-family: inherit;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
 }
 
 .btn:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .btn:focus-visible {
@@ -147,28 +148,29 @@ label {
 .btn-primary:hover {
   background-color: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
 .btn-secondary {
-  background-color: transparent;
+  background-color: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--panel-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--bg-tertiary);
   border-color: var(--panel-border-hover);
 }
 
 .btn-danger {
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(220, 38, 38, 0.06);
   color: var(--danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
 .btn-danger:hover {
-  background-color: rgba(239, 68, 68, 0.2);
+  background-color: rgba(220, 38, 38, 0.12);
 }
 
 .btn-link {
@@ -202,10 +204,11 @@ label {
   flex-direction: row;
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-card);
   position: relative;
   padding: 0;
 }
@@ -213,7 +216,7 @@ label {
 .property-card:hover {
   transform: translateY(-2px);
   border-color: var(--panel-border-hover);
-  background: #14171d;
+  box-shadow: var(--shadow-card-hover);
 }
 
 .property-card-image {
@@ -294,6 +297,7 @@ label {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -325,7 +329,7 @@ label {
   font-variant-numeric: tabular-nums;
 }
 
-.kpi-value.success { color: var(--text-primary); }
+.kpi-value.success { color: #059669; }
 .kpi-value.danger { color: var(--danger); }
 .kpi-value.info { color: var(--text-primary); }
 
@@ -336,13 +340,12 @@ label {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  backdrop-filter: blur(4px);
 }
 
-.badge-success { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); border: 1px solid var(--panel-border); }
-.badge-primary { background: var(--text-primary); color: var(--bg-primary); }
-.badge-warning { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.2); }
-.badge-neutral { background: transparent; color: var(--text-secondary); border: 1px solid var(--panel-border); }
+.badge-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.badge-primary { background: var(--accent-primary); color: var(--accent-primary-fg); }
+.badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.badge-neutral { background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--panel-border); }
 .badge-outline { border: 1px solid var(--panel-border); color: var(--text-secondary); }
 
 .form { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -357,15 +360,15 @@ label {
 
 input, select, textarea {
   width: 100%;
-  padding: 1rem;
-  background: var(--bg-primary);
+  padding: 0.875rem 1rem;
+  background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 1rem;
-  transition: all 0.3s var(--ease-out);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 0.95rem;
+  transition: all 0.2s var(--ease-out);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 select option {
@@ -376,9 +379,9 @@ select option {
 
 input:focus, select:focus, textarea:focus, input:focus-visible {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.02);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-primary);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
 .form-actions {
@@ -393,14 +396,15 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 .modal-overlay, .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
   padding: 1rem;
-  animation: fadeIn 0.3s var(--ease-out);
+  animation: fadeIn 0.2s var(--ease-out);
 }
 
 .modal-content, .confirm-dialog {
@@ -413,7 +417,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   border-radius: var(--radius-xl);
   border: 1px solid var(--panel-border);
   box-shadow: var(--shadow-modal);
-  animation: modal-scale-in 0.25s var(--ease-out);
+  animation: modal-scale-in 0.2s var(--ease-out);
 }
 
 .modal-header {
@@ -424,8 +428,8 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .modal-close {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--panel-border);
   color: var(--text-secondary);
   width: 32px;
   height: 32px;
@@ -438,7 +442,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .modal-close:hover { 
-  background: rgba(255, 255, 255, 0.1);
+  background: #e2e8f0;
   color: var(--text-primary); 
 }
 
@@ -463,6 +467,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   overflow: hidden;
   box-shadow: var(--shadow-card);
   border: 1px solid var(--panel-border);
+  background-color: var(--bg-tertiary);
 }
 
 .detail-hero-image {
@@ -476,7 +481,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .detail-hero-image-wrapper:hover .detail-hero-image {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .detail-hero-kpis {
@@ -494,8 +499,6 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   justify-content: center;
 }
 
-
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
@@ -507,6 +510,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .section-header {
@@ -544,12 +548,12 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 .data-table td {
   padding: 0.875rem 0.5rem;
   font-size: 0.875rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--panel-border);
   font-variant-numeric: tabular-nums;
 }
 
 .text-right { text-align: right !important; }
-.text-success { color: var(--text-primary); }
+.text-success { color: #059669; }
 .text-danger { color: var(--danger); }
 
 .empty-state {
@@ -589,8 +593,8 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-modal);
-  background: var(--bg-tertiary);
-  backdrop-filter: blur(12px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   animation: toast-slide-in 0.25s var(--ease-out);
 }
 
@@ -607,12 +611,12 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   bottom: 0;
   left: 0;
   height: 2px;
-  background: var(--text-primary);
+  background: var(--accent-primary);
   opacity: 0.2;
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%);
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
   background-size: 200% 100%;
   animation: skeleton-pulse 2s infinite linear;
   border-radius: var(--radius-md);
@@ -656,12 +660,12 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: #cbd5e1;
   border-radius: var(--radius-pill);
   border: 2px solid var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--panel-border-hover);
+  background: #94a3b8;
 }
 
 @media (max-width: 1024px) {
@@ -719,6 +723,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
 }
 
 .auth-header {
@@ -773,7 +778,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   text-decoration: underline;
 }
 
-/* F-07 Changes */
+/* App Header */
 
 .app-header {
   position: fixed;
@@ -781,7 +786,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   left: 0;
   width: 100%;
   height: 60px;
-  background: rgba(9, 10, 12, 0.88);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--panel-border);
@@ -868,7 +873,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 .spinner {
   width: 32px;
   height: 32px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(15, 23, 42, 0.1);
   border-radius: 50%;
   border-top-color: var(--accent-primary);
   animation: spin 0.8s linear infinite;
@@ -948,7 +953,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .status-dot.complete {
-  background-color: var(--accent-primary);
+  background-color: #059669;
 }
 
 .status-dot.pending {
@@ -965,6 +970,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-card);
 }
 
 .suggestion-list {
@@ -984,8 +990,8 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   align-items: center;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  background: transparent;
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--bg-secondary);
 }
 
 .suggestion-item:last-child {
@@ -1001,6 +1007,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   transition: all 0.2s var(--ease-out);
   margin-bottom: 1.5rem;
@@ -1016,12 +1023,12 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-secondary);
   transition: background 0.2s;
 }
 
 .fiscal-section-header:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-tertiary);
 }
 
 .fiscal-section-title {
@@ -1064,6 +1071,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -1104,24 +1112,24 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .status-badge.active {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .status-badge.inactive {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .type-badge {
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-sm);
-  background: transparent;
+  background: var(--bg-tertiary);
   border: 1px solid var(--panel-border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .contract-details {
@@ -1150,7 +1158,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .icon-btn {
-  background: transparent;
+  background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   color: var(--text-secondary);
   width: 32px;
@@ -1164,14 +1172,14 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
 .icon-btn.delete:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(220, 38, 38, 0.08);
   color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 /* Fiscal Report Styles */
@@ -1195,6 +1203,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -1211,7 +1220,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   display: flex;
   justify-content: space-between;
   padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--panel-border);
   font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
 }
@@ -1226,16 +1235,16 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   padding-top: 0.75rem;
 }
 .report-warning {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #fcd34d;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
   padding: 1rem;
   border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
 }
 .occupation-bar-container {
   height: 24px;
-  background: var(--bg-primary);
+  background: var(--bg-tertiary);
   border-radius: var(--radius-pill);
   overflow: hidden;
   margin: 1rem 0;
@@ -1249,6 +1258,7 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   padding: 2.5rem 2rem;
   text-align: center;
 }
@@ -1265,9 +1275,10 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 .fiscal-report-download-section {
   margin-top: 2rem;
   padding: 2rem;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -1284,13 +1295,13 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.25s var(--ease-out);
+  transition: all 0.2s var(--ease-out);
   box-shadow: var(--shadow-card);
 }
 
 .fiscal-report-download-btn:hover:not(:disabled) {
   background: var(--accent-primary-hover);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -1319,6 +1330,3 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
   color: var(--text-muted);
   font-style: italic;
 }
-
-
-
