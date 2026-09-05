@@ -70,15 +70,15 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
     <div className="contracts-section">
       <div className="section-header">
         <h3>Contratos de Arrendamiento</h3>
-        <button className="btn-primary" onClick={() => { setEditingContract(undefined); setIsFormOpen(true); }}>
-          <Plus size={16} /> Nuevo Contrato
+        <button className="btn btn-sm btn-primary" onClick={() => { setEditingContract(undefined); setIsFormOpen(true); }}>
+          <Plus size={14} style={{ marginRight: '0.3rem' }} /> Nuevo Contrato
         </button>
       </div>
 
       {contracts.length === 0 ? (
         <div className="empty-state">
-          <FileText size={48} className="empty-icon" />
-          <p>No hay contratos registrados para esta propiedad.</p>
+          <FileText size={36} className="empty-icon" strokeWidth={1.5} />
+          <p className="empty-text">No hay contratos registrados para esta propiedad.</p>
         </div>
       ) : (
         <div className="contracts-list">
@@ -88,7 +88,7 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
                 <h4>{contract.tenant_name}</h4>
                 <div className="contract-badges">
                   <span className={`status-badge ${contract.is_active ? 'active' : 'inactive'}`}>
-                    {contract.is_active ? '🟢 Activo' : '🔴 Finalizado'}
+                    {contract.is_active ? 'Activo' : 'Finalizado'}
                   </span>
                   <span className={`type-badge ${contract.lease_type}`}>
                     {TYPE_LABELS[contract.lease_type] || contract.lease_type}

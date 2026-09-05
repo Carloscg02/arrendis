@@ -12,3 +12,8 @@ __pycache__/
 *.sqlite3
 data/images/
 .env
+
+# Agent & Impeccable binaries
+.agent/
+.gemini/
+.impeccable/

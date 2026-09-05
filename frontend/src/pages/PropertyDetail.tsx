@@ -1,5 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { 
+  ArrowLeft, 
+  Upload, 
+  Trash2, 
+  TrendingUp, 
+  TrendingDown, 
+  Scale, 
+  Wallet, 
+  FileText, 
+  ReceiptText, 
+  Plus 
+} from "lucide-react";
 import type {
   Property,
   Income,
@@ -153,19 +165,19 @@ export default function PropertyDetail() {
       <KPICard
         title="Ingresos Totales"
         value={`${totalIncomes.toFixed(2)} €`}
-        icon="💰"
+        icon={<TrendingUp size={16} />}
         variant="success"
       />
       <KPICard
         title="Gastos Totales"
         value={`${totalExpenses.toFixed(2)} €`}
-        icon="📉"
+        icon={<TrendingDown size={16} />}
         variant="danger"
       />
       <KPICard
         title="Beneficio Neto"
         value={`${parseFloat(profit?.net_profit || "0").toFixed(2)} €`}
-        icon="📊"
+        icon={<Scale size={16} />}
         variant="info"
       />
     </>
@@ -175,20 +187,20 @@ export default function PropertyDetail() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <button className="btn btn-link mb-2" onClick={() => navigate("/")}>
-            ← Volver al Portafolio
+          <button className="btn btn-link mb-2" onClick={() => navigate("/")} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ArrowLeft size={14} /> Volver al Portafolio
           </button>
           <h1 className="page-title">{property.name}</h1>
           <p className="page-subtitle">
             {property.address.street}, {property.address.city}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button className="btn btn-secondary upload-btn" onClick={() => fileInputRef.current?.click()}>
-            📷 Subir Foto
+            <Upload size={14} style={{ marginRight: '0.35rem' }} /> Subir Foto
           </button>
           <button className="btn btn-danger" onClick={() => setIsConfirmOpen(true)}>
-            Eliminar Propiedad
+            <Trash2 size={14} style={{ marginRight: '0.35rem' }} /> Eliminar Propiedad
           </button>
         </div>
         <input
@@ -225,33 +237,35 @@ export default function PropertyDetail() {
             className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
             onClick={() => setActiveTab("dashboard")}
           >
-            📊 Finanzas
+            <Wallet size={16} /> Finanzas
           </button>
           <button 
             className={`tab-btn ${activeTab === "contracts" ? "active" : ""}`}
             onClick={() => setActiveTab("contracts")}
           >
-            📋 Contratos
+            <FileText size={16} /> Contratos
           </button>
           <button 
             className={`tab-btn ${activeTab === "fiscal" ? "active" : ""}`}
             onClick={() => setActiveTab("fiscal")}
           >
-            ⚖️ Datos Fiscales {property.has_fiscal_data ? "🟢" : "⚪"}
+            <ReceiptText size={16} /> Datos Fiscales
+            <span className={`status-dot ${property.has_fiscal_data ? "complete" : "pending"}`} />
           </button>
         </div>
 
         {activeTab === "dashboard" ? (
           <div className="dashboard-grid">
             {/* Incomes Section */}
-            <div className="data-section glass-panel">
+            <div className="data-section">
             <div className="section-header">
               <h3>Ingresos</h3>
               <button
                 className="btn btn-sm btn-primary"
                 onClick={() => setIsIncomeModalOpen(true)}
               >
-                + Registrar Ingreso
+                <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                Registrar Ingreso
               </button>
             </div>
             {incomes.length === 0 ? (
@@ -283,14 +297,15 @@ export default function PropertyDetail() {
           </div>
 
           {/* Expenses Section */}
-          <div className="data-section glass-panel">
+          <div className="data-section">
             <div className="section-header">
               <h3>Gastos</h3>
               <button
-                className="btn btn-sm btn-danger"
+                className="btn btn-sm btn-secondary"
                 onClick={() => setIsExpenseModalOpen(true)}
               >
-                + Registrar Gasto
+                <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                Registrar Gasto
               </button>
             </div>
             {expenses.length === 0 ? (
@@ -322,11 +337,11 @@ export default function PropertyDetail() {
           </div>
           </div>
         ) : activeTab === "contracts" ? (
-          <div className="contracts-tab-content glass-panel" style={{ padding: '2rem' }}>
+          <div className="contracts-tab-content">
             <ContractSection propertyId={property.id} />
           </div>
         ) : (
-          <div className="fiscal-tab-content glass-panel">
+          <div className="fiscal-tab-content">
             <FiscalDataForm 
               propertyId={property.id} 
               onSubmit={handleUpdateFiscalData} 
