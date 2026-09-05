@@ -14,6 +14,9 @@ data/images/
 .env
 
 # Agent & Impeccable binaries
-.agent/
+.agent/*
+!.agent/skills/
+.agent/skills/*
+!.agent/skills/anti-slop-ui/
 .gemini/
 .impeccable/
