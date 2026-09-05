@@ -116,7 +116,7 @@ def me(current_user: User = Depends(get_current_user)):
 
 @router.get("/forwarding-email", response_model=ForwardingEmailResponse)
 def get_forwarding_email(current_user: User = Depends(get_current_user)):
-    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@rental-handler.com")
+    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@arrendis.com")
     return ForwardingEmailResponse(
         forwarding_email=current_user.forwarding_email,
         inbound_address=inbound_address,
@@ -135,7 +135,7 @@ def update_forwarding_email(
         updated_user = use_case.execute(current_user.id, body.forwarding_email)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@rental-handler.com")
+    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@arrendis.com")
     return ForwardingEmailResponse(
         forwarding_email=updated_user.forwarding_email,
         inbound_address=inbound_address,

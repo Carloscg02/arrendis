@@ -82,7 +82,7 @@ sequenceDiagram
 ### 3.2 Experiencia en el Dashboard Web
 - El usuario no necesita hacer nada mensual: la factura aparece automáticamente en su tabla de gastos con el badge neutral del proveedor (`Repsol`, `Endesa`, etc.) y sus balances contables actualizados.
 - En el modal de subida (`InvoiceUploadModal.tsx`), se incluye una tarjeta informativa sutil:
-  > *"¿Sabías que puedes automatizar esto? Configura el envío de facturas a **`facturas@midominio.com`** o crea una regla de reenvío en tu correo. El sistema las asignará automáticamente a tu propiedad mediante el CUPS."*
+  > *"¿Sabías que puedes automatizar esto? Configura el envío de facturas a **`facturas@arrendis.com`** o crea una regla de reenvío en tu correo. El sistema las asignará automáticamente a tu propiedad mediante el CUPS."*
 
 ---
 
@@ -152,7 +152,7 @@ class ProcessInboundEmailUseCase:
 
 #### 🛡️ Modelo de Seguridad: Reenvío Autorizado por Remitente y Mapeo de Correo Origen
 
-Por diseño de producto y privacidad, **nunca se le pide al usuario que cambie su correo personal en la compañía eléctrica** por el de la app. El usuario siempre recibe las facturas en su propio buzón de correo y las reenvía (manualmente o mediante una regla de filtro automático en Gmail/Outlook) a `facturas@midominio.com`.
+Por diseño de producto y privacidad, **nunca se le pide al usuario que cambie su correo personal en la compañía eléctrica** por el de la app. El usuario siempre recibe las facturas en su propio buzón de correo y las reenvía (manualmente o mediante una regla de filtro automático en Gmail/Outlook) a `facturas@arrendis.com`.
 
 Para evitar cualquier tipo de inyección ilegítima o spoofing de CUPS por parte de terceros:
 
@@ -175,7 +175,7 @@ Para evitar cualquier tipo de inyección ilegítima o spoofing de CUPS por parte
    - Si es válida y nueva: inserta el gasto con `is_verified = True`, `source = ExpenseSource.AUTO_IMPORT`, y `fiscal_category = FiscalExpenseCategory.SERVICIOS_SUMINISTROS`.
 
 #### ⚖️ Consentimiento Explícito (GDPR / Buenas Prácticas)
-En la interfaz del usuario donde se muestra la dirección `facturas@midominio.com` y se permite configurar el email de origen alternativo, se incluye obligatoriamente el texto legal:
+En la interfaz del usuario donde se muestra la dirección `facturas@arrendis.com` y se permite configurar el email de origen alternativo, se incluye obligatoriamente el texto legal:
 > *"Al reenviar correos a esta dirección, autorizas el procesamiento automatizado del documento para extraer los datos de la factura."*
 
 
