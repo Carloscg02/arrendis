@@ -11,7 +11,11 @@ import {
   FileText, 
   ReceiptText, 
   Plus,
-  ChevronRight
+  ChevronRight,
+  UploadCloud,
+  Zap,
+  Flame,
+  Droplet
 } from "lucide-react";
 import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
@@ -30,6 +34,7 @@ import {
   getProfitReport,
   createIncome,
   createExpense,
+  deleteExpense,
   deleteProperty,
   uploadPropertyImage,
   updateFiscalData,
@@ -41,6 +46,7 @@ import FiscalClassificationPanel from "../components/FiscalClassificationPanel";
 import FiscalReportView from "../components/FiscalReportView";
 import { ContractSection } from "../components/ContractSection";
 import Modal from "../components/Modal";
+import InvoiceUploadModal from "../components/InvoiceUploadModal";
 import { useToast } from "../components/Toast";
 import { KPICard } from "../components/KPICard";
 import { SkeletonLoader } from "../components/SkeletonLoader";
@@ -60,6 +66,7 @@ export default function PropertyDetail() {
 
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
@@ -126,6 +133,16 @@ export default function PropertyDetail() {
       toast.success("Gasto registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el gasto");
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      await deleteExpense(expenseId);
+      toast.success("Gasto eliminado correctamente");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar el gasto");
     }
   };
 
@@ -356,6 +373,14 @@ export default function PropertyDetail() {
                 <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn btn-sm btn-secondary"
+                    onClick={() => setIsUploadModalOpen(true)}
+                    title="Importar una o varias facturas de suministros en PDF"
+                  >
+                    <UploadCloud size={14} style={{ marginRight: '0.3rem' }} />
+                    Importar Facturas PDF
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
                     onClick={() => setIsExpenseModalOpen(true)}
                   >
                     <Plus size={14} style={{ marginRight: '0.3rem' }} />
@@ -376,6 +401,7 @@ export default function PropertyDetail() {
                           <th>Categoría</th>
                           <th>Descripción</th>
                           <th className="text-right">Importe</th>
+                          <th style={{ width: '40px' }}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -383,13 +409,63 @@ export default function PropertyDetail() {
                           <tr key={exp.id}>
                             <td>{exp.date}</td>
                             <td>
-                              <span className="badge badge-warning">
-                                {translateExpenseCategory(exp.category)}
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span className="badge badge-warning">
+                                  {translateExpenseCategory(exp.category)}
+                                </span>
+                                {exp.utility_data && (
+                                  <span
+                                    className="badge"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                      fontSize: '0.75rem',
+                                      backgroundColor: '#f8fafc',
+                                      border: '1px solid #e2e8f0',
+                                      color: '#475569',
+                                      padding: '0.15rem 0.4rem',
+                                      borderRadius: '4px',
+                                    }}
+                                    title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
+                                  >
+                                    {exp.utility_data.utility_type === 'gas' ? (
+                                      <Flame size={12} style={{ color: '#ea580c' }} />
+                                    ) : exp.utility_data.utility_type === 'water' ? (
+                                      <Droplet size={12} style={{ color: '#0284c7' }} />
+                                    ) : (
+                                      <Zap size={12} style={{ color: '#d97706' }} />
+                                    )}
+                                    {exp.utility_data.provider_name.split(' ')[0]}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td>{exp.description || "—"}</td>
                             <td className="text-right text-danger">
                               -{parseFloat(exp.amount).toFixed(2)} €
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExpense(exp.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '0.25rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  borderRadius: '4px',
+                                  transition: 'color 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                title="Eliminar gasto"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -440,6 +516,12 @@ export default function PropertyDetail() {
           onCancel={() => setIsExpenseModalOpen(false)}
         />
       </Modal>
+
+      <InvoiceUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={loadData}
+      />
 
       <ConfirmDialog
         isOpen={isConfirmOpen}

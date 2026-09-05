@@ -429,3 +429,12 @@ class PropertyNotFoundForCUPSError(UtilityExtractionError):
         self.cups = cups
         self.invoice_data = invoice_data
 
+
+class DuplicateInvoiceError(UtilityExtractionError):
+    """La factura ya fue importada previamente para esta propiedad."""
+    def __init__(self, message: str, existing_expense: any = None, invoice_data: any = None) -> None:
+        super().__init__(message)
+        self.existing_expense = existing_expense
+        self.invoice_data = invoice_data
+
+

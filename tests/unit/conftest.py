@@ -108,6 +108,9 @@ class InMemoryExpenseRepository(ExpenseRepository):
     def find_by_property_id(self, property_id: str) -> list[Expense]:
         return [e for e in self._store.values() if e.property_id == property_id]
 
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        return self._store.get(expense_id)
+
     def delete(self, expense_id: str) -> None:
         self._store.pop(expense_id, None)
 

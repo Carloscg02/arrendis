@@ -18,8 +18,10 @@ import pytest
 from backend.application.use_cases import (
     ProcessUtilityInvoiceUseCase,
     ProcessUtilityInvoiceResult,
+    ProcessBatchUtilityInvoicesUseCase,
 )
 from backend.domain.entities import (
+    DuplicateInvoiceError,
     EmptyPDFTextError,
     Expense,
     ExpenseCategory,
@@ -27,10 +29,12 @@ from backend.domain.entities import (
     ExtractionConfidence,
     ExtractionFailedError,
     FiscalExpenseCategory,
+    Money,
     Property,
     PropertyNotFoundForCUPSError,
     PropertyStatus,
     PropertyType,
+    UtilityInvoiceData,
     UtilityType,
 )
 from backend.domain.extraction import (
@@ -119,7 +123,7 @@ def test_use_case_via_a_regex_success(
     assert saved_expense.date == date(2026, 8, 1)
     assert saved_expense.category == ExpenseCategory.UTILITY
     assert saved_expense.fiscal_category == FiscalExpenseCategory.SERVICIOS_SUMINISTROS
-    assert saved_expense.is_verified is False  # Regla crítica: pendiente de validación
+    assert saved_expense.is_verified is True  # F-20: Contabilización directa por defecto
     assert saved_expense.source == ExpenseSource.AUTO_IMPORT
     assert saved_expense.utility_data is not None
 
@@ -321,3 +325,178 @@ def test_use_case_raises_empty_pdf_when_extractor_raises(
 
     with pytest.raises(EmptyPDFTextError):
         use_case.execute(pdf_bytes=b"", user_id="user_123")
+
+
+def test_use_case_raises_duplicate_invoice_by_invoice_number(
+    mock_pdf_extractor, mock_property_repo, mock_expense_repo, sample_property
+):
+    """UT-F20-01: Lanza DuplicateInvoiceError si ya existe un gasto con el mismo CUPS y nº de factura."""
+    raw_repsol_text = (
+        "Factura de luz\n"
+        "CUPS\n"
+        "ES0031103721971011PR0F\n"
+        "Nº de factura\n"
+        "61088387754\n"
+        "Fecha de emisión\n"
+        "01/08/2026\n"
+        "Total factura\n"
+        "75,46 €\n"
+        "Repsol\n"
+    )
+    mock_pdf_extractor.extract_text.return_value = raw_repsol_text
+    mock_property_repo.find_by_cups.return_value = sample_property
+
+    # Simulamos que ya existe un gasto previo con ese mismo invoice_number
+    existing_expense = Expense(
+        property_id=sample_property.id,
+        amount=Money(Decimal("75.46"), "EUR"),
+        date=date(2026, 8, 1),
+        category=ExpenseCategory.UTILITY,
+        utility_data=UtilityInvoiceData(
+            cups="ES0031103721971011PR0F",
+            amount=Decimal("75.46"),
+            issue_date=date(2026, 8, 1),
+            provider_name="Repsol",
+            utility_type=UtilityType.ELECTRICITY,
+            invoice_number="61088387754",
+            extraction_confidence=ExtractionConfidence.HIGH,
+        ),
+    )
+    mock_expense_repo.find_by_property_id.return_value = [existing_expense]
+
+    registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
+    use_case = ProcessUtilityInvoiceUseCase(
+        pdf_extractor=mock_pdf_extractor,
+        registry=registry,
+        property_repo=mock_property_repo,
+        expense_repo=mock_expense_repo,
+    )
+
+    with pytest.raises(DuplicateInvoiceError) as exc_info:
+        use_case.execute(pdf_bytes=b"dummy", user_id="user_123")
+
+    assert "ya fue importada previamente" in str(exc_info.value)
+    assert exc_info.value.existing_expense == existing_expense
+    assert not mock_expense_repo.save.called
+
+
+def test_use_case_raises_duplicate_invoice_by_date_and_amount_fallback(
+    mock_pdf_extractor, mock_property_repo, mock_expense_repo, sample_property
+):
+    """UT-F20-02: Lanza DuplicateInvoiceError si coinciden CUPS, fecha e importe (sin número de factura)."""
+    raw_repsol_text = (
+        "Factura de luz\n"
+        "CUPS\n"
+        "ES0031103721971011PR0F\n"
+        "Fecha de emisión\n"
+        "01/08/2026\n"
+        "Total factura\n"
+        "75,46 €\n"
+        "Repsol\n"
+    )
+    mock_pdf_extractor.extract_text.return_value = raw_repsol_text
+    mock_property_repo.find_by_cups.return_value = sample_property
+
+    # Simulamos gasto existente sin invoice_number pero misma fecha e importe
+    existing_expense = Expense(
+        property_id=sample_property.id,
+        amount=Money(Decimal("75.46"), "EUR"),
+        date=date(2026, 8, 1),
+        category=ExpenseCategory.UTILITY,
+        utility_data=UtilityInvoiceData(
+            cups="ES0031103721971011PR0F",
+            amount=Decimal("75.46"),
+            issue_date=date(2026, 8, 1),
+            provider_name="Repsol",
+            utility_type=UtilityType.ELECTRICITY,
+            invoice_number=None,
+            extraction_confidence=ExtractionConfidence.HIGH,
+        ),
+    )
+    mock_expense_repo.find_by_property_id.return_value = [existing_expense]
+
+    registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
+    use_case = ProcessUtilityInvoiceUseCase(
+        pdf_extractor=mock_pdf_extractor,
+        registry=registry,
+        property_repo=mock_property_repo,
+        expense_repo=mock_expense_repo,
+    )
+
+    with pytest.raises(DuplicateInvoiceError) as exc_info:
+        use_case.execute(pdf_bytes=b"dummy", user_id="user_123")
+
+    assert "Ya existe una factura" in str(exc_info.value)
+    assert not mock_expense_repo.save.called
+
+
+def test_batch_use_case_processes_mixed_files(
+    mock_pdf_extractor, mock_property_repo, mock_expense_repo, sample_property
+):
+    """UT-F20-03: ProcessBatchUtilityInvoicesUseCase procesa múltiples archivos con éxitos, duplicados y errores."""
+    single_use_case = MagicMock(spec=ProcessUtilityInvoiceUseCase)
+
+    # 1. Factura exitosa
+    mock_exp = Expense(
+        property_id=sample_property.id,
+        amount=Money(Decimal("80.00"), "EUR"),
+        date=date(2026, 7, 1),
+        category=ExpenseCategory.UTILITY,
+    )
+    res_success = ProcessUtilityInvoiceResult(
+        expense=mock_exp,
+        property=sample_property,
+        invoice_data=UtilityInvoiceData(
+            cups="ES0031103721971011PR0F",
+            amount=Decimal("80.00"),
+            issue_date=date(2026, 7, 1),
+            provider_name="Repsol",
+            utility_type=UtilityType.ELECTRICITY,
+        ),
+        strategy_used="Repsol",
+    )
+
+    # 2. Factura duplicada
+    dup_error = DuplicateInvoiceError(
+        "Factura duplicada",
+        invoice_data=UtilityInvoiceData(
+            cups="ES0031103721971011PR0F",
+            amount=Decimal("75.46"),
+            issue_date=date(2026, 8, 1),
+            provider_name="Repsol",
+            utility_type=UtilityType.ELECTRICITY,
+        ),
+    )
+
+    # 3. Factura con error (ej. CUPS no encontrado)
+    cups_error = PropertyNotFoundForCUPSError("CUPS no encontrado", cups="ES9999999999999999PR0F")
+
+    single_use_case.execute.side_effect = [res_success, dup_error, cups_error]
+
+    batch_use_case = ProcessBatchUtilityInvoicesUseCase(single_use_case)
+    batch_result = batch_use_case.execute(
+        files=[
+            ("factura1.pdf", b"pdf1"),
+            ("factura2.pdf", b"pdf2"),
+            ("factura3.pdf", b"pdf3"),
+        ],
+        user_id="user_123",
+    )
+
+    assert batch_result.total_processed == 3
+    assert batch_result.successful_count == 1
+    assert batch_result.duplicate_count == 1
+    assert batch_result.error_count == 1
+    assert batch_result.total_amount_imported == Decimal("80.00")
+
+    assert batch_result.items[0].status == "success"
+    assert batch_result.items[0].filename == "factura1.pdf"
+    assert batch_result.items[0].property_name == sample_property.name
+
+    assert batch_result.items[1].status == "duplicate"
+    assert batch_result.items[1].filename == "factura2.pdf"
+    assert batch_result.items[1].cups == "ES0031103721971011PR0F"
+
+    assert batch_result.items[2].status == "error"
+    assert batch_result.items[2].filename == "factura3.pdf"
+

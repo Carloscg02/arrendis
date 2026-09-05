@@ -30,6 +30,7 @@ from backend.domain.entities import (
     EmptyPDFTextError,
     ExtractionFailedError,
     PropertyNotFoundForCUPSError,
+    DuplicateInvoiceError,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -731,7 +732,7 @@ class ProcessUtilityInvoiceResult:
 
 
 class ProcessUtilityInvoiceUseCase:
-    """Caso de uso: procesar una factura PDF, extraer sus datos y registrar el gasto pendiente."""
+    """Caso de uso: procesar una factura PDF, extraer sus datos y registrar el gasto directamente verificado."""
 
     def __init__(
         self,
@@ -748,7 +749,7 @@ class ProcessUtilityInvoiceUseCase:
         self._fallback_strategy = fallback_strategy
 
     def execute(self, pdf_bytes: bytes, user_id: str) -> ProcessUtilityInvoiceResult:
-        """Procesa una factura PDF y crea un Expense pendiente de verificación.
+        """Procesa una factura PDF y crea un Expense verificado.
 
         Args:
             pdf_bytes: Bytes del archivo PDF de la factura.
@@ -761,6 +762,7 @@ class ProcessUtilityInvoiceUseCase:
             EmptyPDFTextError: Si el PDF no contiene texto digital extraíble.
             ExtractionFailedError: Si ni Regex ni IA lograron extraer los datos requeridos.
             PropertyNotFoundForCUPSError: Si el CUPS extraído no pertenece a ninguna propiedad del usuario.
+            DuplicateInvoiceError: Si la factura ya fue importada previamente para la propiedad.
         """
         # 1. Extraer texto plano con PyMuPDF
         raw_text = self._pdf_extractor.extract_text(pdf_bytes)
@@ -797,7 +799,26 @@ class ProcessUtilityInvoiceUseCase:
                 invoice_data=invoice_data,
             )
 
-        # 5. Crear Expense en estado no verificado (AUTO_IMPORT)
+        # 5. Detección de duplicados (Idempotencia)
+        existing_expenses = self._expense_repo.find_by_property_id(prop.id)
+        for exp in existing_expenses:
+            if exp.utility_data is not None and exp.utility_data.cups == invoice_data.cups:
+                # Criterio 1: Mismo número de factura
+                if invoice_data.invoice_number and exp.utility_data.invoice_number == invoice_data.invoice_number:
+                    raise DuplicateInvoiceError(
+                        f"La factura de {invoice_data.provider_name} con nº {invoice_data.invoice_number} ya fue importada previamente.",
+                        existing_expense=exp,
+                        invoice_data=invoice_data,
+                    )
+                # Criterio 2: Misma fecha y mismo importe
+                if exp.date == invoice_data.issue_date and exp.amount.amount == invoice_data.amount:
+                    raise DuplicateInvoiceError(
+                        f"Ya existe una factura de {invoice_data.provider_name} del {invoice_data.issue_date} por importe de {invoice_data.amount} €.",
+                        existing_expense=exp,
+                        invoice_data=invoice_data,
+                    )
+
+        # 6. Crear Expense directamente verificado (AUTO_IMPORT)
         expense = Expense(
             property_id=prop.id,
             amount=Money(invoice_data.amount, "EUR"),
@@ -805,12 +826,12 @@ class ProcessUtilityInvoiceUseCase:
             category=ExpenseCategory.UTILITY,
             description=f"Factura {invoice_data.provider_name} - {invoice_data.invoice_number or invoice_data.cups}",
             fiscal_category=FiscalExpenseCategory.SERVICIOS_SUMINISTROS,
-            is_verified=False,
+            is_verified=True,
             source=ExpenseSource.AUTO_IMPORT,
             utility_data=invoice_data,
         )
 
-        # 6. Persistir el gasto
+        # 7. Persistir el gasto
         self._expense_repo.save(expense)
 
         return ProcessUtilityInvoiceResult(
@@ -819,5 +840,90 @@ class ProcessUtilityInvoiceUseCase:
             invoice_data=invoice_data,
             strategy_used=strategy_used,
         )
+
+
+@dataclass(frozen=True)
+class BatchInvoiceUploadItem:
+    """Resultado individual dentro de un lote de subida de facturas."""
+    filename: str
+    status: str  # "success" | "duplicate" | "error"
+    expense: Expense | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class BatchInvoiceUploadResult:
+    """Resumen consolidado del procesamiento de un lote de facturas."""
+    total_processed: int
+    successful_count: int
+    duplicate_count: int
+    error_count: int
+    total_amount_imported: Decimal
+    items: list[BatchInvoiceUploadItem]
+
+
+class ProcessBatchUtilityInvoicesUseCase:
+    """Caso de uso: procesar múltiples facturas PDF en lote."""
+
+    def __init__(self, single_invoice_use_case: ProcessUtilityInvoiceUseCase) -> None:
+        self._single_use_case = single_invoice_use_case
+
+    def execute(
+        self, files: list[tuple[str, bytes]], user_id: str
+    ) -> BatchInvoiceUploadResult:
+        items: list[BatchInvoiceUploadItem] = []
+        successful_count = 0
+        duplicate_count = 0
+        error_count = 0
+        total_amount = Decimal("0")
+
+        for filename, pdf_bytes in files:
+            try:
+                res = self._single_use_case.execute(pdf_bytes, user_id)
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="success",
+                        expense=res.expense,
+                        property_name=res.property.name,
+                        amount=res.invoice_data.amount,
+                        cups=res.invoice_data.cups,
+                    )
+                )
+                successful_count += 1
+                total_amount += res.invoice_data.amount
+            except DuplicateInvoiceError as e:
+                duplicate_count += 1
+                cups_val = getattr(e, 'cups', None) or (e.invoice_data.cups if getattr(e, 'invoice_data', None) else None)
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="duplicate",
+                        message=str(e),
+                        cups=cups_val,
+                    )
+                )
+            except Exception as e:
+                error_count += 1
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="error",
+                        message=str(e),
+                    )
+                )
+
+        return BatchInvoiceUploadResult(
+            total_processed=len(files),
+            successful_count=successful_count,
+            duplicate_count=duplicate_count,
+            error_count=error_count,
+            total_amount_imported=total_amount,
+            items=items,
+        )
+
 
 

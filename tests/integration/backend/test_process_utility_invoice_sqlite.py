@@ -79,7 +79,7 @@ def test_process_utility_invoice_full_lifecycle_sqlite(sqlite_connection):
 
     assert result.strategy_used == "Repsol"
     assert result.property.id == prop.id
-    assert result.expense.is_verified is False
+    assert result.expense.is_verified is True
     assert result.expense.source == ExpenseSource.AUTO_IMPORT
     assert result.expense.amount.amount == Decimal("75.46")
 
@@ -94,7 +94,7 @@ def test_process_utility_invoice_full_lifecycle_sqlite(sqlite_connection):
     assert db_expense.date == date(2026, 8, 1)
     assert db_expense.category == ExpenseCategory.UTILITY
     assert db_expense.fiscal_category == FiscalExpenseCategory.SERVICIOS_SUMINISTROS
-    assert db_expense.is_verified is False
+    assert db_expense.is_verified is True
     assert db_expense.source == ExpenseSource.AUTO_IMPORT
 
     # Verificar que el Value Object UtilityInvoiceData se deserializó íntegro

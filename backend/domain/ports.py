@@ -114,6 +114,11 @@ class ExpenseRepository(ABC):
         ...
 
     @abstractmethod
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        """Busca un gasto por su identificador."""
+        ...
+
+    @abstractmethod
     def delete(self, expense_id: str) -> None:
         """Elimina un gasto por su id."""
         ...

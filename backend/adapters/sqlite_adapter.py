@@ -579,6 +579,17 @@ class SQLiteExpenseRepository(ExpenseRepository):
         )
         return [self._row_to_entity(row) for row in cursor.fetchall()]
 
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        """Busca un gasto por su id."""
+        cursor = self._conn.execute(
+            "SELECT * FROM expenses WHERE id = ?",
+            (expense_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
     def delete(self, expense_id: str) -> None:
         """Elimina un gasto por su id."""
         self._conn.execute(

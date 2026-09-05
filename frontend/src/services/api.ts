@@ -10,6 +10,7 @@ import type {
   FiscalDataInput,
   LeaseContract,
   LeaseContractInput,
+  BatchInvoiceUploadResponse,
 } from "../types";
 import * as authService from './auth';
 
@@ -108,6 +109,35 @@ export async function createExpense(data: ExpenseCreateInput): Promise<Expense> 
     body: JSON.stringify(data),
   });
   return handleResponse<Expense>(res);
+}
+
+export async function deleteExpense(expenseId: string): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/expenses/${expenseId}`, { method: "DELETE" });
+  await handleResponse<void>(res);
+}
+
+export async function uploadUtilityInvoices(files: File[]): Promise<BatchInvoiceUploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  const res = await apiFetch(`${API_BASE}/expenses/upload-invoices`, {
+    method: "POST",
+    body: formData,
+  });
+  return handleResponse<BatchInvoiceUploadResponse>(res);
+}
+
+export async function updatePropertyCups(
+  propertyId: string,
+  cups: { cups_electricity?: string | null; cups_gas?: string | null; cups_water?: string | null }
+): Promise<Property> {
+  const res = await apiFetch(`${API_BASE}/properties/${propertyId}/cups`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cups),
+  });
+  return handleResponse<Property>(res);
 }
 
 export async function getProfitReport(propertyId: string): Promise<ProfitReport> {
