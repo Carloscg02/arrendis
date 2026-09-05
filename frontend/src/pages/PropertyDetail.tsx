@@ -13,9 +13,7 @@ import {
   Plus,
   ChevronRight,
   UploadCloud,
-  Zap,
-  Flame,
-  Droplet
+  SlidersHorizontal
 } from "lucide-react";
 import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
@@ -378,8 +376,8 @@ export default function PropertyDetail() {
                     onClick={() => setIsCupsModalOpen(true)}
                     title={property.cups_electricity ? `CUPS Luz: ${property.cups_electricity}` : "Configurar código CUPS de luz, gas o agua"}
                   >
-                    <Zap size={14} style={{ marginRight: '0.3rem', color: property.cups_electricity ? '#d97706' : undefined }} />
-                    {property.cups_electricity ? "CUPS Configurado" : "Configurar CUPS"}
+                    <SlidersHorizontal size={14} style={{ marginRight: '0.35rem' }} />
+                    Configurar CUPS
                   </button>
                   <button
                     className="btn btn-sm btn-secondary"
@@ -425,27 +423,14 @@ export default function PropertyDetail() {
                                 </span>
                                 {exp.utility_data && (
                                   <span
-                                    className="badge"
+                                    className="badge badge-neutral"
                                     style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem',
                                       fontSize: '0.75rem',
-                                      backgroundColor: '#f8fafc',
-                                      border: '1px solid #e2e8f0',
-                                      color: '#475569',
-                                      padding: '0.15rem 0.4rem',
+                                      padding: '0.15rem 0.45rem',
                                       borderRadius: '4px',
                                     }}
                                     title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
                                   >
-                                    {exp.utility_data.utility_type === 'gas' ? (
-                                      <Flame size={12} style={{ color: '#ea580c' }} />
-                                    ) : exp.utility_data.utility_type === 'water' ? (
-                                      <Droplet size={12} style={{ color: '#0284c7' }} />
-                                    ) : (
-                                      <Zap size={12} style={{ color: '#d97706' }} />
-                                    )}
                                     {exp.utility_data.provider_name.split(' ')[0]}
                                   </span>
                                 )}

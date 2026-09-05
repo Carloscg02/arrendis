@@ -6,9 +6,6 @@ import {
   AlertCircle, 
   Trash2, 
   Loader2, 
-  Zap, 
-  Flame, 
-  Droplet,
   ArrowRight
 } from "lucide-react";
 import Modal from "./Modal";
@@ -103,12 +100,6 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const renderUtilityIcon = (type?: string) => {
-    if (type === "gas") return <Flame size={14} className="text-orange-500" style={{ color: "#f97316" }} />;
-    if (type === "water") return <Droplet size={14} className="text-sky-500" style={{ color: "#0284c7" }} />;
-    return <Zap size={14} className="text-amber-500" style={{ color: "#d97706" }} />;
   };
 
   return (
@@ -446,10 +437,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
                     {item.status === "success" && (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--text-secondary)", fontSize: "0.8rem", paddingLeft: "1.4rem" }}>
                         {item.expense?.utility_data && (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                            {renderUtilityIcon(item.expense.utility_data.utility_type)}
-                            {item.expense.utility_data.provider_name}
-                          </span>
+                          <span>{item.expense.utility_data.provider_name}</span>
                         )}
                         {item.property_name && (
                           <span>Inmueble: <strong>{item.property_name}</strong></span>

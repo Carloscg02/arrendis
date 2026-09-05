@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Zap, Flame, Droplet, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import Modal from "./Modal";
 import { updatePropertyCups } from "../services/api";
 
@@ -98,10 +98,7 @@ export default function CupsModal({
         )}
 
         <div className="form-group">
-          <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <Zap size={14} style={{ color: "#d97706" }} />
-            CUPS Electricidad (Luz)
-          </label>
+          <label>CUPS Electricidad (Luz)</label>
           <input
             type="text"
             value={cupsElectricity}
@@ -115,10 +112,7 @@ export default function CupsModal({
         </div>
 
         <div className="form-group">
-          <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <Flame size={14} style={{ color: "#ea580c" }} />
-            CUPS Gas (Opcional)
-          </label>
+          <label>CUPS Gas (Opcional)</label>
           <input
             type="text"
             value={cupsGas}
@@ -129,10 +123,7 @@ export default function CupsModal({
         </div>
 
         <div className="form-group">
-          <label style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-            <Droplet size={14} style={{ color: "#0284c7" }} />
-            CUPS o Nº Contador Agua (Opcional)
-          </label>
+          <label>CUPS o Nº Contador Agua (Opcional)</label>
           <input
             type="text"
             value={cupsWater}
