@@ -2,15 +2,27 @@ import type { TokenResponse, UserResponse, LoginInput, RegisterInput } from '../
 
 const API_BASE = 'http://localhost:8000/api';
 
-let accessToken: string | null = null;
+const TOKEN_KEY = 'rental_handler_access_token';
+
+let accessToken: string | null = (typeof window !== 'undefined') ? sessionStorage.getItem(TOKEN_KEY) : null;
 let refreshPromise: Promise<TokenResponse> | null = null;
 
 export function getAccessToken(): string | null {
+  if (!accessToken && typeof window !== 'undefined') {
+    accessToken = sessionStorage.getItem(TOKEN_KEY);
+  }
   return accessToken;
 }
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      sessionStorage.setItem(TOKEN_KEY, token);
+    } else {
+      sessionStorage.removeItem(TOKEN_KEY);
+    }
+  }
 }
 
 async function handleAuthResponse(res: Response): Promise<TokenResponse> {
@@ -29,7 +41,7 @@ export async function register(data: RegisterInput): Promise<TokenResponse> {
     credentials: 'include',
   });
   const result = await handleAuthResponse(res);
-  accessToken = result.access_token;
+  setAccessToken(result.access_token);
   return result;
 }
 
@@ -41,7 +53,7 @@ export async function login(data: LoginInput): Promise<TokenResponse> {
     credentials: 'include',
   });
   const result = await handleAuthResponse(res);
-  accessToken = result.access_token;
+  setAccessToken(result.access_token);
   return result;
 }
 
@@ -57,7 +69,7 @@ export async function refresh(): Promise<TokenResponse> {
         credentials: 'include',
       });
       const result = await handleAuthResponse(res);
-      accessToken = result.access_token;
+      setAccessToken(result.access_token);
       return result;
     } finally {
       refreshPromise = null;
@@ -72,13 +84,14 @@ export async function logout(): Promise<void> {
     method: 'POST',
     credentials: 'include',
   });
-  accessToken = null;
+  setAccessToken(null);
 }
 
 export async function getMe(): Promise<UserResponse> {
+  const token = getAccessToken();
   const res = await fetch(`${API_BASE}/auth/me`, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      'Authorization': `Bearer ${token}`,
     },
     credentials: 'include',
   });
@@ -87,5 +100,5 @@ export async function getMe(): Promise<UserResponse> {
 }
 
 export function clearSession(): void {
-  accessToken = null;
+  setAccessToken(null);
 }

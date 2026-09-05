@@ -8,6 +8,7 @@ y ExpenseRepository usando SQLite como base de datos.
 from __future__ import annotations
 
 import sqlite3
+import threading
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -36,6 +37,7 @@ class SQLiteConnection:
 
     Almacena Decimal como TEXT para mantener la precisión.
     Usa consultas parametrizadas (?) para prevenir inyección SQL.
+    Soporta concurrencia multihilo segura mediante conexiones thread-local.
     """
 
     def __init__(self, db_path: str = "data/rental.db") -> None:
@@ -45,24 +47,40 @@ class SQLiteConnection:
             db_path: Ruta al archivo de base de datos SQLite.
                      Usar ":memory:" para bases de datos en memoria (tests).
         """
-        self._db_path = db_path
+        import uuid
+        self._raw_path = db_path
+        self._local = threading.local()
 
-        # Crear el directorio padre si no existe (excepto para :memory:)
-        if db_path != ":memory:":
+        if db_path == ":memory:":
+            self._is_uri = True
+            self._connect_path = f"file:mem_{uuid.uuid4().hex}?mode=memory&cache=shared"
+        else:
+            self._is_uri = False
+            self._connect_path = db_path
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self._connection = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
-        self._connection.row_factory = sqlite3.Row
-        # Activar claves foráneas y modo WAL para evitar bloqueos por concurrencia
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        if db_path != ":memory:":
-            self._connection.execute("PRAGMA journal_mode = WAL")
-            self._connection.execute("PRAGMA busy_timeout = 15000")
-        self._create_tables()
+        self._anchor_conn = self._create_connection()
+        self._create_tables(self._anchor_conn)
+        if not self._is_uri:
+            self._anchor_conn.close()
+            self._anchor_conn = None
 
-    def _create_tables(self) -> None:
+    def _create_connection(self) -> sqlite3.Connection:
+        if self._is_uri:
+            conn = sqlite3.connect(self._connect_path, timeout=30.0, uri=True, check_same_thread=False)
+        else:
+            conn = sqlite3.connect(self._connect_path, timeout=30.0, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        if not self._is_uri:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA busy_timeout = 15000")
+        return conn
+
+    def _create_tables(self, conn: sqlite3.Connection | None = None) -> None:
         """Crea las tablas si no existen."""
-        cursor = self._connection.cursor()
+        active_conn = conn if conn is not None else self.connection
+        cursor = active_conn.cursor()
 
         # Tabla de usuarios
         cursor.execute("""
@@ -228,23 +246,34 @@ class SQLiteConnection:
             )
         """)
 
-        self._connection.commit()
+        active_conn.commit()
 
     @property
     def connection(self) -> sqlite3.Connection:
-        """Retorna la conexión activa."""
-        return self._connection
+        """Retorna la conexión activa para el hilo actual."""
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            self._local.conn = self._create_connection()
+        return self._local.conn
 
     def close(self) -> None:
         """Cierra la conexión a la base de datos."""
-        self._connection.close()
+        if self._anchor_conn is not None:
+            self._anchor_conn.close()
+            self._anchor_conn = None
+        if hasattr(self._local, "conn") and self._local.conn is not None:
+            self._local.conn.close()
+            self._local.conn = None
 
 
 class SQLitePropertyRepository(PropertyRepository):
     """Implementación de PropertyRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, property: Property) -> None:
         """Guarda o actualiza una propiedad en la base de datos."""
@@ -466,7 +495,11 @@ class SQLiteIncomeRepository(IncomeRepository):
     """Implementación de IncomeRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, income: Income) -> None:
         """Guarda un ingreso en la base de datos."""
@@ -548,7 +581,11 @@ class SQLiteExpenseRepository(ExpenseRepository):
     """Implementación de ExpenseRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, expense: Expense) -> None:
         """Guarda un gasto en la base de datos."""
@@ -674,7 +711,11 @@ class SQLiteUserRepository(UserRepository):
     """Implementación de UserRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, user: User) -> None:
         """Guarda un usuario en la base de datos."""
@@ -762,7 +803,11 @@ class SQLiteLeaseContractRepository(LeaseContractRepository):
     """Implementación de LeaseContractRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, contract: LeaseContract) -> None:
         self._conn.execute(
@@ -828,7 +873,11 @@ class SQLiteFiscalCarryforwardRepository(FiscalCarryforwardRepository):
     """Implementación de FiscalCarryforwardRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, carryforward: FiscalCarryforward) -> None:
         self._conn.execute(
