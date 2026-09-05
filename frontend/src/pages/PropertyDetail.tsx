@@ -31,6 +31,7 @@ import {
   getExpenses,
   getProfitReport,
   createIncome,
+  deleteIncome,
   createExpense,
   deleteExpense,
   deleteProperty,
@@ -123,6 +124,16 @@ export default function PropertyDetail() {
       toast.success("Ingreso registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el ingreso");
+    }
+  };
+
+  const handleDeleteIncome = async (incomeId: string) => {
+    try {
+      await deleteIncome(incomeId);
+      toast.success("Ingreso eliminado correctamente");
+      loadData(false);
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar el ingreso");
     }
   };
 
@@ -325,6 +336,7 @@ export default function PropertyDetail() {
                           <th>Categoría</th>
                           <th>Descripción</th>
                           <th className="text-right">Importe</th>
+                          <th style={{ width: '40px' }}></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -339,6 +351,35 @@ export default function PropertyDetail() {
                             <td>{inc.description || "—"}</td>
                             <td className="text-right text-success">
                               +{parseFloat(inc.amount).toFixed(2)} €
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteIncome(inc.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#94a3b8',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '4px',
+                                  transition: 'color 0.15s, background-color 0.15s'
+                                }}
+                                title="Eliminar ingreso"
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#ef4444';
+                                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = '#94a3b8';
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -484,7 +525,7 @@ export default function PropertyDetail() {
               onSubmit={handleUpdateFiscalData} 
               onCancel={() => setActiveTab("dashboard")} 
             />
-            <FiscalClassificationPanel propertyId={property.id} onClassified={loadData} />
+            <FiscalClassificationPanel propertyId={property.id} onClassified={() => loadData(false)} />
             <FiscalReportView propertyId={property.id} />
           </div>
         )}

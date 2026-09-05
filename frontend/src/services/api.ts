@@ -97,6 +97,11 @@ export async function createIncome(data: IncomeCreateInput): Promise<Income> {
   return handleResponse<Income>(res);
 }
 
+export async function deleteIncome(incomeId: string): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/incomes/${incomeId}`, { method: "DELETE" });
+  await handleResponse<void>(res);
+}
+
 export async function getExpenses(propertyId: string): Promise<Expense[]> {
   const res = await apiFetch(`${API_BASE}/properties/${propertyId}/expenses`);
   return handleResponse<Expense[]>(res);

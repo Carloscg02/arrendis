@@ -86,6 +86,9 @@ class InMemoryIncomeRepository(IncomeRepository):
     def find_by_property_id(self, property_id: str) -> list[Income]:
         return [i for i in self._store.values() if i.property_id == property_id]
 
+    def find_by_id(self, income_id: str) -> Income | None:
+        return self._store.get(income_id)
+
     def delete(self, income_id: str) -> None:
         self._store.pop(income_id, None)
 

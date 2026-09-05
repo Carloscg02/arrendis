@@ -499,6 +499,17 @@ class SQLiteIncomeRepository(IncomeRepository):
         )
         return [self._row_to_entity(row) for row in cursor.fetchall()]
 
+    def find_by_id(self, income_id: str) -> Income | None:
+        """Busca un ingreso por su id."""
+        cursor = self._conn.execute(
+            "SELECT * FROM incomes WHERE id = ?",
+            (income_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
     def delete(self, income_id: str) -> None:
         """Elimina un ingreso por su id."""
         self._conn.execute(

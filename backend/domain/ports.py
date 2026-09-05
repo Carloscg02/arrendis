@@ -90,6 +90,11 @@ class IncomeRepository(ABC):
         ...
 
     @abstractmethod
+    def find_by_id(self, income_id: str) -> Income | None:
+        """Busca un ingreso por su identificador."""
+        ...
+
+    @abstractmethod
     def delete(self, income_id: str) -> None:
         """Elimina un ingreso por su id."""
         ...
