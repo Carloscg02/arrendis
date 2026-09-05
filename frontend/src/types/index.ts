@@ -63,7 +63,7 @@ export interface InvoiceUploadItemResult {
   property_name?: string | null;
   message?: string | null;
   cups?: string | null;
-  amount?: number | null;
+  amount?: number | string | null;
 }
 
 export interface BatchInvoiceUploadResponse {
@@ -71,7 +71,7 @@ export interface BatchInvoiceUploadResponse {
   successful_count: number;
   duplicate_count: number;
   error_count: number;
-  total_amount_imported: number;
+  total_amount_imported: number | string;
   items: InvoiceUploadItemResult[];
 }
 

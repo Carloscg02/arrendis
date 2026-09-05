@@ -333,7 +333,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
                 </div>
                 {result.successful_count > 0 && (
                   <div style={{ fontSize: "0.75rem", color: "#166534", marginTop: "0.2rem" }}>
-                    Total: {result.total_amount_imported.toFixed(2)} €
+                    Total: {parseFloat(String(result.total_amount_imported || 0)).toFixed(2)} €
                   </div>
                 )}
               </div>
@@ -438,7 +438,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
 
                     {item.status === "success" && (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "var(--text-secondary)", fontSize: "0.8rem", paddingLeft: "1.4rem" }}>
-                        {item.expense?.utility_data && (
+                        {item.expense?.utility_data?.provider_name && (
                           <span>{item.expense.utility_data.provider_name}</span>
                         )}
                         {item.property_name && (
