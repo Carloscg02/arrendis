@@ -474,14 +474,14 @@ export default function PropertyDetail() {
                                     }}
                                     title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
                                   >
-                                    {exp.utility_data.provider_name.split(' ')[0]}
+                                    {exp.utility_data.provider_name ? exp.utility_data.provider_name.split(' ')[0] : 'Suministro'}
                                   </span>
                                 )}
                               </div>
                             </td>
                             <td>{exp.description || "—"}</td>
                             <td className="text-right text-danger">
-                              -{parseFloat(exp.amount).toFixed(2)} €
+                              -{parseFloat(String(exp.amount || 0)).toFixed(2)} €
                             </td>
                             <td className="text-right">
                               <button
