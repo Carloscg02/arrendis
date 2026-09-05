@@ -127,3 +127,14 @@ def get_process_batch_utility_invoices_use_case(
     from backend.application.use_cases import ProcessBatchUtilityInvoicesUseCase
     return ProcessBatchUtilityInvoicesUseCase(single_use_case)
 
+
+def get_process_inbound_email_use_case(
+    user_repo: SQLiteUserRepository = Depends(get_user_repo),
+    single_use_case: ProcessUtilityInvoiceUseCase = Depends(get_process_utility_invoice_use_case),
+) -> ProcessInboundEmailUseCase:
+    from backend.application.use_cases import ProcessInboundEmailUseCase
+    return ProcessInboundEmailUseCase(
+        user_repo=user_repo,
+        single_invoice_use_case=single_use_case,
+    )
+

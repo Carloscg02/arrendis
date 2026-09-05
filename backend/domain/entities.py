@@ -286,6 +286,7 @@ class User:
     email: Email
     password_hash: PasswordHash
     username: str
+    forwarding_email: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
@@ -436,5 +437,33 @@ class DuplicateInvoiceError(UtilityExtractionError):
         super().__init__(message)
         self.existing_expense = existing_expense
         self.invoice_data = invoice_data
+
+
+@dataclass(frozen=True)
+class InboundInvoiceItemResult:
+    """Resultado individual de un archivo procesado en el correo entrante."""
+    filename: str
+    status: str  # "success" | "duplicate" | "cups_not_owned" | "unmatched_cups" | "error"
+    expense: Expense | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class InboundEmailProcessResult:
+    """Resultado del procesamiento de un correo entrante."""
+    status: str  # "success" | "unauthorized_sender" | "ignored" | "error"
+    sender: str
+    recipient: str
+    subject: str
+    total_attachments: int
+    processed_count: int
+    duplicate_count: int
+    error_count: int
+    items: list[InboundInvoiceItemResult]
+    message: str = ""
+
 
 

@@ -151,6 +151,21 @@ class InMemoryUserRepository(UserRepository):
         return next((u for u in self._users if u.id == user_id), None)
     def find_by_email(self, email: str) -> User | None:
         return next((u for u in self._users if u.email.value == email.lower()), None)
+    def find_by_sender_email(self, email: str) -> User | None:
+        clean = email.strip().lower()
+        return next(
+            (
+                u
+                for u in self._users
+                if u.email.value == clean
+                or (u.forwarding_email and u.forwarding_email.strip().lower() == clean)
+            ),
+            None,
+        )
+    def update_forwarding_email(self, user_id: str, forwarding_email: str | None) -> None:
+        u = self.find_by_id(user_id)
+        if u:
+            u.forwarding_email = forwarding_email.strip().lower() if forwarding_email else None
 
 class FakePasswordHasherAdapter(PasswordHasherPort):
     """Hasher falso para tests: hash = '$2b$fake$' + password, verify = comparación directa."""

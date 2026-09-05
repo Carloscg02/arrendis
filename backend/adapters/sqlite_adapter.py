@@ -70,9 +70,14 @@ class SQLiteConnection:
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 username TEXT NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                forwarding_email TEXT DEFAULT NULL
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN forwarding_email TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass  # La columna ya existe
 
         # Tabla de propiedades
         cursor.execute("""
@@ -676,14 +681,15 @@ class SQLiteUserRepository(UserRepository):
         try:
             self._conn.execute(
                 """
-                INSERT INTO users (id, email, username, password_hash)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO users (id, email, username, password_hash, forwarding_email)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     user.id,
                     user.email.value,
                     user.username,
                     user.password_hash.hash_value,
+                    user.forwarding_email,
                 ),
             )
             self._conn.commit()
@@ -706,7 +712,7 @@ class SQLiteUserRepository(UserRepository):
     def find_by_email(self, email: str) -> User | None:
         """Busca un usuario por su email."""
         cursor = self._conn.execute(
-            "SELECT * FROM users WHERE email = ?",
+            "SELECT * FROM users WHERE LOWER(email) = ?",
             (email.lower(),),
         )
         row = cursor.fetchone()
@@ -714,14 +720,41 @@ class SQLiteUserRepository(UserRepository):
             return None
         return self._row_to_entity(row)
 
+    def find_by_sender_email(self, email: str) -> User | None:
+        """Busca un usuario por su email principal o su email de reenvío autorizado (case-insensitive)."""
+        clean = email.strip().lower()
+        cursor = self._conn.execute(
+            "SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(forwarding_email) = ?",
+            (clean, clean),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
+    def update_forwarding_email(self, user_id: str, forwarding_email: str | None) -> None:
+        """Actualiza el email de reenvío autorizado de un usuario."""
+        clean = forwarding_email.strip().lower() if forwarding_email else None
+        self._conn.execute(
+            "UPDATE users SET forwarding_email = ? WHERE id = ?",
+            (clean, user_id),
+        )
+        self._conn.commit()
+
     @staticmethod
     def _row_to_entity(row: sqlite3.Row) -> User:
         """Convierte una fila de SQLite a una entidad User."""
+        forwarding_email = None
+        try:
+            forwarding_email = row["forwarding_email"]
+        except (IndexError, KeyError):
+            pass
         return User(
             id=row["id"],
             email=Email(row["email"]),
             username=row["username"],
             password_hash=PasswordHash(row["password_hash"]),
+            forwarding_email=forwarding_email,
         )
 
 

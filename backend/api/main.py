@@ -22,6 +22,7 @@ from backend.api.routes.properties import router as properties_router
 from backend.api.routes.auth import router as auth_router
 from backend.api.routes.contracts import router as contracts_router
 from backend.api.routes.llm import router as llm_router
+from backend.api.routes.webhooks import router as webhooks_router
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
@@ -70,6 +71,7 @@ app.include_router(expenses_router)
 app.include_router(auth_router)
 app.include_router(contracts_router)
 app.include_router(llm_router)
+app.include_router(webhooks_router)
 
 # Mount static files para servir imágenes de propiedades
 _images_dir = Path("data/images")
