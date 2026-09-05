@@ -3,7 +3,7 @@ import React from 'react';
 interface KPICardProps {
   title: string;
   value: string | number;
-  icon: string;
+  icon?: React.ReactNode;
   variant: 'success' | 'danger' | 'info';
 }
 
@@ -11,8 +11,8 @@ export const KPICard: React.FC<KPICardProps> = ({ title, value, icon, variant })
   return (
     <div className="kpi-card">
       <div className="kpi-header">
-        <span>{icon}</span>
-        <span>{title}</span>
+        {icon && <span className="kpi-icon">{icon}</span>}
+        <span className="kpi-title">{title}</span>
       </div>
       <div className={`kpi-value ${variant}`}>
         {value}

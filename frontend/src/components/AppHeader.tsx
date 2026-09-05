@@ -1,5 +1,6 @@
 
 import { Link } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 export default function AppHeader() {
@@ -9,8 +10,10 @@ export default function AppHeader() {
     <header className="app-header">
       <div className="app-header__container">
         <Link to="/" className="app-header__logo">
-          <span className="app-header__logo-icon">🏠</span>
-          <span className="app-header__logo-text">Gestión de Alquileres</span>
+          <span className="app-header__logo-icon">
+            <Building2 size={18} />
+          </span>
+          <span className="app-header__logo-text">Rental Handler</span>
         </Link>
         {user && (
           <div className="app-header__user">
