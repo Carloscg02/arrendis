@@ -168,6 +168,14 @@ class UserResponse(BaseModel):
     id: str
     email: str
     username: str
+    forwarding_email: str | None = None
+
+class ForwardingEmailUpdate(BaseModel):
+    forwarding_email: str | None = None
+
+class ForwardingEmailResponse(BaseModel):
+    forwarding_email: str | None = None
+    inbound_address: str
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -343,3 +351,28 @@ class LLMHealthResponse(BaseModel):
     status: str           # "ok" | "not_configured" | "error"
     model: str | None     # Nombre del modelo si está configurado
     message: str | None = None  # Mensaje descriptivo si hay error
+
+
+# ──────────────────────────────────────────────
+# Inbound Email / Webhook Schemas (F-21)
+# ──────────────────────────────────────────────
+
+class InboundEmailItemResultSchema(BaseModel):
+    filename: str
+    status: str  # "success" | "duplicate" | "cups_not_owned" | "error"
+    property_name: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+    message: str | None = None
+
+class InboundEmailWebhookResponse(BaseModel):
+    status: str  # "success" | "unauthorized_sender" | "ignored" | "error"
+    sender: str
+    recipient: str
+    subject: str
+    total_attachments: int
+    processed_count: int
+    duplicate_count: int
+    error_count: int
+    items: list[InboundEmailItemResultSchema]
+    message: str = ""

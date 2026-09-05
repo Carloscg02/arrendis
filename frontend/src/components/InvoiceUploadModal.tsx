@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   UploadCloud, 
   FileText, 
@@ -6,10 +6,15 @@ import {
   AlertCircle, 
   Trash2, 
   Loader2, 
-  ArrowRight
+  ArrowRight,
+  Mail,
+  Copy,
+  Check,
+  ShieldCheck
 } from "lucide-react";
 import Modal from "./Modal";
-import { uploadUtilityInvoices } from "../services/api";
+import { uploadUtilityInvoices, getForwardingEmail, updateForwardingEmail } from "../services/api";
+import { useAuth } from "./AuthProvider";
 import type { BatchInvoiceUploadResponse, InvoiceUploadItemResult } from "../types";
 
 interface InvoiceUploadModalProps {
@@ -19,13 +24,33 @@ interface InvoiceUploadModalProps {
 }
 
 export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: InvoiceUploadModalProps) {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'upload' | 'email'>('upload');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<BatchInvoiceUploadResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Email Ingestion Automation State
+  const [inboundAddress, setInboundAddress] = useState<string>('facturas@rental-handler.com');
+  const [forwardingEmailInput, setForwardingEmailInput] = useState<string>('');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      getForwardingEmail()
+        .then((res) => {
+          if (res.inbound_address) setInboundAddress(res.inbound_address);
+          if (res.forwarding_email) setForwardingEmailInput(res.forwarding_email);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   const resetState = () => {
     setSelectedFiles([]);
@@ -33,6 +58,30 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
     setIsProcessing(false);
     setResult(null);
     setErrorMessage(null);
+    setActiveTab('upload');
+    setSaveMessage(null);
+    setCopied(false);
+  };
+
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText(inboundAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveForwardingEmail = async () => {
+    setIsSavingEmail(true);
+    setSaveMessage(null);
+    try {
+      const res = await updateForwardingEmail(forwardingEmailInput.trim() || null);
+      setForwardingEmailInput(res.forwarding_email || '');
+      setSaveMessage('Guardado correctamente');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      setSaveMessage(err.message || 'Error al guardar email');
+    } finally {
+      setIsSavingEmail(false);
+    }
   };
 
   const handleClose = () => {
@@ -107,207 +156,397 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Importar Facturas de Suministros">
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {!result ? (
-          <>
-            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: 0 }}>
-              Sube una o varias facturas en PDF (luz, gas o agua). Se extraerán automáticamente los datos mediante el CUPS y se contabilizarán en tu propiedad.
-            </p>
-
-            {/* Drop Zone */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+        {/* Tab Switcher */}
+        {!result && (
+          <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--panel-border)", paddingBottom: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab("upload")}
               style={{
-                border: `2px dashed ${isDragging ? "var(--accent-secondary)" : "var(--panel-border)"}`,
-                backgroundColor: isDragging ? "var(--bg-tertiary)" : "var(--bg-primary)",
-                borderRadius: "var(--radius-lg)",
-                padding: "2rem 1.5rem",
-                textAlign: "center",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                gap: "0.75rem",
+                gap: "0.4rem",
+                padding: "0.4rem 0.85rem",
+                borderRadius: "var(--radius-md)",
+                fontSize: "0.85rem",
+                fontWeight: activeTab === "upload" ? 600 : 500,
+                backgroundColor: activeTab === "upload" ? "var(--bg-tertiary)" : "transparent",
+                color: activeTab === "upload" ? "var(--text-primary)" : "var(--text-secondary)",
+                border: "none",
+                cursor: "pointer",
               }}
             >
+              <UploadCloud size={15} />
+              Subir Archivos PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("email")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.4rem 0.85rem",
+                borderRadius: "var(--radius-md)",
+                fontSize: "0.85rem",
+                fontWeight: activeTab === "email" ? 600 : 500,
+                backgroundColor: activeTab === "email" ? "var(--bg-tertiary)" : "transparent",
+                color: activeTab === "email" ? "var(--text-primary)" : "var(--text-secondary)",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Mail size={15} />
+              Reenvío por Email
+            </button>
+          </div>
+        )}
+
+        {!result ? (
+          activeTab === "upload" ? (
+            <>
+              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: 0 }}>
+                Sube una o varias facturas en PDF (luz, gas o agua). Se extraerán automáticamente los datos mediante el CUPS y se contabilizarán en tu propiedad.
+              </p>
+
+              {/* Drop Zone */}
               <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
                 style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "50%",
-                  backgroundColor: "var(--bg-secondary)",
+                  border: `2px dashed ${isDragging ? "var(--accent-secondary)" : "var(--panel-border)"}`,
+                  backgroundColor: isDragging ? "var(--bg-tertiary)" : "var(--bg-primary)",
+                  borderRadius: "var(--radius-lg)",
+                  padding: "2rem 1.5rem",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--accent-secondary)",
-                  boxShadow: "var(--shadow-card)",
+                  gap: "0.75rem",
                 }}
               >
-                <UploadCloud size={24} />
-              </div>
-              <div>
-                <p style={{ fontWeight: 500, color: "var(--text-primary)", margin: "0 0 0.25rem 0" }}>
-                  Arrastra tus archivos PDF aquí
-                </p>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>
-                  o haz clic para explorar tus carpetas (admite selección múltiple)
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,application/pdf"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  if (e.target.files) handleFilesAdded(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-
-            {/* Selected files list */}
-            {selectedFiles.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text-secondary)" }}>
-                    Archivos seleccionados ({selectedFiles.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFiles([])}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "0.8rem",
-                      color: "var(--danger)",
-                      cursor: "pointer",
-                      padding: "0.2rem 0.4rem",
-                    }}
-                  >
-                    Limpiar todo
-                  </button>
-                </div>
-
                 <div
                   style={{
-                    maxHeight: "180px",
-                    overflowY: "auto",
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--bg-secondary)",
                     display: "flex",
-                    flexDirection: "column",
-                    gap: "0.4rem",
-                    paddingRight: "0.25rem",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--accent-secondary)",
+                    boxShadow: "var(--shadow-card)",
                   }}
                 >
-                  {selectedFiles.map((file, idx) => (
-                    <div
-                      key={`${file.name}-${idx}`}
+                  <UploadCloud size={24} />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 500, color: "var(--text-primary)", margin: "0 0 0.25rem 0" }}>
+                    Arrastra tus archivos PDF aquí
+                  </p>
+                  <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>
+                    o haz clic para explorar tus carpetas (admite selección múltiple)
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,application/pdf"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    if (e.target.files) handleFilesAdded(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+
+              {/* Selected files list */}
+              {selectedFiles.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                      Archivos seleccionados ({selectedFiles.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFiles([])}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "0.5rem 0.75rem",
-                        backgroundColor: "var(--bg-tertiary)",
-                        borderRadius: "var(--radius-md)",
-                        fontSize: "0.85rem",
+                        background: "none",
+                        border: "none",
+                        fontSize: "0.8rem",
+                        color: "var(--danger)",
+                        cursor: "pointer",
+                        padding: "0.2rem 0.4rem",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", overflow: "hidden" }}>
-                        <FileText size={16} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />
-                        <span
-                          style={{
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            maxWidth: "280px",
-                            fontWeight: 500,
-                          }}
-                          title={file.name}
-                        >
-                          {file.name}
-                        </span>
-                        <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-                          ({formatFileSize(file.size)})
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFile(idx);
-                        }}
+                      Limpiar todo
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      maxHeight: "180px",
+                      overflowY: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.4rem",
+                      paddingRight: "0.25rem",
+                    }}
+                  >
+                    {selectedFiles.map((file, idx) => (
+                      <div
+                        key={`${file.name}-${idx}`}
                         style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--text-muted)",
-                          cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          padding: "0.2rem",
+                          justifyContent: "space-between",
+                          padding: "0.5rem 0.75rem",
+                          backgroundColor: "var(--bg-tertiary)",
+                          borderRadius: "var(--radius-md)",
+                          fontSize: "0.85rem",
                         }}
-                        title="Quitar archivo"
                       >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", overflow: "hidden" }}>
+                          <FileText size={16} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />
+                          <span
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: "280px",
+                              fontWeight: 500,
+                            }}
+                            title={file.name}
+                          >
+                            {file.name}
+                          </span>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                            ({formatFileSize(file.size)})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFile(idx);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--text-muted)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "0.2rem",
+                          }}
+                          title="Quitar archivo"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {errorMessage && (
+              {errorMessage && (
+                <div
+                  style={{
+                    padding: "0.75rem 1rem",
+                    backgroundColor: "var(--toast-error-bg)",
+                    border: "1px solid #fecaca",
+                    borderRadius: "var(--radius-md)",
+                    color: "var(--danger)",
+                    fontSize: "0.85rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleClose}
+                  disabled={isProcessing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleUploadAndProcess}
+                  disabled={selectedFiles.length === 0 || isProcessing}
+                  style={{ minWidth: "150px" }}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" style={{ marginRight: "0.5rem" }} />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight size={16} style={{ marginRight: "0.4rem" }} />
+                      Procesar {selectedFiles.length > 0 ? `(${selectedFiles.length})` : ""}
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            /* Email Tab */
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 0.25rem 0" }}>
+                  Ingesta automática por reenvío de correo
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                  Configura una regla de reenvío en tu correo o reenvía directamente tus facturas en PDF. El sistema identificará tu propiedad a través del CUPS y registrará el gasto verificado automáticamente.
+                </p>
+              </div>
+
+              {/* Inbound Address Well */}
               <div
                 style={{
-                  padding: "0.75rem 1rem",
-                  backgroundColor: "var(--toast-error-bg)",
-                  border: "1px solid #fecaca",
+                  padding: "0.85rem 1rem",
+                  backgroundColor: "var(--bg-tertiary)",
+                  border: "1px solid var(--panel-border)",
                   borderRadius: "var(--radius-md)",
-                  color: "var(--danger)",
-                  fontSize: "0.85rem",
                   display: "flex",
-                  alignItems: "center",
+                  flexDirection: "column",
                   gap: "0.5rem",
                 }}
               >
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                <span>{errorMessage}</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>
+                  Dirección de recepción
+                </span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                  <code
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      color: "var(--text-primary)",
+                      backgroundColor: "var(--bg-secondary)",
+                      padding: "0.3rem 0.6rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--panel-border)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {inboundAddress}
+                  </code>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}
+                    onClick={handleCopyAddress}
+                  >
+                    {copied ? <Check size={14} style={{ color: "var(--success)" }} /> : <Copy size={14} />}
+                    {copied ? "Copiado" : "Copiar"}
+                  </button>
+                </div>
               </div>
-            )}
 
-            {/* Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleClose}
-                disabled={isProcessing}
+              {/* Anti-Spoofing & Sender Configuration */}
+              <div
+                style={{
+                  padding: "0.85rem 1rem",
+                  backgroundColor: "var(--bg-secondary)",
+                  border: "1px solid var(--panel-border)",
+                  borderRadius: "var(--radius-md)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
               >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleUploadAndProcess}
-                disabled={selectedFiles.length === 0 || isProcessing}
-                style={{ minWidth: "150px" }}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <ShieldCheck size={16} style={{ color: "var(--text-secondary)" }} />
+                  <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                    Seguridad y Remitente Autorizado
+                  </span>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.4 }}>
+                  Por seguridad anti-spoofing, el sistema solo procesa correos procedentes de tu email de cuenta o de la dirección de reenvío autorizada que indiques aquí.
+                </p>
+
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  Email de cuenta: <strong style={{ color: "var(--text-secondary)" }}>{user?.email || "cargando..."}</strong> (autorizado)
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-secondary)" }}>
+                    Email alternativo donde recibes las facturas (opcional):
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <input
+                      type="email"
+                      placeholder="ej. facturas.personales@gmail.com"
+                      value={forwardingEmailInput}
+                      onChange={(e) => setForwardingEmailInput(e.target.value)}
+                      style={{
+                        flex: 1,
+                        fontSize: "0.85rem",
+                        padding: "0.4rem 0.6rem",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--panel-border)",
+                        backgroundColor: "var(--bg-primary)",
+                        color: "var(--text-primary)",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleSaveForwardingEmail}
+                      disabled={isSavingEmail}
+                      style={{ fontSize: "0.8rem", padding: "0.4rem 0.85rem", flexShrink: 0 }}
+                    >
+                      {isSavingEmail ? "Guardando..." : "Guardar"}
+                    </button>
+                  </div>
+                  {saveMessage && (
+                    <span style={{ fontSize: "0.75rem", color: saveMessage.includes("Error") ? "var(--danger)" : "var(--success)" }}>
+                      {saveMessage}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Explicit Legal Consent (GDPR Mandatory) */}
+              <div
+                style={{
+                  padding: "0.75rem 0.85rem",
+                  backgroundColor: "var(--bg-tertiary)",
+                  border: "1px solid var(--panel-border)",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "0.75rem",
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.45,
+                }}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" style={{ marginRight: "0.5rem" }} />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <ArrowRight size={16} style={{ marginRight: "0.4rem" }} />
-                    Procesar {selectedFiles.length > 0 ? `(${selectedFiles.length})` : ""}
-                  </>
-                )}
-              </button>
+                <strong style={{ color: "var(--text-primary)" }}>Consentimiento de procesamiento:</strong>
+                <p style={{ margin: "0.25rem 0 0 0", fontStyle: "italic" }}>
+                  "Al reenviar correos a esta dirección, autorizas el procesamiento automatizado del documento para extraer los datos de la factura."
+                </p>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                <button type="button" className="btn btn-secondary" onClick={handleClose}>
+                  Cerrar
+                </button>
+              </div>
             </div>
-          </>
+          )
         ) : (
           /* Results View */
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>

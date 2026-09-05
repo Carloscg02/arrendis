@@ -266,3 +266,21 @@ export async function downloadFiscalReportPdf(propertyId: string, year: number):
   window.URL.revokeObjectURL(url);
 }
 
+import type { ForwardingEmailResponse } from "../types";
+
+export async function getForwardingEmail(): Promise<ForwardingEmailResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/forwarding-email`);
+  return handleResponse<ForwardingEmailResponse>(res);
+}
+
+export async function updateForwardingEmail(
+  forwardingEmail: string | null
+): Promise<ForwardingEmailResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/forwarding-email`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ forwarding_email: forwardingEmail }),
+  });
+  return handleResponse<ForwardingEmailResponse>(res);
+}
+

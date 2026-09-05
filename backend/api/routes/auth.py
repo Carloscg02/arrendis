@@ -1,10 +1,24 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
+import os
+
 from backend.adapters.sqlite_adapter import SQLiteConnection, SQLiteUserRepository
 from backend.adapters.auth_adapter import BcryptPasswordHasherAdapter, JWTTokenServiceAdapter
 from backend.api.dependencies import get_db, get_user_repo, get_hasher, get_token_service, get_current_user
-from backend.api.schemas import UserRegisterRequest, UserLoginRequest, UserResponse, TokenResponse
-from backend.application.use_cases import RegisterUserUseCase, LoginUserUseCase, RefreshTokenUseCase
+from backend.api.schemas import (
+    UserRegisterRequest,
+    UserLoginRequest,
+    UserResponse,
+    TokenResponse,
+    ForwardingEmailUpdate,
+    ForwardingEmailResponse,
+)
+from backend.application.use_cases import (
+    RegisterUserUseCase,
+    LoginUserUseCase,
+    RefreshTokenUseCase,
+    UpdateForwardingEmailUseCase,
+)
 from backend.domain.entities import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -21,7 +35,12 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     )
 
 def _user_response(user: User) -> UserResponse:
-    return UserResponse(id=user.id, email=user.email.value, username=user.username)
+    return UserResponse(
+        id=user.id,
+        email=user.email.value,
+        username=user.username,
+        forwarding_email=user.forwarding_email,
+    )
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -93,3 +112,31 @@ def logout(response: Response):
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
     return _user_response(current_user)
+
+
+@router.get("/forwarding-email", response_model=ForwardingEmailResponse)
+def get_forwarding_email(current_user: User = Depends(get_current_user)):
+    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@rental-handler.com")
+    return ForwardingEmailResponse(
+        forwarding_email=current_user.forwarding_email,
+        inbound_address=inbound_address,
+    )
+
+
+@router.put("/forwarding-email", response_model=ForwardingEmailResponse)
+def update_forwarding_email(
+    body: ForwardingEmailUpdate,
+    current_user: User = Depends(get_current_user),
+    db: SQLiteConnection = Depends(get_db),
+):
+    user_repo = SQLiteUserRepository(db)
+    use_case = UpdateForwardingEmailUseCase(user_repo)
+    try:
+        updated_user = use_case.execute(current_user.id, body.forwarding_email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    inbound_address = os.getenv("INBOUND_EMAIL_ADDRESS", "facturas@rental-handler.com")
+    return ForwardingEmailResponse(
+        forwarding_email=updated_user.forwarding_email,
+        inbound_address=inbound_address,
+    )

@@ -109,6 +109,12 @@ export interface UserResponse {
   id: string;
   email: string;
   username: string;
+  forwarding_email?: string | null;
+}
+
+export interface ForwardingEmailResponse {
+  forwarding_email: string | null;
+  inbound_address: string;
 }
 
 export interface TokenResponse {

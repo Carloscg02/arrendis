@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from email.utils import parseaddr
+
 from backend.domain.entities import (
     Expense,
     ExpenseCategory,
@@ -31,6 +33,8 @@ from backend.domain.entities import (
     ExtractionFailedError,
     PropertyNotFoundForCUPSError,
     DuplicateInvoiceError,
+    InboundInvoiceItemResult,
+    InboundEmailProcessResult,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -923,6 +927,172 @@ class ProcessBatchUtilityInvoicesUseCase:
             error_count=error_count,
             total_amount_imported=total_amount,
             items=items,
+        )
+
+
+class UpdateForwardingEmailUseCase:
+    """Caso de uso: actualizar el email de reenvío autorizado para la ingesta de facturas."""
+
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._user_repo = user_repo
+
+    def execute(self, user_id: str, forwarding_email: str | None) -> User:
+        user = self._user_repo.find_by_id(user_id)
+        if user is None:
+            raise ValueError(f"No existe el usuario con id '{user_id}'.")
+
+        clean = forwarding_email.strip().lower() if forwarding_email and forwarding_email.strip() else None
+        if clean:
+            # Validar sintaxis con el Value Object Email
+            Email(clean)
+
+        self._user_repo.update_forwarding_email(user_id, clean)
+        user.forwarding_email = clean
+        return user
+
+
+class ProcessInboundEmailUseCase:
+    """Caso de uso: Procesar facturas de suministros recibidas por email (F-21).
+
+    Verifica la identidad del remitente contra los emails autorizados del usuario
+    (email de registro o forwarding_email), filtra los adjuntos PDF, extrae los
+    datos de la factura y persiste el gasto verificado si el CUPS pertenece a un
+    inmueble del usuario.
+    """
+
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        single_invoice_use_case: ProcessUtilityInvoiceUseCase,
+    ) -> None:
+        self._user_repo = user_repo
+        self._single_use_case = single_invoice_use_case
+
+    def execute(
+        self,
+        sender: str,
+        recipient: str,
+        subject: str,
+        attachments: list[tuple[str, bytes]],
+    ) -> InboundEmailProcessResult:
+        # 1. Normalizar y extraer email del remitente (RFC 2822)
+        _, sender_address = parseaddr(sender)
+        clean_sender = sender_address.strip().lower()
+        if not clean_sender and "@" in sender:
+            import re
+            m = re.search(r'[\w\.-]+@[\w\.-]+', sender)
+            if m:
+                clean_sender = m.group(0).lower()
+
+        # 2. Anti-Spoofing: Verificar si el remitente corresponde a un usuario registrado o autorizado
+        user = self._user_repo.find_by_sender_email(clean_sender)
+        if user is None:
+            return InboundEmailProcessResult(
+                status="unauthorized_sender",
+                sender=clean_sender or sender,
+                recipient=recipient,
+                subject=subject,
+                total_attachments=len(attachments),
+                processed_count=0,
+                duplicate_count=0,
+                error_count=0,
+                items=[],
+                message=f"El remitente '{clean_sender or sender}' no está registrado ni autorizado como dirección de reenvío.",
+            )
+
+        # 3. Filtrar únicamente adjuntos PDF
+        pdf_attachments = [
+            (filename, content)
+            for filename, content in attachments
+            if filename.lower().endswith(".pdf")
+        ]
+
+        if not pdf_attachments:
+            return InboundEmailProcessResult(
+                status="ignored",
+                sender=clean_sender,
+                recipient=recipient,
+                subject=subject,
+                total_attachments=len(attachments),
+                processed_count=0,
+                duplicate_count=0,
+                error_count=0,
+                items=[],
+                message="No se encontraron archivos adjuntos PDF en el correo recibido.",
+            )
+
+        # 4. Procesar cada archivo PDF usando el user_id autenticado
+        items: list[InboundInvoiceItemResult] = []
+        processed_count = 0
+        duplicate_count = 0
+        error_count = 0
+
+        for filename, pdf_bytes in pdf_attachments:
+            try:
+                res = self._single_use_case.execute(pdf_bytes, user.id)
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="success",
+                        expense=res.expense,
+                        property_name=res.property.name,
+                        amount=res.invoice_data.amount,
+                        cups=res.invoice_data.cups,
+                    )
+                )
+                processed_count += 1
+            except DuplicateInvoiceError as e:
+                duplicate_count += 1
+                cups_val = getattr(e, 'cups', None) or (e.invoice_data.cups if getattr(e, 'invoice_data', None) else None)
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="duplicate",
+                        message=str(e),
+                        cups=cups_val,
+                    )
+                )
+            except PropertyNotFoundForCUPSError as e:
+                error_count += 1
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="cups_not_owned",
+                        message=str(e),
+                        cups=e.cups,
+                    )
+                )
+            except Exception as e:
+                error_count += 1
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="error",
+                        message=str(e),
+                    )
+                )
+
+        if processed_count > 0 or duplicate_count > 0:
+            status = "success"
+            msg = f"Se procesaron {processed_count} facturas correctamente ({duplicate_count} duplicadas omitidas)."
+        elif error_count > 0:
+            status = "error"
+            msg = "Ocurrieron errores al procesar los adjuntos del correo."
+        else:
+            status = "ignored"
+            msg = "No se procesó ningún documento."
+
+        return InboundEmailProcessResult(
+            status=status,
+            sender=clean_sender,
+            recipient=recipient,
+            subject=subject,
+            total_attachments=len(attachments),
+            processed_count=processed_count,
+            duplicate_count=duplicate_count,
+            error_count=error_count,
+            items=items,
+            message=msg,
         )
 
 

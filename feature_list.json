@@ -35,6 +35,6 @@
     { "id": "F-18", "epic": "E-02", "title": "Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex + LLM Fallback) + Privacy Scrubber", "status": "done" },
     { "id": "F-19", "epic": "E-02", "title": "Almacenamiento Documental de Recibos PDF y Política de Retención 5 años", "status": "deferred" },
     { "id": "F-20", "epic": "E-02", "title": "Interfaz UI: Subida Manual de PDF, Panel de Gastos Pendientes y Confirmación 1-click", "status": "done" },
-    { "id": "F-21", "epic": "E-02", "title": "Ingesta Automática por Email: Inbound Parse Webhook con Búsqueda Global de CUPS", "status": "in_progress" }
+    { "id": "F-21", "epic": "E-02", "title": "Ingesta Automática por Email: Inbound Parse Webhook con Búsqueda Global de CUPS", "status": "done" }
   ]
 }
