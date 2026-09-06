@@ -189,6 +189,30 @@ class SQLiteDatabase:
 - Los cursores, buffers y transacciones de un hilo están físicamente aislados de los demás.
 - Para tests en memoria (`:memory:`), se implementó URI compartida (`file:mem_{uuid}?mode=memory&cache=shared`) para que hilos independientes compartan el mismo estado de datos sin interferir en los cursores.
 
+#### Análisis Crítico de Arquitectura: ¿Es `threading.local()` una buena práctica en FastAPI?
+
+En frameworks clásicos síncronos (como Flask o Django tradicional), `threading.local()` era el mecanismo estándar para aislar conexiones. Sin embargo, en el diseño idiomático de **FastAPI**, el uso directo de `threading.local()` se considera un **antipatrón / solución de transición** por dos motivos fundamentales:
+
+1. **Peligro ante funciones asíncronas (`async def`):**  
+   Si en el futuro se introducen endpoints declarados con `async def`, múltiples peticiones concurrentes se ejecutan dentro del **mismo hilo** del bucle de eventos (*Event Loop*), pausándose y reanudándose con `await`. Como todas esas peticiones comparten el mismo hilo de ejecución, **¡compartirían exactamente la misma conexión en `threading.local`!**, reintroduciendo la colisión de cursores y la corrupción de transacciones. (En el paradigma asíncrono de Python no se usa `threading.local`, sino `contextvars`).
+2. **FastAPI ya ofrece un patrón nativo superior: Ciclo de vida por petición (`Depends` con `yield`):**  
+   El patrón canónico que recomienda el diseño de FastAPI es delegar la gestión al sistema de inyección de dependencias:
+   ```python
+   def get_db():
+       conn = sqlite3.connect("rental.db")
+       try:
+           yield conn  # Se inyecta en el endpoint para esta petición concreta
+       finally:
+           conn.close()  # FastAPI la cierra automáticamente al terminar la respuesta HTTP
+   ```
+   Con este patrón, cada petición HTTP (sea síncrona o asíncrona) recibe una conexión limpia y privada que se destruye al finalizar, sin necesidad de manipular hilos a bajo nivel.
+
+**¿Por qué se utilizó `threading.local()` en nuestra solución inmediata?**  
+Por el contexto histórico del código: el backend tenía desde sus inicios un singleton global en `app.state.db` y 335 tests con base de datos en memoria (`:memory:`). Cambiar el ciclo de vida a nivel global requería reestructurar fixtures y el lifespan. Como todos nuestros endpoints actuales son síncronos (`def`), `threading.local()` permitió solucionar la carrera crítica de "Piso Gran Vía" de inmediato sin romper ningún test existente.
+
+> [!NOTE]  
+> Para resolver esta deuda técnica y alinear la persistencia al 100% con el estándar canónico de FastAPI, se ha creado la tarea de refactorización **F-22** en el backlog (ver su documento de intención en [`specs/F-22/intencion.md`](file:///home/carlos/rental-handler/specs/F-22/intencion.md)).
+
 ### Capa 2: Motor SQLite de Alta Concurrencia (WAL + Busy Timeout)
 Por defecto, SQLite utiliza un archivo de diario tradicional (*rollback journal*). En este modo, cuando un hilo escribe, bloquea a todos los lectores; cuando un hilo lee, bloquea a los escritores.
 
