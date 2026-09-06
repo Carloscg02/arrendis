@@ -48,21 +48,49 @@ const [prop, inc, exp, rep] = await Promise.all([
 
 El navegador dispara **4 peticiones HTTP independientes al backend al mismo milisegundo**.
 
-### 2.3. El Modelo de Ejecución de FastAPI y AnyIO
-FastAPI es un framework asíncrono (ASGI), pero los endpoints que definimos en Python pueden ser de dos tipos:
-1. `async def mi_endpoint()`: Se ejecuta cooperativamente en el bucle de eventos (*Event Loop*) del hilo principal.
-2. `def mi_endpoint()` (síncrono / estándar): Para no bloquear el bucle de eventos con operaciones que tardan (como consultas a disco o base de datos), FastAPI y Starlette envían automáticamente la ejecución de cada endpoint síncrono a un **pool de hilos de trabajo** (*threadpool* mediante AnyIO).
+### 2.3. ¿En qué momento exacto se crea un hilo en el código?
+En la inmensa mayoría de aplicaciones web modernas, **el desarrollador jamás escribe `threading.Thread.start()` manualmente**. Los hilos no los crea nuestro código de negocio, sino el **servidor web subyacente (Uvicorn + AnyIO / Starlette)** mediante un **Pool de Hilos (*Worker ThreadPool*)**:
+
+1. **Al iniciar el servidor (`uvicorn ...`):** Uvicorn arranca en el proceso principal de Python con un **hilo principal** (*Main Thread*), donde vive el bucle de eventos (*Event Loop*). En ese arranque, la librería AnyIO inicializa una cuadrilla de hilos durmientes (hasta 40 hilos por defecto en Python) esperando tareas.
+2. **La detección del tipo de función:** Cuando una petición HTTP entra por la red (por ejemplo, `GET /api/properties/gran-via`), FastAPI examina la firma de la función en el router:
+   ```python
+   # backend/api/routes/properties.py
+   @router.get("/{property_id}")
+   def get_property(...):  # <-- Definida con 'def', NO con 'async def'
+   ```
+3. **El despacho al hilo:** FastAPI detecta que la función no es asíncrona. Sabe que si la ejecuta en el hilo principal congelará el bucle de eventos de todo el servidor mientras lee de SQLite. Por tanto, la delega inmediatamente a un hilo libre del pool:
+   ```python
+   # Lo que hace FastAPI y AnyIO por debajo de forma transparente:
+   await anyio.to_thread.run_sync(get_property, ...)
+   ```
+4. **Activación:** Un hilo durmiente del pool (ej. `Thread-2`) despierta en ese microsegundo exacto, ejecuta la función, devuelve el resultado al cliente y vuelve a dormirse en el pool a la espera de la siguiente petición.
 
 ```
 [Navegador]
    |
-   |-- HTTP GET /api/v1/properties/123 ---> [Hilo de trabajo 1] (Pool AnyIO)
-   |-- HTTP GET /api/v1/incomes/123 -------> [Hilo de trabajo 2] (Pool AnyIO)
-   |-- HTTP GET /api/v1/expenses/123 ------> [Hilo de trabajo 3] (Pool AnyIO)
-   |-- HTTP GET /api/v1/reports/123 -------> [Hilo de trabajo 4] (Pool AnyIO)
+   |-- HTTP GET /api/v1/properties/123 ---> [Hilo del Pool 1] (AnyIO ThreadPool)
+   |-- HTTP GET /api/v1/incomes/123 -------> [Hilo del Pool 2] (AnyIO ThreadPool)
+   |-- HTTP GET /api/v1/expenses/123 ------> [Hilo del Pool 3] (AnyIO ThreadPool)
+   |-- HTTP GET /api/v1/reports/123 -------> [Hilo del Pool 4] (AnyIO ThreadPool)
 ```
 
-Por lo tanto, **las 4 peticiones se ejecutan literalmente al mismo tiempo en 4 hilos distintos de Python**.
+Por lo tanto, **las 4 peticiones simultáneas del navegador se ejecutan en 4 hilos distintos de Python al mismo tiempo**.
+
+### 2.4. Concurrencia en un solo hilo vs. Paralelismo multihilo en FastAPI
+
+#### Metáfora: El Restaurante
+- **Modelo Asíncrono (`async def` - Concurrencia en 1 solo hilo): El Camarero Ágil**  
+  Tienes un único camarero. Toma la comanda en la mesa 1, la lleva a la cocina y, **mientras el cocinero prepara el plato** (espera de red o I/O no bloqueante), el camarero no se queda esperando de pie: va a la mesa 2 a servir el agua y a la mesa 3 a tomar nota. Un solo camarero puede gestionar 100 mesas si las pausas son voluntarias (`await`).
+- **Modelo Síncrono (`def` en ThreadPool - Paralelismo multihilo): El Ejército de Camareros**  
+  Tienes una plantilla de camareros (pool de hilos). El camarero 1 va a la cocina y se queda esperando hasta que el plato esté terminado. Mientras tanto, el camarero 2 atiende la mesa 2 y el camarero 3 atiende la mesa 3 de forma totalmente independiente.
+
+#### Motivo técnico de decisión: ¿Cuándo usar cada uno?
+La decisión **no es por preferencia estética, sino por las librerías utilizadas para interactuar con la base de datos y el disco**:
+- **¿Cuándo usar `async def` (1 solo hilo)?** Únicamente cuando **TODAS** las librerías en la ruta sean nativamente asíncronas y no bloqueantes (ej. `asyncpg` para PostgreSQL, `aiohttp` o `httpx` para llamadas HTTP, `aiosqlite`).
+  - *Ventaja:* Mínimo consumo de RAM; puede mantener decenas de miles de conexiones abiertas (WebSockets, microservicios de streaming).
+  - *Peligro mortal:* Si defines un endpoint como `async def` y dentro llamas a una función bloqueante tradicional (como `sqlite3`, `bcrypt` o `time.sleep()`), **congelas al camarero único**. Toda la web se paraliza para todos los usuarios del sistema.
+- **¿Cuándo usar `def` (multihilo)?** Cuando utilizas la librería estándar de Python (`sqlite3`, algoritmos criptográficos intensivos como `bcrypt`, o librerías de generación de PDFs con `reportlab`). FastAPI te protege enviando cada petición a un hilo independiente para que las esperas en disco no congelen el servidor.
+- *El precio a pagar:* Al haber múltiples hilos corriendo simultáneamente en el mismo proceso compartiendo memoria, **cualquier recurso común (como el driver de SQLite) debe estar aislado o protegido contra colisiones (*Thread-Safe*)**.
 
 ---
 
@@ -192,7 +220,70 @@ Cuando un token JWT caduca, las 4 peticiones concurrentes de `Promise.all` recib
 
 ---
 
-## 5. Pruebas de Verificación y Carga Concurrente
+## 5. ¿Y si migramos a otra base de datos? SQLite vs. PostgreSQL y el "Connection Pool"
+
+Una duda frecuente tras analizar este problema es: *¿Usamos múltiples hilos porque SQLite es gratuita o simple? Si migramos a una base de datos más robusta (como PostgreSQL), ¿se cambiaría a concurrencia en un solo hilo?*
+
+La respuesta es **no**, y comprender la relación entre hilos, bases de datos y pools aclara cómo funcionan las arquitecturas profesionales en backend.
+
+### 5.1. El mito del coste: SQLite vs. PostgreSQL
+Prácticamente todas las grandes bases de datos de la industria (**PostgreSQL, MySQL, MariaDB**) son **100% gratuitas y de código abierto**, exactamente igual que SQLite.
+
+La decisión de usar SQLite en el proyecto no fue por coste ni por limitación, sino por su **modelo de despliegue**:
+- **SQLite es una base de datos embebida:** No requiere instalar servicios de fondo, ni abrir puertos de red, ni configurar usuarios o contraseñas. Todo vive en un único archivo (`rental.db`) que se lee a velocidad de memoria local.
+- **PostgreSQL es una base de datos cliente-servidor:** Requiere un proceso demonio en red (puerto 5432), gestión de usuarios, copias de seguridad remotas y configuración de red.
+
+### 5.2. ¿Por qué los múltiples hilos seguirán existiendo en PostgreSQL?
+Tener múltiples hilos (o múltiples procesos) **no es un defecto ni un compromiso; es la forma natural de aprovechar el procesador**:
+- Los servidores modernos cuentan con 4, 8, 16 o más núcleos de CPU (*cores*).
+- Si tu backend funcionara en un único hilo, solo aprovecharía 1 núcleo y dejaría el 85% de la potencia de la CPU desaprovechada.
+- Para atender a decenas o cientos de usuarios a la vez en paralelo, el backend **debe** procesar peticiones simultáneas en múltiples hilos o procesos.
+
+### 5.3. ¿Cómo resuelve PostgreSQL la concurrencia? El "Connection Pool" (Piscina de Conexiones)
+En nuestra solución actual con SQLite, tuvimos que aislar las conexiones manualmente en Python mediante `threading.local()` porque SQLite es una librería embebida que accede a un archivo local compartido en el mismo proceso.
+
+En PostgreSQL (y MySQL), la gestión de concurrencia es nativa gracias al patrón **Connection Pool**:
+
+```
+[ Hilo de Trabajo 1 ]   [ Hilo de Trabajo 2 ]   [ Hilo de Trabajo 3 ]
+         |                       |                       |
+         v                       v                       v
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CONNECTION POOL (Ej: 20 conexiones)              │
+│  [Conn 1: Ocupada]     [Conn 2: Ocupada]     [Conn 3: Ocupada]     │
+│  [Conn 4: Libre]       [Conn 5: Libre]       ...                   │
+└──────────────────────────────────┬──────────────────────────────────┘
+                                   | (Sockets TCP / Red)
+                                   v
+             [ Servidor Externo PostgreSQL (Puerto 5432) ]
+```
+
+1. La aplicación abre al iniciar un cupo fijo de conexiones de red (ej. 20 conexiones TCP).
+2. Cuando el **Hilo 1** atiende a un usuario, pide una conexión prestada del pool.
+3. El **Hilo 2** toma otra conexión simultáneamente.
+4. Cada hilo ejecuta su consulta sin interferir jamás en los buffers de los demás.
+5. Al terminar la petición HTTP, el hilo devuelve la conexión limpia al pool para el siguiente usuario.
+
+### 5.4. Concurrencia de Escritura: Bloqueo de Archivo vs. Bloqueo por Fila
+Aquí reside la gran ventaja de PostgreSQL frente a SQLite en alta concurrencia:
+- **SQLite (WAL):** Admite **ilimitados lectores concurrentes** y **un único escritor simultáneo a la vez en toda la base de datos**. Si dos usuarios guardan una factura al mismo instante exacto, uno escribe primero y el segundo espera unos milisegundos (`busy_timeout`).
+- **PostgreSQL:** Dispone de **bloqueo a nivel de fila (*row-level locking*)**. Si 50 usuarios editan 50 contratos distintos a la vez, las 50 escrituras se completan en paralelo al mismo milisegundo sin esperas, porque el motor bloquea únicamente el registro afectado, no la base de datos entera.
+
+### 5.5. Tabla Comparativa: SQLite Actual vs. PostgreSQL con Pool
+
+| Característica | Nuestra Solución Actual (SQLite WAL) | Si Migramos a PostgreSQL |
+| :--- | :--- | :--- |
+| **Tipo de Arquitectura** | Embebida (archivo local en disco) | Cliente-Servidor (servicio en red) |
+| **Coste de Licencia** | Gratis (Dominio Público) | Gratis (Open Source) |
+| **Modelo de Hilos en Backend** | Múltiples hilos (FastAPI ThreadPool) | Múltiples hilos (FastAPI ThreadPool) o Procesos Workers |
+| **Mecanismo de Aislamiento** | `threading.local` (1 conexión por hilo) | `ConnectionPool` gestionado (ej. `psycopg_pool`) |
+| **Lecturas Concurrentes** | Ilimitadas y ultrarrápidas (en memoria/disco local) | Ilimitadas (vía sockets de red) |
+| **Escrituras Concurrentes** | Secuenciales con espera activa (`busy_timeout`) | Masivas en paralelo (bloqueo por fila) |
+| **Mantenimiento Operativo** | Cero (basta con copiar el archivo `.db`) | Medio (gestionar servidor, backups, credenciales) |
+
+---
+
+## 6. Pruebas de Verificación y Carga Concurrente
 
 Para garantizar que el fallo está resuelto y no reaparecerá, se introdujo un test de estrés concurrente que simula la carga real:
 
@@ -215,7 +306,7 @@ def test_concurrent_property_detail_requests(client, test_db, auth_headers):
 
 ---
 
-## 6. Guía para el Futuro: Cómo Pedir y Auditar Sistemas Resistentes
+## 7. Guía para el Futuro: Cómo Pedir y Auditar Sistemas Resistentes
 
 Cuando encargues, diseñes o audites un software (bien sea trabajando con ingenieros, consultoras o asistentes de IA), utiliza esta lista de preguntas clave. Un sistema profesional debe responder satisfactoriamente a cada una de ellas.
 
@@ -232,7 +323,7 @@ Cuando encargues, diseñes o audites un software (bien sea trabajando con ingeni
 
 ---
 
-## 7. Glosario Rápido de Conceptos
+## 8. Glosario Rápido de Conceptos
 
 - **Race Condition (Condición de Carrera)**: Anomalía donde el resultado de una operación depende del orden o sincronización imprevista de eventos concurrentes.
 - **Thread-Safety (Seguridad de Hilo)**: Propiedad de un fragmento de código u objeto que garantiza que puede ser invocado simultáneamente por múltiples hilos sin corromper el estado.
