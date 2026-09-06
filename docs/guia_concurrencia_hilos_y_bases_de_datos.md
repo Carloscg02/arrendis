@@ -181,7 +181,7 @@ Cuando un token JWT caduca, las 4 peticiones concurrentes de `Promise.all` recib
 - **Problema previo**: Las 4 peticiones intentaban llamar concurrentemente al endpoint `/refresh` con el mismo Refresh Token. Como los refresh tokens se rotan e invalidan al usarse, la primera tenía éxito pero las otras 3 fallaban (token ya usado), cerrando la sesión del usuario.
 - **Solución implementada**:
   - Un mecanismo de deduplicación en el interceptor de peticiones (`frontend/src/services/api.ts`). Si ya hay un refresco en curso, las demás peticiones esperan a esa misma promesa compartida.
-  - Almacenamiento sincronizado del token en `sessionStorage`.
+  - Almacenamiento seguro del Access Token exclusivamente en memoria JS (sin persistencia en storage).
   - Ampliación del TTL del Access Token de 15 a 60 minutos para reducir la frecuencia de refrescos.
 
 ### Capa 4: Experiencia de Usuario Tolerante a Fallos (Frontend)

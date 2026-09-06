@@ -2,27 +2,27 @@ import type { TokenResponse, UserResponse, LoginInput, RegisterInput } from '../
 
 const API_BASE = 'http://localhost:8000/api';
 
-const TOKEN_KEY = 'rental_handler_access_token';
-
-let accessToken: string | null = (typeof window !== 'undefined') ? sessionStorage.getItem(TOKEN_KEY) : null;
+// Enfoque "Shielded JWT" estricto: el Access Token vive ÚNICAMENTE en memoria JavaScript (closure).
+// Nunca se persiste en localStorage ni sessionStorage, mitigando totalmente el robo por XSS estático.
+// La persistencia de sesión la gestiona el Refresh Token en su cookie HTTP-only (inaccesible para JS).
+let accessToken: string | null = null;
 let refreshPromise: Promise<TokenResponse> | null = null;
 
-export function getAccessToken(): string | null {
-  if (!accessToken && typeof window !== 'undefined') {
-    accessToken = sessionStorage.getItem(TOKEN_KEY);
+// Limpieza proactiva de claves residuales de versiones anteriores si existieran
+if (typeof window !== 'undefined') {
+  try {
+    sessionStorage.removeItem('rental_handler_access_token');
+  } catch {
+    // Ignorar si el entorno bloquea storage
   }
+}
+
+export function getAccessToken(): string | null {
   return accessToken;
 }
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
-  if (typeof window !== 'undefined') {
-    if (token) {
-      sessionStorage.setItem(TOKEN_KEY, token);
-    } else {
-      sessionStorage.removeItem(TOKEN_KEY);
-    }
-  }
 }
 
 async function handleAuthResponse(res: Response): Promise<TokenResponse> {
