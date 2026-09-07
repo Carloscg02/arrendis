@@ -815,27 +815,37 @@ input:focus, select:focus, textarea:focus, input:focus-visible {
 }
 
 /* Auth Pages */
-/* Auth Pages */
 .auth-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: var(--bg-primary);
+  background-color: #f8fafc;
+  /* Option 2: Sculptural dual-aura glow (Porcelain & Deep Burgundy Glow) */
   background-image: 
-    radial-gradient(at 50% 0%, rgba(107, 0, 8, 0.04) 0%, transparent 60%),
-    radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.02) 0%, transparent 50%);
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(107, 0, 8, 0.08) 0%, rgba(107, 0, 8, 0.02) 40%, transparent 75%),
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(15, 23, 42, 0.05) 0%, transparent 60%),
+    radial-gradient(circle at 10% 20%, rgba(107, 0, 8, 0.025) 0%, transparent 35%),
+    radial-gradient(circle at 90% 80%, rgba(15, 23, 42, 0.02) 0%, transparent 35%);
+  position: relative;
 }
 
 .auth-card {
   width: 100%;
   max-width: 440px;
   padding: 3rem 2.5rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: var(--radius-xl);
-  box-shadow: 0 20px 35px -10px rgba(107, 0, 8, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.05);
+  box-shadow: 
+    0 1px 2px 0 rgba(15, 23, 42, 0.03),
+    0 12px 30px -6px rgba(15, 23, 42, 0.06),
+    0 25px 45px -12px rgba(107, 0, 8, 0.08);
+  position: relative;
+  z-index: 1;
 }
 
 .auth-header {
