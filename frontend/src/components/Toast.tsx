@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -42,17 +43,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 50, scale: 0.95 }}
+              initial={{ opacity: 0, x: 20, scale: 0.98 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className={`toast toast-${toast.type}`}
             >
               <div className="toast-message">
-                {toast.type === 'success' && '✅ '}
-                {toast.type === 'error' && '❌ '}
-                {toast.type === 'info' && 'ℹ️ '}
-                {toast.message}
+                {toast.type === 'success' && <CheckCircle2 size={16} className="toast-icon toast-icon-success" />}
+                {toast.type === 'error' && <AlertCircle size={16} className="toast-icon toast-icon-error" />}
+                {toast.type === 'info' && <Info size={16} className="toast-icon toast-icon-info" />}
+                <span>{toast.message}</span>
               </div>
               <motion.div 
                 className="toast-progress"
