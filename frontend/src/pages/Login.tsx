@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
 
@@ -26,10 +25,14 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-brand-badge">
-            <Building2 size={20} />
+          <div className="auth-logo-container">
+            <img 
+              src="/arrendis-logo.png" 
+              alt="Arrendis" 
+              className="auth-brand-logo" 
+            />
           </div>
-          <h1>Iniciar Sesión</h1>
+          <p className="auth-subtitle">Acceso a la plataforma de gestión inmobiliaria</p>
         </div>
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
