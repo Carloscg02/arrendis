@@ -21,16 +21,17 @@ Para lograr la máxima seguridad ("Seguridad Blindada"), hemos adoptado un patr�
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                          SISTEMA DE DOBLE TOKEN                                 │
 ├──────────────────────────┬──────────────────────────────────────────────────────┤
-│  ACCESS TOKEN (15 min)   │  REFRESH TOKEN (7 días)                              │
+│  ACCESS TOKEN (60 min*)  │  REFRESH TOKEN (7 días)                              │
 ├──────────────────────────┼──────────────────────────────────────────────────────┤
 │ 📦 Viaja en: Body JSON   │ 🍪 Viaja en: Cookie HTTP (httpOnly + Secure + Lax)  │
 │ 🧠 Guardado: Memoria JS  │ 🔒 Guardado: Navegador (Inaccesible para JS)         │
 │ 🔑 Uso: Cabecera Bearer  │ 🔄 Uso: Renovar Access Token caducado en /refresh   │
 └──────────────────────────┴──────────────────────────────────────────────────────┘
+* Duración por defecto de 60 min (configurable mediante la variable ACCESS_TOKEN_EXPIRE_MINUTES).
 ```
 
 #### ¿Por qué esta combinación es tan segura?
-- **Inmunidad contra XSS (Robo de sesión persistente):** El **Refresh Token** (el de larga duración, 7 días) se guarda en una cookie marcada con la bandera `HttpOnly`. Esto significa que **el motor de JavaScript del navegador tiene prohibido leerla**. Si sufrimos un ataque XSS, el hacker nunca podrá robar tu Refresh Token. El **Access Token**, que sí es accesible por JS, solo existe en una variable en memoria (desaparece si cierras la pestaña o recargas) y **sólo dura 15 minutos**.
+- **Inmunidad contra XSS (Robo de sesión persistente):** El **Refresh Token** (el de larga duración, 7 días) se guarda en una cookie marcada con la bandera `HttpOnly`. Esto significa que **el motor de JavaScript del navegador tiene prohibido leerla**. Si sufrimos un ataque XSS, el atacante nunca podrá robar tu Refresh Token. El **Access Token**, que sí es accesible por JS, reside **única y exclusivamente en memoria** (desaparece al cerrar la pestaña o recargar) y tiene una vida acotada.
 - **Inmunidad contra CSRF:** Para las peticiones a la API de datos (propiedades, gastos, ingresos), exigimos que el token viaje en la cabecera HTTP `Authorization: Bearer <token>`. Los ataques CSRF no pueden inyectar cabeceras personalizadas sin ser bloqueados por la política CORS del navegador. Por tanto, nuestra API está protegida contra falsificación de peticiones.
 
 ---
@@ -91,7 +92,7 @@ Cuando el usuario introduce sus credenciales correctas:
 
 ### 3.2 Flujo de Refresco Silencioso (`POST /api/auth/refresh`)
 
-Al abrir la aplicación por primera vez en el día, o cuando un Access Token caduca a los 15 minutos:
+Al abrir la aplicación por primera vez en el día, o cuando un Access Token caduca (60 minutos por defecto):
 1. El frontend realiza una petición HTTP `POST /api/auth/refresh` con la opción `credentials: "include"`.
 2. El navegador adjunta automáticamente la cookie `httpOnly` con el `refresh_token`.
 3. El backend verifica la firma y caducidad del token de refresco.
@@ -99,13 +100,15 @@ Al abrir la aplicación por primera vez en el día, o cuando un Access Token cad
 
 ---
 
-## 4. Capa de Frontend (`AuthProvider` e Interceptor)
+## 4. Capa de Frontend (`AuthProvider`, Interceptor y Protección de Rutas)
 
 En el lado del cliente (React + TypeScript), el sistema se gestiona sin contaminar los componentes visuales:
 
-- **Almacenamiento en Memoria (`services/auth.ts`):** Existe una variable privada a nivel de módulo (`let accessToken: string | null = null;`). No es accesible desde la consola del navegador por scripts de terceros y se limpia al cerrar la página.
+- **Almacenamiento Estricto en Memoria (`services/auth.ts`):** Existe una variable privada en memoria (`let accessToken: string | null = null;`). Ni `localStorage` ni `sessionStorage` se utilizan, impidiendo la extracción pasiva de credenciales ante vectores XSS.
+- **Deduplicación de Refresco Concurrente (`refreshPromise`):** Tanto en `services/auth.ts` como en el interceptor `apiFetch` de `services/api.ts`, si múltiples peticiones reciben un 401 al mismo milisegundo (ej. en `Promise.all`), solo una ejecuta la petición a `/refresh` y las demás esperan y reutilizan el token obtenido.
 - **`AuthProvider` (React Context):** Al montarse la aplicación, ejecuta un "refresco silencioso" en segundo plano (`useEffect`). Si el usuario tenía una cookie válida de días anteriores, recupera automáticamente su sesión sin pedirle contraseña.
-- **Estado de las Rutas (Transición a F-07):** En **F-06** se crearon las pantallas y toda la fontanería técnica. Las rutas `/login` y `/register` están plenamente operativas. Para no alterar el flujo de trabajo existente durante las pruebas, el catálogo (`/`) no bloquea aún el acceso. En la feature pendiente **F-07**, se implementarán los guardias visuales (`ProtectedRoute`) y la barra superior de usuario.
+- **Protección de Rutas (`ProtectedRoute` y `PublicOnlyRoute`):** Las rutas privadas (`/`, `/properties/:id`) exigen autenticación y redirigen a `/login` si no hay sesión activa. Las rutas públicas (`/login`, `/register`) redirigen al catálogo si ya estás autenticado.
+- **Barra de Navegación (`AppHeader`):** Muestra el usuario conectado y proporciona el botón de cierre de sesión (`logout`), que revoca las credenciales y limpia la memoria.
 
 ---
 
@@ -182,8 +185,9 @@ venv/bin/python -m pytest tests/integration/backend/api/test_auth_api.py -v
 
 ---
 
-## 6. Próximos Pasos (Feature F-07)
+## 6. Estado de Implementación (F-06 y F-07)
 
-Tal y como está programado en nuestro backlog (`feature_list.json`), la feature **F-07** complementará esta infraestructura con:
-1. **`ProtectedRoute` (React Router):** Un componente envoltorio para que si un usuario intenta entrar a `/` o a `/properties/1` sin estar logueado, sea redirigido instantáneamente a `/login`.
-2. **Barra de Navegación (Header UI):** Un encabezado visible en toda la aplicación que mostrará el nombre de usuario activo y un botón elegante para **"Cerrar Sesión"** (`logout`), el cual borrará la cookie y limpiará la memoria del navegador.
+La infraestructura de autenticación y seguridad se encuentra **100% implementada y en producción**:
+1. **`ProtectedRoute` y `PublicOnlyRoute` (React Router):** Los accesos no autorizados al catálogo o al detalle de propiedades redirigen automáticamente a `/login`. Del mismo modo, usuarios ya autenticados que visiten `/login` o `/register` son redirigidos directamente al catálogo.
+2. **Barra de Navegación (`AppHeader`):** Presente en la aplicación, muestra el usuario activo (`user.username`) y un botón funcional de **"Cerrar Sesión"** (`logout`), el cual invalida la cookie en backend y purga la memoria del frontend.
+3. **Resistencia a Concurrencia y Ráfagas:** Interceptores de red con deduplicación de refresco de tokens para evitar colisiones 401 en llamadas paralelas (`Promise.all`).

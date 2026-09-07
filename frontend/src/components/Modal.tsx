@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { X } from "lucide-react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,10 +29,12 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         // give it a tiny tick to render
         setTimeout(() => focusableElements[0].focus(), 100);
       }
+    } else {
+      document.body.style.overflow = "unset";
     }
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "auto";
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
@@ -40,20 +43,20 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       {isOpen && (
         <div className="modal-overlay" onClick={onClose}>
           <motion.div
-            className="modal-content glass-panel"
+            className="modal-content"
             ref={modalRef}
             onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.18 }}
             role="dialog"
             aria-modal="true"
           >
             <div className="modal-header">
               <h2>{title}</h2>
               <button className="modal-close" onClick={onClose} aria-label="Cerrar modal">
-                &times;
+                <X size={18} />
               </button>
             </div>
             <div className="modal-body">{children}</div>

@@ -44,6 +44,9 @@ class PropertyResponse(BaseModel):
     status: str
     image_url: str | None = None
     has_fiscal_data: bool = False
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
 
 
 # ──────────────────────────────────────────────
@@ -78,6 +81,15 @@ class IncomeResponse(BaseModel):
 # Expense Schemas
 # ──────────────────────────────────────────────
 
+class UtilityInvoiceDataSchema(BaseModel):
+    cups: str
+    amount: Decimal
+    issue_date: date
+    provider_name: str
+    utility_type: str
+    invoice_number: str | None = None
+    extraction_confidence: str
+
 class ExpenseCreate(BaseModel):
     """Request body para registrar un gasto."""
 
@@ -100,6 +112,31 @@ class ExpenseResponse(BaseModel):
     category: str
     description: str
     fiscal_category: str | None = None
+    is_verified: bool = True
+    source: str = "manual"
+    receipt_path: str | None = None
+    utility_data: UtilityInvoiceDataSchema | None = None
+
+
+class InvoiceUploadItemResultSchema(BaseModel):
+    """Resultado individual dentro de una subida por lotes."""
+    filename: str
+    status: str  # "success" | "duplicate" | "error"
+    expense: ExpenseResponse | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+class BatchInvoiceUploadResponse(BaseModel):
+    """Respuesta consolidada de una subida por lotes de facturas."""
+    total_processed: int
+    successful_count: int
+    duplicate_count: int
+    error_count: int
+    total_amount_imported: Decimal
+    items: list[InvoiceUploadItemResultSchema]
 
 
 # ──────────────────────────────────────────────
@@ -131,6 +168,14 @@ class UserResponse(BaseModel):
     id: str
     email: str
     username: str
+    forwarding_email: str | None = None
+
+class ForwardingEmailUpdate(BaseModel):
+    forwarding_email: str | None = None
+
+class ForwardingEmailResponse(BaseModel):
+    forwarding_email: str | None = None
+    inbound_address: str
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -181,6 +226,11 @@ class FiscalDataResponse(BaseModel):
     acquisition_cost: AcquisitionCostSchema | None = None
     acquisition_date: date | None = None
     has_fiscal_data: bool
+
+class PropertyCupsUpdate(BaseModel):
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
 
 
 # ──────────────────────────────────────────────
@@ -295,3 +345,34 @@ class FiscalReportResponse(BaseModel):
     unclassified_income_count: int
     unclassified_expense_count: int
     has_warnings: bool
+
+
+class LLMHealthResponse(BaseModel):
+    status: str           # "ok" | "not_configured" | "error"
+    model: str | None     # Nombre del modelo si está configurado
+    message: str | None = None  # Mensaje descriptivo si hay error
+
+
+# ──────────────────────────────────────────────
+# Inbound Email / Webhook Schemas (F-21)
+# ──────────────────────────────────────────────
+
+class InboundEmailItemResultSchema(BaseModel):
+    filename: str
+    status: str  # "success" | "duplicate" | "cups_not_owned" | "error"
+    property_name: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+    message: str | None = None
+
+class InboundEmailWebhookResponse(BaseModel):
+    status: str  # "success" | "unauthorized_sender" | "ignored" | "error"
+    sender: str
+    recipient: str
+    subject: str
+    total_attachments: int
+    processed_count: int
+    duplicate_count: int
+    error_count: int
+    items: list[InboundEmailItemResultSchema]
+    message: str = ""

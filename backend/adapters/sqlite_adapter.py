@@ -8,6 +8,7 @@ y ExpenseRepository usando SQLite como base de datos.
 from __future__ import annotations
 
 import sqlite3
+import threading
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -36,6 +37,7 @@ class SQLiteConnection:
 
     Almacena Decimal como TEXT para mantener la precisión.
     Usa consultas parametrizadas (?) para prevenir inyección SQL.
+    Soporta concurrencia multihilo segura mediante conexiones thread-local.
     """
 
     def __init__(self, db_path: str = "data/rental.db") -> None:
@@ -45,21 +47,40 @@ class SQLiteConnection:
             db_path: Ruta al archivo de base de datos SQLite.
                      Usar ":memory:" para bases de datos en memoria (tests).
         """
-        self._db_path = db_path
+        import uuid
+        self._raw_path = db_path
+        self._local = threading.local()
 
-        # Crear el directorio padre si no existe (excepto para :memory:)
-        if db_path != ":memory:":
+        if db_path == ":memory:":
+            self._is_uri = True
+            self._connect_path = f"file:mem_{uuid.uuid4().hex}?mode=memory&cache=shared"
+        else:
+            self._is_uri = False
+            self._connect_path = db_path
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        self._connection = sqlite3.connect(db_path, check_same_thread=False)
-        self._connection.row_factory = sqlite3.Row
-        # Activar claves foráneas
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        self._create_tables()
+        self._anchor_conn = self._create_connection()
+        self._create_tables(self._anchor_conn)
+        if not self._is_uri:
+            self._anchor_conn.close()
+            self._anchor_conn = None
 
-    def _create_tables(self) -> None:
+    def _create_connection(self) -> sqlite3.Connection:
+        if self._is_uri:
+            conn = sqlite3.connect(self._connect_path, timeout=30.0, uri=True, check_same_thread=False)
+        else:
+            conn = sqlite3.connect(self._connect_path, timeout=30.0, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        if not self._is_uri:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA busy_timeout = 15000")
+        return conn
+
+    def _create_tables(self, conn: sqlite3.Connection | None = None) -> None:
         """Crea las tablas si no existen."""
-        cursor = self._connection.cursor()
+        active_conn = conn if conn is not None else self.connection
+        cursor = active_conn.cursor()
 
         # Tabla de usuarios
         cursor.execute("""
@@ -67,9 +88,14 @@ class SQLiteConnection:
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 username TEXT NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                forwarding_email TEXT DEFAULT NULL
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN forwarding_email TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass  # La columna ya existe
 
         # Tabla de propiedades
         cursor.execute("""
@@ -114,6 +140,17 @@ class SQLiteConnection:
             except sqlite3.OperationalError:
                 pass  # La columna ya existe
 
+        # Migración F-16: Suministros (Propiedades)
+        for col in [
+            "cups_electricity TEXT DEFAULT NULL",
+            "cups_gas TEXT DEFAULT NULL",
+            "cups_water TEXT DEFAULT NULL",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE properties ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
+
         # Tabla de ingresos
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS incomes (
@@ -141,6 +178,24 @@ class SQLiteConnection:
                 FOREIGN KEY (property_id) REFERENCES properties(id)
             )
         """)
+
+        # Migración F-16: Suministros (Gastos)
+        for col in [
+            "is_verified INTEGER NOT NULL DEFAULT 1",
+            "source TEXT NOT NULL DEFAULT 'manual'",
+            "receipt_path TEXT DEFAULT NULL",
+            "utility_cups TEXT DEFAULT NULL",
+            "utility_amount TEXT DEFAULT NULL",
+            "utility_issue_date TEXT DEFAULT NULL",
+            "utility_provider_name TEXT DEFAULT NULL",
+            "utility_type TEXT DEFAULT NULL",
+            "utility_invoice_number TEXT DEFAULT NULL",
+            "utility_extraction_confidence TEXT DEFAULT NULL",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE expenses ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
 
         # Tabla de contratos de arrendamiento
         cursor.execute("""
@@ -191,23 +246,34 @@ class SQLiteConnection:
             )
         """)
 
-        self._connection.commit()
+        active_conn.commit()
 
     @property
     def connection(self) -> sqlite3.Connection:
-        """Retorna la conexión activa."""
-        return self._connection
+        """Retorna la conexión activa para el hilo actual."""
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            self._local.conn = self._create_connection()
+        return self._local.conn
 
     def close(self) -> None:
         """Cierra la conexión a la base de datos."""
-        self._connection.close()
+        if self._anchor_conn is not None:
+            self._anchor_conn.close()
+            self._anchor_conn = None
+        if hasattr(self._local, "conn") and self._local.conn is not None:
+            self._local.conn.close()
+            self._local.conn = None
 
 
 class SQLitePropertyRepository(PropertyRepository):
     """Implementación de PropertyRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, property: Property) -> None:
         """Guarda o actualiza una propiedad en la base de datos."""
@@ -217,8 +283,9 @@ class SQLitePropertyRepository(PropertyRepository):
                 (id, name, street, city, postal_code, country, property_type, user_id, status, image_filename,
                  cadastral_ref, cadastral_land_value, cadastral_construction_value,
                  acquisition_purchase_price, acquisition_construction_portion, acquisition_land_portion,
-                 acquisition_transfer_tax, acquisition_notary_fees, acquisition_registry_fees, acquisition_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 acquisition_transfer_tax, acquisition_notary_fees, acquisition_registry_fees, acquisition_date,
+                 cups_electricity, cups_gas, cups_water)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 property.id,
@@ -241,6 +308,9 @@ class SQLitePropertyRepository(PropertyRepository):
                 str(property.acquisition_cost.notary_fees) if property.acquisition_cost else None,
                 str(property.acquisition_cost.registry_fees) if property.acquisition_cost else None,
                 property.acquisition_date.isoformat() if property.acquisition_date else None,
+                property.cups_electricity,
+                property.cups_gas,
+                property.cups_water,
             ),
         )
         self._conn.commit()
@@ -300,6 +370,29 @@ class SQLitePropertyRepository(PropertyRepository):
             (image_filename, property_id),
         )
         self._conn.commit()
+
+    def update_cups(self, property_id: str, cups_electricity: str | None, cups_gas: str | None, cups_water: str | None) -> None:
+        """Actualiza los CUPS de una propiedad."""
+        self._conn.execute(
+            "UPDATE properties SET cups_electricity = ?, cups_gas = ?, cups_water = ? WHERE id = ?",
+            (cups_electricity, cups_gas, cups_water, property_id),
+        )
+        self._conn.commit()
+
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        """Busca una propiedad de un usuario por cualquiera de sus CUPS."""
+        cursor = self._conn.execute(
+            """
+            SELECT * FROM properties 
+            WHERE user_id = ? AND 
+                  (cups_electricity = ? OR cups_gas = ? OR cups_water = ?)
+            """,
+            (user_id, cups, cups, cups),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
 
     def update_fiscal_data(
         self,
@@ -392,6 +485,9 @@ class SQLitePropertyRepository(PropertyRepository):
             cadastral_breakdown=cadastral_breakdown,
             acquisition_cost=acquisition_cost,
             acquisition_date=acquisition_date,
+            cups_electricity=row["cups_electricity"],
+            cups_gas=row["cups_gas"],
+            cups_water=row["cups_water"],
         )
 
 
@@ -399,7 +495,11 @@ class SQLiteIncomeRepository(IncomeRepository):
     """Implementación de IncomeRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, income: Income) -> None:
         """Guarda un ingreso en la base de datos."""
@@ -437,6 +537,17 @@ class SQLiteIncomeRepository(IncomeRepository):
         )
         return [self._row_to_entity(row) for row in cursor.fetchall()]
 
+    def find_by_id(self, income_id: str) -> Income | None:
+        """Busca un ingreso por su id."""
+        cursor = self._conn.execute(
+            "SELECT * FROM incomes WHERE id = ?",
+            (income_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
     def delete(self, income_id: str) -> None:
         """Elimina un ingreso por su id."""
         self._conn.execute(
@@ -470,15 +581,21 @@ class SQLiteExpenseRepository(ExpenseRepository):
     """Implementación de ExpenseRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, expense: Expense) -> None:
         """Guarda un gasto en la base de datos."""
         self._conn.execute(
             """
             INSERT OR REPLACE INTO expenses
-                (id, property_id, amount, currency, date, category, description, fiscal_category)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, property_id, amount, currency, date, category, description, fiscal_category,
+                 is_verified, source, receipt_path, utility_cups, utility_amount, utility_issue_date,
+                 utility_provider_name, utility_type, utility_invoice_number, utility_extraction_confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 expense.id,
@@ -489,6 +606,16 @@ class SQLiteExpenseRepository(ExpenseRepository):
                 expense.category.value,
                 expense.description,
                 expense.fiscal_category.value if expense.fiscal_category else None,
+                1 if expense.is_verified else 0,
+                expense.source.value,
+                expense.receipt_path,
+                expense.utility_data.cups if expense.utility_data else None,
+                str(expense.utility_data.amount) if expense.utility_data else None,
+                expense.utility_data.issue_date.isoformat() if expense.utility_data else None,
+                expense.utility_data.provider_name if expense.utility_data else None,
+                expense.utility_data.utility_type.value if expense.utility_data else None,
+                expense.utility_data.invoice_number if expense.utility_data else None,
+                expense.utility_data.extraction_confidence.value if expense.utility_data else None,
             ),
         )
         self._conn.commit()
@@ -508,6 +635,17 @@ class SQLiteExpenseRepository(ExpenseRepository):
         )
         return [self._row_to_entity(row) for row in cursor.fetchall()]
 
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        """Busca un gasto por su id."""
+        cursor = self._conn.execute(
+            "SELECT * FROM expenses WHERE id = ?",
+            (expense_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
     def delete(self, expense_id: str) -> None:
         """Elimina un gasto por su id."""
         self._conn.execute(
@@ -526,6 +664,34 @@ class SQLiteExpenseRepository(ExpenseRepository):
         except IndexError:
             pass
 
+        from backend.domain.entities import ExpenseSource
+        from backend.domain.value_objects import UtilityInvoiceData
+        from backend.domain.entities import UtilityType, ExtractionConfidence
+
+        utility_data = None
+        try:
+            if row["utility_cups"] is not None:
+                utility_data = UtilityInvoiceData(
+                    cups=row["utility_cups"],
+                    amount=Decimal(row["utility_amount"]),
+                    issue_date=date.fromisoformat(row["utility_issue_date"]),
+                    provider_name=row["utility_provider_name"],
+                    utility_type=UtilityType(row["utility_type"]),
+                    invoice_number=row["utility_invoice_number"],
+                    extraction_confidence=ExtractionConfidence(row["utility_extraction_confidence"]),
+                )
+        except IndexError:
+            pass
+            
+        try:
+            is_verified = bool(row["is_verified"])
+            source = ExpenseSource(row["source"])
+            receipt_path = row["receipt_path"]
+        except IndexError:
+            is_verified = True
+            source = ExpenseSource.MANUAL
+            receipt_path = None
+
         return Expense(
             id=row["id"],
             property_id=row["property_id"],
@@ -534,6 +700,10 @@ class SQLiteExpenseRepository(ExpenseRepository):
             category=ExpenseCategory(row["category"]),
             description=row["description"],
             fiscal_category=fiscal_category,
+            is_verified=is_verified,
+            source=source,
+            receipt_path=receipt_path,
+            utility_data=utility_data,
         )
 
 
@@ -541,21 +711,26 @@ class SQLiteUserRepository(UserRepository):
     """Implementación de UserRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, user: User) -> None:
         """Guarda un usuario en la base de datos."""
         try:
             self._conn.execute(
                 """
-                INSERT INTO users (id, email, username, password_hash)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO users (id, email, username, password_hash, forwarding_email)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
                     user.id,
                     user.email.value,
                     user.username,
                     user.password_hash.hash_value,
+                    user.forwarding_email,
                 ),
             )
             self._conn.commit()
@@ -578,7 +753,7 @@ class SQLiteUserRepository(UserRepository):
     def find_by_email(self, email: str) -> User | None:
         """Busca un usuario por su email."""
         cursor = self._conn.execute(
-            "SELECT * FROM users WHERE email = ?",
+            "SELECT * FROM users WHERE LOWER(email) = ?",
             (email.lower(),),
         )
         row = cursor.fetchone()
@@ -586,14 +761,41 @@ class SQLiteUserRepository(UserRepository):
             return None
         return self._row_to_entity(row)
 
+    def find_by_sender_email(self, email: str) -> User | None:
+        """Busca un usuario por su email principal o su email de reenvío autorizado (case-insensitive)."""
+        clean = email.strip().lower()
+        cursor = self._conn.execute(
+            "SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(forwarding_email) = ?",
+            (clean, clean),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
+    def update_forwarding_email(self, user_id: str, forwarding_email: str | None) -> None:
+        """Actualiza el email de reenvío autorizado de un usuario."""
+        clean = forwarding_email.strip().lower() if forwarding_email else None
+        self._conn.execute(
+            "UPDATE users SET forwarding_email = ? WHERE id = ?",
+            (clean, user_id),
+        )
+        self._conn.commit()
+
     @staticmethod
     def _row_to_entity(row: sqlite3.Row) -> User:
         """Convierte una fila de SQLite a una entidad User."""
+        forwarding_email = None
+        try:
+            forwarding_email = row["forwarding_email"]
+        except (IndexError, KeyError):
+            pass
         return User(
             id=row["id"],
             email=Email(row["email"]),
             username=row["username"],
             password_hash=PasswordHash(row["password_hash"]),
+            forwarding_email=forwarding_email,
         )
 
 
@@ -601,7 +803,11 @@ class SQLiteLeaseContractRepository(LeaseContractRepository):
     """Implementación de LeaseContractRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, contract: LeaseContract) -> None:
         self._conn.execute(
@@ -667,7 +873,11 @@ class SQLiteFiscalCarryforwardRepository(FiscalCarryforwardRepository):
     """Implementación de FiscalCarryforwardRepository usando SQLite."""
 
     def __init__(self, connection: SQLiteConnection) -> None:
-        self._conn = connection.connection
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
 
     def save(self, carryforward: FiscalCarryforward) -> None:
         self._conn.execute(

@@ -103,7 +103,7 @@ class FiscalCalculator:
     ) -> FiscalReport:
         # PASO 1: Filtrar por año fiscal
         incomes_year = [i for i in incomes if i.date.year == fiscal_year]
-        expenses_year = [e for e in expenses if e.date.year == fiscal_year]
+        expenses_year = [e for e in expenses if e.date.year == fiscal_year and e.is_verified]
 
         # PASO 2: Separar clasificados / no clasificados
         classified_incomes = [i for i in incomes_year if i.fiscal_category is not None]
@@ -165,6 +165,7 @@ class FiscalCalculator:
             e for e in expenses
             if e.fiscal_category == FiscalExpenseCategory.AMORTIZACION_MUEBLES
             and (fiscal_year - 9) <= e.date.year <= fiscal_year
+            and e.is_verified
         ]
         raw_muebles = sum((e.amount.amount for e in furniture_expenses), Decimal("0")) * Decimal("0.10")
 

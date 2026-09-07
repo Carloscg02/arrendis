@@ -125,3 +125,34 @@ def test_update_income_fiscal_category(client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert data["fiscal_category"] == "rendimiento_integro"
+
+
+def test_delete_income_success(client: TestClient):
+    """DELETE /api/incomes/{id} elimina el ingreso y devuelve 204."""
+    prop_id = create_property(client)
+    create_res = client.post("/api/incomes", json={
+        "property_id": prop_id,
+        "amount": 500.00,
+        "date": "2026-07-01",
+        "category": "rent"
+    })
+    inc_id = create_res.json()["id"]
+
+    # Verificar que existe
+    list_res = client.get(f"/api/properties/{prop_id}/incomes")
+    assert len(list_res.json()) == 1
+
+    # Eliminar
+    del_res = client.delete(f"/api/incomes/{inc_id}")
+    assert del_res.status_code == 204
+
+    # Verificar que ya no existe
+    list_res_after = client.get(f"/api/properties/{prop_id}/incomes")
+    assert len(list_res_after.json()) == 0
+
+
+def test_delete_income_not_found(client: TestClient):
+    """DELETE /api/incomes/{id} con id inexistente devuelve 404."""
+    response = client.delete("/api/incomes/non-existent-id")
+    assert response.status_code == 404
+

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Building2, MapPin, ChevronRight } from "lucide-react";
 import type { Property } from "../types";
 
 interface Props {
@@ -32,29 +33,18 @@ export default function PropertyCard({ property }: Props) {
 
   const translateType = (type: string) => {
     switch (type.toLowerCase()) {
-      case "apartment": return "🏢 Apartamento";
-      case "house": return "🏠 Casa";
-      case "commercial": return "🏪 Local Comercial";
-      case "garage": return "🚗 Garaje";
-      case "land": return "🌍 Terreno";
-      default: return `🏗️ ${type}`;
-    }
-  };
-
-  const getTypeEmoji = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "apartment": return "🏢";
-      case "house": return "🏠";
-      case "commercial": return "🏪";
-      case "garage": return "🚗";
-      case "land": return "🌍";
-      default: return "🏗️";
+      case "apartment": return "Apartamento";
+      case "house": return "Casa";
+      case "commercial": return "Local Comercial";
+      case "garage": return "Garaje";
+      case "land": return "Terreno";
+      default: return type;
     }
   };
 
   return (
     <div
-      className="property-card glass-panel"
+      className="property-card"
       onClick={() => navigate(`/properties/${property.id}`)}
     >
       <div 
@@ -62,7 +52,7 @@ export default function PropertyCard({ property }: Props) {
         style={property.image_url ? { backgroundImage: `url(http://localhost:8000${property.image_url})` } : undefined}
       >
         {!property.image_url && (
-          <span className="property-card-placeholder-icon">{getTypeEmoji(property.property_type)}</span>
+          <Building2 size={32} strokeWidth={1.5} className="property-card-placeholder-icon" />
         )}
       </div>
       <div className="property-card-content">
@@ -73,10 +63,15 @@ export default function PropertyCard({ property }: Props) {
           </span>
         </div>
         <p className="property-address">
-          📍 {property.address.street}, {property.address.city}{" "}
-          {property.address.postal_code}
+          <MapPin size={13} style={{ marginRight: '0.35rem', verticalAlign: '-1px', flexShrink: 0 }} />
+          <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
         </p>
-        <span className="badge badge-outline">{translateType(property.property_type)}</span>
+        <div className="property-card-footer">
+          <span className="badge badge-outline">{translateType(property.property_type)}</span>
+          <span className="property-card-cta">
+            Ver detalle <ChevronRight size={14} />
+          </span>
+        </div>
       </div>
     </div>
   );

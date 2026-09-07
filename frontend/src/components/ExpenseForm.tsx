@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Info } from "lucide-react";
 import type { ExpenseCreateInput, FiscalExpenseCategory } from "../types";
 
 interface Props {
@@ -133,7 +134,8 @@ export default function ExpenseForm({ propertyId, onSubmit, onCancel }: Props) {
 
       {selectedCategoryKey === "dudoso_cobro" && (
         <div className="report-warning" style={{ fontSize: "0.85rem" }}>
-          <strong>ℹ️ Requisito legal:</strong> Para deducir impagos como saldos de dudoso cobro,
+          <Info size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '0.4rem' }} />
+          <strong>Requisito legal:</strong> Para deducir impagos como saldos de dudoso cobro,
           deben haber transcurrido más de 6 meses desde la primera gestión de cobro,
           o el deudor debe estar en situación de concurso de acreedores (Art. 13 RIRPF).
         </div>

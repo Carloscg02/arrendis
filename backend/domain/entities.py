@@ -13,12 +13,29 @@ from datetime import date
 from enum import Enum
 from decimal import Decimal
 
-from backend.domain.value_objects import Address, Email, Money, PasswordHash, CadastralBreakdown, AcquisitionCost
-
-
 # ──────────────────────────────────────────────
 # Enumeraciones
 # ──────────────────────────────────────────────
+
+class UtilityType(Enum):
+    """Clasificación del tipo de suministro."""
+    ELECTRICITY = "electricity"
+    GAS = "gas"
+    WATER = "water"
+
+
+class ExpenseSource(Enum):
+    """Origen de un gasto: manual o auto-importado desde PDF."""
+    MANUAL = "manual"
+    AUTO_IMPORT = "auto_import"
+
+
+class ExtractionConfidence(Enum):
+    """Nivel de confianza de la extracción automática de datos."""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
 
 class PropertyType(Enum):
     """Clasificación del tipo de propiedad."""
@@ -83,6 +100,17 @@ class FiscalIncomeCategory(Enum):
     OTROS_INGRESOS = "otros_ingresos"
 
 
+from backend.domain.value_objects import (
+    Address,
+    Email,
+    Money,
+    PasswordHash,
+    CadastralBreakdown,
+    AcquisitionCost,
+    UtilityInvoiceData,
+)
+
+
 # ──────────────────────────────────────────────
 # Entidades
 # ──────────────────────────────────────────────
@@ -104,9 +132,13 @@ class Property:
     cadastral_breakdown: CadastralBreakdown | None = None
     acquisition_cost: AcquisitionCost | None = None
     acquisition_date: date | None = None
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
+        import re
         # Validar que el nombre no esté vacío
         if not self.name or not self.name.strip():
             raise ValueError("El nombre de la propiedad (name) no puede estar vacío.")
@@ -117,6 +149,14 @@ class Property:
             if len(ref) != 20:
                 raise ValueError(
                     f"La referencia catastral debe tener 20 caracteres, tiene {len(ref)}."
+                )
+
+        _CUPS_PATTERN = re.compile(r'^ES\d{16,18}[A-Z0-9]{0,4}$')
+        for field_name in ("cups_electricity", "cups_gas", "cups_water"):
+            value = getattr(self, field_name)
+            if value is not None and not _CUPS_PATTERN.match(value):
+                raise ValueError(
+                    f"{field_name} no tiene formato CUPS válido: '{value}'"
                 )
 
     @property
@@ -217,6 +257,10 @@ class Expense:
     category: ExpenseCategory
     description: str = ""
     fiscal_category: FiscalExpenseCategory | None = None
+    is_verified: bool = True
+    source: ExpenseSource = ExpenseSource.MANUAL
+    receipt_path: str | None = None
+    utility_data: UtilityInvoiceData | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
@@ -242,6 +286,7 @@ class User:
     email: Email
     password_hash: PasswordHash
     username: str
+    forwarding_email: str | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
@@ -336,3 +381,89 @@ class FiscalCarryforward:
     @property 
     def expiry_year(self) -> int:
         return self.year_generated + 4
+
+
+class LLMProviderError(Exception):
+    """Error genérico no recuperable del proveedor de LLM."""
+    def __init__(self, message: str, provider: str = "unknown"):
+        self.provider = provider
+        super().__init__(f"[{provider}] {message}")
+
+class RateLimitError(LLMProviderError):
+    """El proveedor rechazó la petición por exceso de cuota (429)."""
+    def __init__(self, provider: str = "unknown", retry_after_seconds: int | None = None):
+        self.retry_after_seconds = retry_after_seconds
+        msg = "Rate limit exceeded"
+        if retry_after_seconds:
+            msg += f" (retry after {retry_after_seconds}s)"
+        super().__init__(msg, provider)
+
+
+# ──────────────────────────────────────────────
+# Excepciones de Suministros (E-02 / F-18)
+# ──────────────────────────────────────────────
+
+class UtilityExtractionError(Exception):
+    """Clase base para errores en el motor de extracción de suministros."""
+    pass
+
+
+class EmptyPDFTextError(UtilityExtractionError):
+    """El PDF está vacío o no contiene capa de texto vectorial digital."""
+    pass
+
+
+class PDFExtractionError(UtilityExtractionError):
+    """Error al abrir o decodificar el archivo PDF."""
+    pass
+
+
+class ExtractionFailedError(UtilityExtractionError):
+    """Ni Regex ni IA lograron extraer los campos mínimos obligatorios."""
+    pass
+
+
+class PropertyNotFoundForCUPSError(UtilityExtractionError):
+    """Los datos fueron extraídos pero el CUPS no está registrado en los inmuebles del usuario."""
+    def __init__(self, message: str, cups: str, invoice_data: any = None) -> None:
+        super().__init__(message)
+        self.cups = cups
+        self.invoice_data = invoice_data
+
+
+class DuplicateInvoiceError(UtilityExtractionError):
+    """La factura ya fue importada previamente para esta propiedad."""
+    def __init__(self, message: str, existing_expense: any = None, invoice_data: any = None) -> None:
+        super().__init__(message)
+        self.existing_expense = existing_expense
+        self.invoice_data = invoice_data
+
+
+@dataclass(frozen=True)
+class InboundInvoiceItemResult:
+    """Resultado individual de un archivo procesado en el correo entrante."""
+    filename: str
+    status: str  # "success" | "duplicate" | "cups_not_owned" | "unmatched_cups" | "error"
+    expense: Expense | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class InboundEmailProcessResult:
+    """Resultado del procesamiento de un correo entrante."""
+    status: str  # "success" | "unauthorized_sender" | "ignored" | "error"
+    sender: str
+    recipient: str
+    subject: str
+    total_attachments: int
+    processed_count: int
+    duplicate_count: int
+    error_count: int
+    items: list[InboundInvoiceItemResult]
+    message: str = ""
+
+
+

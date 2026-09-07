@@ -12,3 +12,13 @@ __pycache__/
 *.sqlite3
 data/images/
 .env
+
+# Agent & Impeccable binaries
+.agent/*
+!.agent/skills/
+.agent/skills/*
+!.agent/skills/anti-slop-ui/
+.gemini/
+.impeccable/*.db-shm
+*.db-wal
+data/*.db*

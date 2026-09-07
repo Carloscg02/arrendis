@@ -142,7 +142,7 @@ Para cerrar la especificación técnica detallada de las features, el modelo de 
 | **1** | Regex vs. IA | **Híbrido con Fallback:** Regex local primero (por comercializadora conocida), IA (Gemini Flash free tier con `response_schema`) como motor universal de respaldo. Patrón Strategy + Fallback. |
 | **2** | Almacenamiento de PDFs | **Diferido (`deferred`).** El pipeline extrae datos en memoria. El usuario conserva el PDF original en su correo/disco. Se implementará en el futuro (disco local fase 1, Cloudflare R2 fase 2). Política de retención: 5 años (prescripción AEAT). |
 | **3** | GDPR / Privacidad | **Scrubbing obligatorio** antes de enviar texto a la Vía B (IA). Eliminar NIFs, nombres, direcciones, IBANs. Conservar solo CUPS, importes, fechas y conceptos. |
-| **4** | Ingesta de correo | **Fase 1: Subida manual de PDF** desde la interfaz web (zero infraestructura). **Fase 2 (deferred):** IMAP polling a **carpeta dedicada** del correo del usuario. El usuario crea una regla en Gmail/Outlook para mover facturas de comercializadoras a una carpeta específica; el sistema solo escanea esa carpeta. Menor fricción que acceso al inbox completo y máxima privacidad. |
+| **4** | Ingesta de correo | **Fase 1: Subida manual de PDF** desde la interfaz web (zero infraestructura). **Fase 2 (deferred):** Inbound Parse Webhook (SendGrid, Mailgun o Cloudflare Email Routing) con buzón virtual dedicado por usuario (`facturas+{user_id}@...`). Se descarta la lectura IMAP directa por riesgos de compliance (auditorías CASA de Google de 15k-75k$), privacidad y escalabilidad. |
 | **5** | Validación humana | **Estado `is_verified = False`** para gastos auto-importados. Panel de revisión con campos editables y confirmación 1-click. Los gastos no verificados no computan en borradores fiscales. |
 
 ---
@@ -153,9 +153,9 @@ Para cerrar la especificación técnica detallada de las features, el modelo de 
 
 | ID | Título | Estado | Descripción |
 |---|---|---|---|
-| **F-16** | Modelo de Dominio de Suministros (CUPS en Property, `is_verified` y `receipt_path` en Expense, `UtilityInvoiceData` VO) | `backlog` | Extensiones al modelo de dominio existente: campos CUPS en Property, estado de verificación en Expense, y nuevo Value Object para datos extraídos de facturas. |
-| **F-17** | Puerto y Adaptador Genérico de LLM (`LLMProviderPort` + `GeminiFlashAdapter`) | `backlog` | **Feature transversal (sin épica).** Puerto de dominio genérico para interacciones con LLMs, con adaptador de Gemini Flash (free tier, `response_schema`). Incluye rate limiting, retry logic y gestión de API key. Diseñado para ser reutilizable por cualquier feature futura (chat con límites, resúmenes, etc.). |
-| **F-18** | Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex + LLM Fallback) + Privacy Scrubber | `backlog` | Núcleo del pipeline: extracción de texto con PyMuPDF, registro extensible de parsers por comercializadora (`UtilityExtractorRegistry` con soporte para Repsol, Endesa, Iberdrola, Naturgy, Aqualia, etc.), fallback automático a LLM (`LLMProviderPort` de F-17) para facturas de formato desconocido o fallos de Regex, scrubbing de datos personales, matching CUPS → Property, y suite de pruebas empíricas sobre el corpus de muestras PDF en `samples/`. |
+| **F-16** | Modelo de Dominio de Suministros (CUPS en Property, `is_verified` y `receipt_path` en Expense, `UtilityInvoiceData` VO) | `completed` | Extensiones al modelo de dominio existente: campos CUPS en Property, estado de verificación en Expense, y nuevo Value Object para datos extraídos de facturas. |
+| **F-17** | Puerto y Adaptador Genérico de LLM (`LLMProviderPort` + `GeminiFlashAdapter`) | `completed` | **Feature transversal (sin épica).** Puerto de dominio genérico para interacciones con LLMs, con adaptador de Gemini Flash (free tier, `response_schema`). Incluye rate limiting, retry logic y gestión de API key. Diseñado para ser reutilizable por cualquier feature futura (chat con límites, resúmenes, etc.). |
+| **F-18** | Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex + LLM Fallback) + Privacy Scrubber | `completed` | Núcleo del pipeline: extracción de texto con PyMuPDF, registro extensible de parsers por comercializadora (`UtilityExtractorRegistry` con soporte para Repsol, Endesa, Iberdrola, Naturgy, Aqualia, etc.), fallback automático a LLM (`LLMProviderPort` de F-17) para facturas de formato desconocido o fallos de Regex, scrubbing de datos personales, matching CUPS → Property, y suite de pruebas empíricas sobre el corpus de muestras PDF en `samples/`. |
 | **F-20** | Interfaz UI: Subida Manual de PDF, Panel de Gastos Pendientes y Confirmación 1-click | `backlog` | Componente de subida de archivo PDF, vista de gastos pendientes de revisión con campos pre-cumplimentados editables, y acción de confirmar/rechazar. |
 
 ### Features diferidas (futuro)
@@ -163,7 +163,7 @@ Para cerrar la especificación técnica detallada de las features, el modelo de 
 | ID | Título | Estado | Notas |
 |---|---|---|---|
 | **F-19** | Almacenamiento Documental de Recibos PDF y Política de Retención 5 años | `deferred` | Disco local (fase 1) o Cloudflare R2 (fase 2). Se implementará cuando se valide la necesidad de conservar los PDFs en la plataforma. |
-| **F-21** | Ingesta Automática por Email: IMAP Polling a Carpeta Dedicada | `deferred` | Conexión IMAP al correo del usuario, escaneando solo una carpeta específica donde el usuario redirige facturas de comercializadoras mediante reglas de correo. |
+| **F-21** | Ingesta Automática por Email: Inbound Parse Webhook (SendGrid/Mailgun/Cloudflare) | `deferred` | Buzón virtual dedicado por usuario/propiedad. Los correos entrantes disparan un webhook hacia el backend sin requerir acceso al correo privado del usuario. |
 
 ### Orden de implementación y dependencias
 
@@ -177,11 +177,11 @@ F-16 (Dominio) → F-17 (LLM Port genérico) → F-18 (Motor Extracción) → F-
                   features futuras
                   (chat, resúmenes...)
                                                        │
-                                                 ┌─────┴──────┐
-                                                 │  DIFERIDOS  │
-                                                 │  F-19 (PDFs)│
-                                                 │  F-21 (IMAP)│
-                                                 └─────────────┘
+                                                 ┌─────┴─────────────┐
+                                                 │     DIFERIDOS     │
+                                                 │  F-19 (PDFs)      │
+                                                 │  F-21 (Inbound WH)│
+                                                 └───────────────────┘
 ```
 
 > [!NOTE]

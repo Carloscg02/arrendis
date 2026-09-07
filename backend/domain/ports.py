@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 from datetime import date
 from backend.domain.entities import Expense, Income, Property, User, LeaseContract, FiscalCarryforward
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, LLMResponse
 
 
 class PropertyRepository(ABC):
@@ -59,6 +59,22 @@ class PropertyRepository(ABC):
         """Actualiza los datos fiscales de una propiedad."""
         ...
 
+    @abstractmethod
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        """Busca una propiedad por cualquiera de sus CUPS."""
+        ...
+
+    @abstractmethod
+    def update_cups(
+        self,
+        property_id: str,
+        cups_electricity: str | None,
+        cups_gas: str | None,
+        cups_water: str | None,
+    ) -> None:
+        """Actualiza los CUPS de una propiedad."""
+        ...
+
 
 class IncomeRepository(ABC):
     """Puerto de salida para persistir y recuperar Incomes."""
@@ -71,6 +87,11 @@ class IncomeRepository(ABC):
     @abstractmethod
     def find_by_property_id(self, property_id: str) -> list[Income]:
         """Retorna todos los ingresos de una propiedad."""
+        ...
+
+    @abstractmethod
+    def find_by_id(self, income_id: str) -> Income | None:
+        """Busca un ingreso por su identificador."""
         ...
 
     @abstractmethod
@@ -98,6 +119,11 @@ class ExpenseRepository(ABC):
         ...
 
     @abstractmethod
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        """Busca un gasto por su identificador."""
+        ...
+
+    @abstractmethod
     def delete(self, expense_id: str) -> None:
         """Elimina un gasto por su id."""
         ...
@@ -116,6 +142,10 @@ class UserRepository(ABC):
     def find_by_id(self, user_id: str) -> User | None: ...
     @abstractmethod
     def find_by_email(self, email: str) -> User | None: ...
+    @abstractmethod
+    def find_by_sender_email(self, email: str) -> User | None: ...
+    @abstractmethod
+    def update_forwarding_email(self, user_id: str, forwarding_email: str | None) -> None: ...
 
 class PasswordHasherPort(ABC):
     """Puerto de salida para hashear y verificar contraseñas."""
@@ -199,3 +229,50 @@ class FiscalCarryforwardRepository(ABC):
         """Retorna excesos disponibles (no caducados, con saldo) para aplicar en un año fiscal.
         Solo incluye excesos de los 4 años anteriores con amount_remaining > 0."""
         ...
+
+
+class LLMProviderPort(ABC):
+    """Puerto de salida genérico para interacciones con LLMs.
+    
+    Contrato que cualquier adaptador de LLM debe cumplir.
+    El dominio usa este puerto sin saber si detrás hay Gemini, OpenAI, Anthropic, o un mock.
+    """
+
+    @abstractmethod
+    def generate(self, request: LLMRequest) -> LLMResponse:
+        """Genera una respuesta a partir de un LLMRequest.
+        
+        - Si request.response_schema está definido, el adaptador debe solicitar
+          salida estructurada (JSON) y poblar LLMResponse.parsed_data.
+        - Debe implementar retry con exponential backoff para errores transitorios (429, 5xx).
+        
+        Raises:
+            RateLimitError: Si el proveedor rechaza por cuota tras agotar reintentos.
+            LLMProviderError: Para errores no recuperables.
+        """
+        ...
+
+
+class PDFTextExtractorPort(ABC):
+    """Puerto de salida para la extracción de texto plano desde archivos PDF binarios.
+    
+    El dominio define QUÉ necesita (texto del documento) sin atarse a ninguna
+    librería concreta (PyMuPDF, PDFMiner, pypdf, etc.).
+    """
+
+    @abstractmethod
+    def extract_text(self, pdf_bytes: bytes) -> str:
+        """Extrae el contenido textual ordenado de las páginas del PDF.
+        
+        Args:
+            pdf_bytes: Bytes del archivo PDF en memoria.
+            
+        Returns:
+            Cadena de texto con el contenido concatenado de todas las páginas.
+            
+        Raises:
+            EmptyPDFTextError: Si el archivo es válido pero no contiene texto vectorial.
+            PDFExtractionError: Si el documento está corrupto o protegido por contraseña.
+        """
+        ...
+

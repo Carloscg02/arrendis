@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from datetime import date
+from backend.domain.entities import UtilityType, ExtractionConfidence
 
 
 @dataclass(frozen=True)
@@ -247,3 +249,69 @@ class FiscalReport:
     unclassified_income_count: int
     unclassified_expense_count: int
     has_warnings: bool
+
+
+@dataclass(frozen=True)
+class UtilityInvoiceData:
+    """Datos estructurados extraídos de una factura de suministros."""
+    cups: str
+    amount: Decimal
+    issue_date: date
+    provider_name: str
+    utility_type: 'UtilityType'
+    invoice_number: str | None = None
+    extraction_confidence: 'ExtractionConfidence' = ExtractionConfidence.HIGH
+
+    def __post_init__(self) -> None:
+        import re
+        from datetime import date as date_cls, timedelta
+
+        cups_pattern = r'^ES\d{16,18}[A-Z0-9]{0,4}$'
+        if not re.match(cups_pattern, self.cups):
+            raise ValueError(
+                f"CUPS no tiene formato válido (esperado ES + 16-18 dígitos + 0-2 letras): '{self.cups}'"
+            )
+
+        if self.amount <= 0:
+            raise ValueError(f"El importe de la factura debe ser positivo: {self.amount}")
+
+        max_future = date_cls.today() + timedelta(days=60)
+        if self.issue_date > max_future:
+            raise ValueError(
+                f"La fecha de emisión no puede ser tan futura: {self.issue_date}"
+            )
+
+        if not self.provider_name or not self.provider_name.strip():
+            raise ValueError("El nombre del proveedor no puede estar vacío.")
+
+
+@dataclass(frozen=True)
+class LLMRequest:
+    """Petición genérica al LLM — independiente de proveedor."""
+    user_prompt: str                          # Prompt principal del usuario
+    system_prompt: str | None = None          # Instrucciones de sistema (opcional)
+    response_schema: dict | None = None       # JSON Schema esperado (para extracción estructurada)
+    temperature: float = 0.0                  # 0.0 = determinista (ideal para extracción)
+    max_output_tokens: int = 2048             # Límite de tokens de salida
+
+    def __post_init__(self) -> None:
+        if not self.user_prompt or not self.user_prompt.strip():
+            raise ValueError("user_prompt cannot be empty")
+        if not (0.0 <= self.temperature <= 2.0):
+            raise ValueError(f"temperature must be between 0.0 and 2.0, got {self.temperature}")
+        if self.max_output_tokens < 1:
+            raise ValueError(f"max_output_tokens must be positive, got {self.max_output_tokens}")
+
+
+@dataclass(frozen=True)
+class LLMResponse:
+    """Respuesta genérica del LLM — independiente de proveedor."""
+    text: str                                 # Texto crudo de la respuesta
+    parsed_data: dict | None = None           # Datos estructurados parseados (si se pidió schema)
+    model_name: str = ""                      # Nombre del modelo que respondió
+    input_tokens: int = 0                     # Tokens de entrada consumidos
+    output_tokens: int = 0                    # Tokens de salida consumidos
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens

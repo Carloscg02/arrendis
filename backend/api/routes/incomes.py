@@ -7,7 +7,7 @@ ya que es una vista de lectura vinculada a una propiedad específica.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from backend.adapters.sqlite_adapter import (
     SQLiteExpenseRepository,
@@ -143,3 +143,25 @@ def update_fiscal_category(
         if "no encontrado" in str(e).lower():
             raise HTTPException(status_code=404, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/incomes/{income_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_income(
+    income_id: str,
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    income_repo: SQLiteIncomeRepository = Depends(get_income_repo),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    """Elimina un ingreso perteneciente a una propiedad del usuario actual."""
+    income = income_repo.find_by_id(income_id)
+    if income is None:
+        raise HTTPException(status_code=404, detail=f"No existe el ingreso con id '{income_id}'.")
+
+    # Verificar que la propiedad pertenece al usuario actual
+    prop = property_repo.find_by_id(income.property_id)
+    if prop is None or prop.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail=f"No existe el ingreso con id '{income_id}'.")
+
+    income_repo.delete(income_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
 
@@ -23,10 +24,12 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card glass-panel">
+      <div className="auth-card">
         <div className="auth-header">
+          <div className="auth-brand-badge">
+            <Building2 size={20} />
+          </div>
           <h1>Iniciar Sesión</h1>
-          <p>Bienvenido de nuevo</p>
         </div>
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">

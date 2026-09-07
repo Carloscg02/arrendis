@@ -1,5 +1,21 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { 
+  ArrowLeft, 
+  Upload, 
+  Trash2, 
+  TrendingUp, 
+  TrendingDown, 
+  Scale, 
+  Wallet, 
+  FileText, 
+  ReceiptText, 
+  Plus,
+  ChevronRight,
+  UploadCloud,
+  SlidersHorizontal
+} from "lucide-react";
+import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
   Property,
   Income,
@@ -15,7 +31,9 @@ import {
   getExpenses,
   getProfitReport,
   createIncome,
+  deleteIncome,
   createExpense,
+  deleteExpense,
   deleteProperty,
   uploadPropertyImage,
   updateFiscalData,
@@ -27,6 +45,8 @@ import FiscalClassificationPanel from "../components/FiscalClassificationPanel";
 import FiscalReportView from "../components/FiscalReportView";
 import { ContractSection } from "../components/ContractSection";
 import Modal from "../components/Modal";
+import InvoiceUploadModal from "../components/InvoiceUploadModal";
+import CupsModal from "../components/CupsModal";
 import { useToast } from "../components/Toast";
 import { KPICard } from "../components/KPICard";
 import { SkeletonLoader } from "../components/SkeletonLoader";
@@ -46,14 +66,20 @@ export default function PropertyDetail() {
 
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isCupsModalOpen, setIsCupsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
+  const [isIncomesOpen, setIsIncomesOpen] = useState(false);
+  const [isExpensesOpen, setIsExpensesOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (isInitial = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
+      setLoadError(null);
       const [propData, incData, expData, profData] = await Promise.all([
         getPropertyById(id),
         getIncomes(id),
@@ -64,17 +90,17 @@ export default function PropertyDetail() {
       setIncomes(incData);
       setExpenses(expData);
       setProfit(profData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load property data", error);
+      setLoadError(error.message || "Error al cargar los datos de la propiedad");
       toast.error("Error al cargar los datos de la propiedad");
-      navigate("/");
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
   }, [id]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +109,7 @@ export default function PropertyDetail() {
     try {
       await uploadPropertyImage(id!, file);
       toast.success("Foto subida correctamente");
-      loadData();
+      loadData(false);
     } catch (error: any) {
       toast.error(error.message || "Error al subir la foto");
     }
@@ -95,10 +121,21 @@ export default function PropertyDetail() {
     try {
       await createIncome(data);
       setIsIncomeModalOpen(false);
-      loadData();
+      setIsIncomesOpen(true);
+      loadData(false);
       toast.success("Ingreso registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el ingreso");
+    }
+  };
+
+  const handleDeleteIncome = async (incomeId: string) => {
+    try {
+      await deleteIncome(incomeId);
+      toast.success("Ingreso eliminado correctamente");
+      loadData(false);
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar el ingreso");
     }
   };
 
@@ -106,10 +143,21 @@ export default function PropertyDetail() {
     try {
       await createExpense(data);
       setIsExpenseModalOpen(false);
-      loadData();
+      setIsExpensesOpen(true);
+      loadData(false);
       toast.success("Gasto registrado correctamente");
     } catch (error: any) {
       toast.error(error.message || "Error al registrar el gasto");
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      await deleteExpense(expenseId);
+      toast.success("Gasto eliminado correctamente");
+      loadData(false);
+    } catch (error: any) {
+      toast.error(error.message || "Error al eliminar el gasto");
     }
   };
 
@@ -135,6 +183,27 @@ export default function PropertyDetail() {
     }
   };
 
+  if (loadError && !property) {
+    return (
+      <div className="page-container" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+        <h3 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>
+          No se pudieron cargar los datos de la propiedad
+        </h3>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
+          {loadError}
+        </p>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+          <button className="btn btn-secondary" onClick={() => navigate("/")}>
+            Volver al Portafolio
+          </button>
+          <button className="btn btn-primary" onClick={() => loadData(true)}>
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !property) {
     return (
       <div className="page-container">
@@ -153,19 +222,19 @@ export default function PropertyDetail() {
       <KPICard
         title="Ingresos Totales"
         value={`${totalIncomes.toFixed(2)} €`}
-        icon="💰"
+        icon={<TrendingUp size={16} />}
         variant="success"
       />
       <KPICard
         title="Gastos Totales"
         value={`${totalExpenses.toFixed(2)} €`}
-        icon="📉"
+        icon={<TrendingDown size={16} />}
         variant="danger"
       />
       <KPICard
         title="Beneficio Neto"
         value={`${parseFloat(profit?.net_profit || "0").toFixed(2)} €`}
-        icon="📊"
+        icon={<Scale size={16} />}
         variant="info"
       />
     </>
@@ -175,20 +244,20 @@ export default function PropertyDetail() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <button className="btn btn-link mb-2" onClick={() => navigate("/")}>
-            ← Volver al Portafolio
+          <button className="btn btn-link mb-2" onClick={() => navigate("/")} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ArrowLeft size={14} /> Volver al Portafolio
           </button>
           <h1 className="page-title">{property.name}</h1>
           <p className="page-subtitle">
             {property.address.street}, {property.address.city}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button className="btn btn-secondary upload-btn" onClick={() => fileInputRef.current?.click()}>
-            📷 Subir Foto
+            <Upload size={14} style={{ marginRight: '0.35rem' }} /> Subir Foto
           </button>
           <button className="btn btn-danger" onClick={() => setIsConfirmOpen(true)}>
-            Eliminar Propiedad
+            <Trash2 size={14} style={{ marginRight: '0.35rem' }} /> Eliminar Propiedad
           </button>
         </div>
         <input
@@ -225,114 +294,261 @@ export default function PropertyDetail() {
             className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
             onClick={() => setActiveTab("dashboard")}
           >
-            📊 Finanzas
+            <Wallet size={16} /> Finanzas
           </button>
           <button 
             className={`tab-btn ${activeTab === "contracts" ? "active" : ""}`}
             onClick={() => setActiveTab("contracts")}
           >
-            📋 Contratos
+            <FileText size={16} /> Contratos
           </button>
           <button 
             className={`tab-btn ${activeTab === "fiscal" ? "active" : ""}`}
             onClick={() => setActiveTab("fiscal")}
           >
-            ⚖️ Datos Fiscales {property.has_fiscal_data ? "🟢" : "⚪"}
+            <ReceiptText size={16} /> Datos Fiscales
+            <span className={`status-dot ${property.has_fiscal_data ? "complete" : "pending"}`} />
           </button>
         </div>
 
         {activeTab === "dashboard" ? (
-          <div className="dashboard-grid">
-            {/* Incomes Section */}
-            <div className="data-section glass-panel">
-            <div className="section-header">
-              <h3>Ingresos</h3>
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={() => setIsIncomeModalOpen(true)}
+          <div className="finance-sections">
+            {/* Collapsible Incomes Section */}
+            <div className={`data-section collapsible ${isIncomesOpen ? "open" : "collapsed"}`}>
+              <div
+                className="collapsible-header"
+                onClick={() => setIsIncomesOpen(!isIncomesOpen)}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isIncomesOpen}
               >
-                + Registrar Ingreso
-              </button>
-            </div>
-            {incomes.length === 0 ? (
-              <p className="empty-text">Aún no hay ingresos registrados.</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th className="text-right">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incomes.map((inc) => (
-                    <tr key={inc.id}>
-                      <td>{inc.date}</td>
-                      <td><span className="badge badge-neutral">{inc.category}</span></td>
-                      <td>{inc.description}</td>
-                      <td className="text-right text-success">
-                        +{parseFloat(inc.amount).toFixed(2)} €
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                <div className="collapsible-header-left">
+                  <span className={`collapsible-chevron ${isIncomesOpen ? "open" : ""}`}>
+                    <ChevronRight size={18} />
+                  </span>
+                  <div className="collapsible-title-group">
+                    <h3>Ingresos</h3>
+                    <span className="badge badge-neutral">
+                      {incomes.length} {incomes.length === 1 ? "registro" : "registros"}
+                    </span>
+                    <span className="collapsible-total text-success">
+                      +{totalIncomes.toFixed(2)} €
+                    </span>
+                  </div>
+                </div>
+                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => setIsIncomeModalOpen(true)}
+                  >
+                    <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                    Registrar Ingreso
+                  </button>
+                </div>
+              </div>
 
-          {/* Expenses Section */}
-          <div className="data-section glass-panel">
-            <div className="section-header">
-              <h3>Gastos</h3>
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => setIsExpenseModalOpen(true)}
-              >
-                + Registrar Gasto
-              </button>
+              {isIncomesOpen && (
+                <div className="collapsible-content">
+                  {incomes.length === 0 ? (
+                    <p className="empty-text">Aún no hay ingresos registrados.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Categoría</th>
+                          <th>Descripción</th>
+                          <th className="text-right">Importe</th>
+                          <th style={{ width: '40px' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incomes.map((inc) => (
+                          <tr key={inc.id}>
+                            <td>{inc.date}</td>
+                            <td>
+                              <span className="badge badge-neutral">
+                                {translateIncomeCategory(inc.category)}
+                              </span>
+                            </td>
+                            <td>{inc.description || "—"}</td>
+                            <td className="text-right text-success">
+                              +{parseFloat(inc.amount).toFixed(2)} €
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteIncome(inc.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#94a3b8',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '4px',
+                                  transition: 'color 0.15s, background-color 0.15s'
+                                }}
+                                title="Eliminar ingreso"
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#ef4444';
+                                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = '#94a3b8';
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
             </div>
-            {expenses.length === 0 ? (
-              <p className="empty-text">Aún no hay gastos registrados.</p>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th className="text-right">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map((exp) => (
-                    <tr key={exp.id}>
-                      <td>{exp.date}</td>
-                      <td><span className="badge badge-warning">{exp.category}</span></td>
-                      <td>{exp.description}</td>
-                      <td className="text-right text-danger">
-                        -{parseFloat(exp.amount).toFixed(2)} €
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+
+            {/* Collapsible Expenses Section */}
+            <div className={`data-section collapsible ${isExpensesOpen ? "open" : "collapsed"}`}>
+              <div
+                className="collapsible-header"
+                onClick={() => setIsExpensesOpen(!isExpensesOpen)}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpensesOpen}
+              >
+                <div className="collapsible-header-left">
+                  <span className={`collapsible-chevron ${isExpensesOpen ? "open" : ""}`}>
+                    <ChevronRight size={18} />
+                  </span>
+                  <div className="collapsible-title-group">
+                    <h3>Gastos</h3>
+                    <span className="badge badge-neutral">
+                      {expenses.length} {expenses.length === 1 ? "registro" : "registros"}
+                    </span>
+                    <span className="collapsible-total text-danger">
+                      -{totalExpenses.toFixed(2)} €
+                    </span>
+                  </div>
+                </div>
+                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => setIsCupsModalOpen(true)}
+                    title={property.cups_electricity ? `CUPS Luz: ${property.cups_electricity}` : "Configurar código CUPS de luz, gas o agua"}
+                  >
+                    <SlidersHorizontal size={14} style={{ marginRight: '0.35rem' }} />
+                    Configurar CUPS
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => setIsUploadModalOpen(true)}
+                    title="Importar una o varias facturas de suministros en PDF"
+                  >
+                    <UploadCloud size={14} style={{ marginRight: '0.3rem' }} />
+                    Importar Facturas PDF
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => setIsExpenseModalOpen(true)}
+                  >
+                    <Plus size={14} style={{ marginRight: '0.3rem' }} />
+                    Registrar Gasto
+                  </button>
+                </div>
+              </div>
+
+              {isExpensesOpen && (
+                <div className="collapsible-content">
+                  {expenses.length === 0 ? (
+                    <p className="empty-text">Aún no hay gastos registrados.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Categoría</th>
+                          <th>Descripción</th>
+                          <th className="text-right">Importe</th>
+                          <th style={{ width: '40px' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expenses.map((exp) => (
+                          <tr key={exp.id}>
+                            <td>{exp.date}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span className="badge badge-warning">
+                                  {translateExpenseCategory(exp.category)}
+                                </span>
+                                {exp.utility_data && (
+                                  <span
+                                    className="badge badge-neutral"
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.15rem 0.45rem',
+                                      borderRadius: '4px',
+                                    }}
+                                    title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
+                                  >
+                                    {exp.utility_data.provider_name ? exp.utility_data.provider_name.split(' ')[0] : 'Suministro'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>{exp.description || "—"}</td>
+                            <td className="text-right text-danger">
+                              -{parseFloat(String(exp.amount || 0)).toFixed(2)} €
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExpense(exp.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '0.25rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  borderRadius: '4px',
+                                  transition: 'color 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                title="Eliminar gasto"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : activeTab === "contracts" ? (
-          <div className="contracts-tab-content glass-panel" style={{ padding: '2rem' }}>
+          <div className="contracts-tab-content">
             <ContractSection propertyId={property.id} />
           </div>
         ) : (
-          <div className="fiscal-tab-content glass-panel">
+          <div className="fiscal-tab-content">
             <FiscalDataForm 
               propertyId={property.id} 
               onSubmit={handleUpdateFiscalData} 
               onCancel={() => setActiveTab("dashboard")} 
             />
-            <FiscalClassificationPanel propertyId={property.id} onClassified={loadData} />
+            <FiscalClassificationPanel propertyId={property.id} onClassified={() => loadData(false)} />
             <FiscalReportView propertyId={property.id} />
           </div>
         )}
@@ -361,6 +577,30 @@ export default function PropertyDetail() {
           onCancel={() => setIsExpenseModalOpen(false)}
         />
       </Modal>
+
+      <InvoiceUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={() => {
+          setIsExpensesOpen(true);
+          loadData(false);
+        }}
+      />
+
+      <CupsModal
+        isOpen={isCupsModalOpen}
+        onClose={() => setIsCupsModalOpen(false)}
+        propertyId={property.id}
+        initialCups={{
+          cups_electricity: property.cups_electricity,
+          cups_gas: property.cups_gas,
+          cups_water: property.cups_water,
+        }}
+        onSuccess={() => {
+          toast.success("Códigos CUPS actualizados correctamente");
+          loadData(false);
+        }}
+      />
 
       <ConfirmDialog
         isOpen={isConfirmOpen}

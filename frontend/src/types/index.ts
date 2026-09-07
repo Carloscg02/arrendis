@@ -15,6 +15,9 @@ export interface Property {
   status: string;
   image_url: string | null;
   has_fiscal_data?: boolean;
+  cups_electricity?: string | null;
+  cups_gas?: string | null;
+  cups_water?: string | null;
 }
 
 export interface Income {
@@ -28,6 +31,16 @@ export interface Income {
   fiscal_category?: FiscalIncomeCategory | null;
 }
 
+export interface UtilityInvoiceData {
+  cups: string;
+  amount: number;
+  issue_date: string;
+  provider_name: string;
+  utility_type: 'electricity' | 'gas' | 'water';
+  invoice_number?: string | null;
+  extraction_confidence: 'high' | 'medium' | 'low';
+}
+
 export interface Expense {
   id: string;
   property_id: string;
@@ -37,6 +50,29 @@ export interface Expense {
   category: string;
   description: string;
   fiscal_category?: FiscalExpenseCategory | null;
+  is_verified?: boolean;
+  source?: string;
+  receipt_path?: string | null;
+  utility_data?: UtilityInvoiceData | null;
+}
+
+export interface InvoiceUploadItemResult {
+  filename: string;
+  status: 'success' | 'duplicate' | 'error';
+  expense?: Expense | null;
+  property_name?: string | null;
+  message?: string | null;
+  cups?: string | null;
+  amount?: number | string | null;
+}
+
+export interface BatchInvoiceUploadResponse {
+  total_processed: number;
+  successful_count: number;
+  duplicate_count: number;
+  error_count: number;
+  total_amount_imported: number | string;
+  items: InvoiceUploadItemResult[];
 }
 
 export interface ProfitReport {
@@ -73,6 +109,12 @@ export interface UserResponse {
   id: string;
   email: string;
   username: string;
+  forwarding_email?: string | null;
+}
+
+export interface ForwardingEmailResponse {
+  forwarding_email: string | null;
+  inbound_address: string;
 }
 
 export interface TokenResponse {
