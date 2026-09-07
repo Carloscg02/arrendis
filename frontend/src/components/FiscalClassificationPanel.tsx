@@ -1,7 +1,13 @@
 import { useState } from "react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { getFiscalSuggestions, updateIncomeFiscalCategory, updateExpenseFiscalCategory } from "../services/api";
 import type { FiscalSuggestionsResponse } from "../types";
 import { useToast } from "./Toast";
+import { 
+  translateIncomeCategory, 
+  translateExpenseCategory, 
+  translateFiscalCategory 
+} from "../utils/translations";
 
 interface Props {
   propertyId: string;
@@ -48,33 +54,38 @@ export default function FiscalClassificationPanel({ propertyId, onClassified }: 
   };
 
   return (
-    <div className="fiscal-classification-panel" style={{ marginTop: '2rem', padding: '1.5rem', border: '1px solid var(--panel-border)', borderRadius: 'var(--radius-lg)', background: 'var(--panel-bg)' }}>
-      <h3>Clasificación Fiscal Inteligente</h3>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-        Analiza tus ingresos y gastos para sugerir la categoría fiscal correspondiente según la AEAT.
-      </p>
+    <div className="fiscal-classification-panel">
+      <div className="section-header" style={{ marginBottom: "1rem" }}>
+        <h3>Clasificación Fiscal Inteligente</h3>
+        {!suggestions && (
+          <button className="btn btn-sm btn-primary" onClick={handleGetSuggestions} disabled={loading}>
+            <Sparkles size={14} style={{ marginRight: "0.35rem" }} />
+            {loading ? "Analizando..." : "Generar Sugerencias"}
+          </button>
+        )}
+      </div>
       
-      {!suggestions ? (
-        <button className="btn btn-primary" onClick={handleGetSuggestions} disabled={loading}>
-          {loading ? "Analizando..." : "Generar Sugerencias"}
-        </button>
-      ) : (
+      {suggestions && (
         <div className="suggestions-results">
           {suggestions.total_unclassified === 0 ? (
-            <p style={{ color: 'var(--text-secondary)' }}>Todos los movimientos están clasificados fiscalmente. ¡Buen trabajo!</p>
+            <p className="empty-text">Todos los movimientos están clasificados fiscalmente.</p>
           ) : (
             <>
-              <p style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Se han encontrado {suggestions.total_unclassified} movimientos sin clasificar.</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                Se han encontrado <strong style={{ color: 'var(--text-primary)' }}>{suggestions.total_unclassified}</strong> movimientos pendientes de clasificar:
+              </p>
               
               {suggestions.unclassified_incomes.length > 0 && (
-                <div className="suggestion-group" style={{ marginTop: '1rem' }}>
-                  <h4>Ingresos</h4>
-                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                <div className="suggestion-group">
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Ingresos</h4>
+                  <ul className="suggestion-list">
                     {suggestions.unclassified_incomes.map(inc => (
-                      <li key={inc.id} style={{ padding: '0.75rem', background: 'var(--bg-tertiary)', marginBottom: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--panel-border)' }}>
-                        {inc.description || inc.category} ({inc.amount} €) 
-                        <span className="arrow" style={{ margin: '0 0.5rem' }}> → </span> 
-                        <span className="badge badge-success">{inc.suggested_fiscal_category}</span>
+                      <li key={inc.id} className="suggestion-item">
+                        <span>{inc.description || translateIncomeCategory(inc.category)} ({inc.amount} €)</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <ArrowRight size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span className="badge badge-success">{translateFiscalCategory(inc.suggested_fiscal_category)}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -82,25 +93,27 @@ export default function FiscalClassificationPanel({ propertyId, onClassified }: 
               )}
 
               {suggestions.unclassified_expenses.length > 0 && (
-                <div className="suggestion-group" style={{ marginTop: '1rem' }}>
-                  <h4>Gastos</h4>
-                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                <div className="suggestion-group" style={{ marginTop: '1.25rem' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>Gastos</h4>
+                  <ul className="suggestion-list">
                     {suggestions.unclassified_expenses.map(exp => (
-                      <li key={exp.id} style={{ padding: '0.75rem', background: 'var(--bg-tertiary)', marginBottom: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--panel-border)' }}>
-                        {exp.description || exp.category} ({exp.amount} €) 
-                        <span className="arrow" style={{ margin: '0 0.5rem' }}> → </span> 
-                        <span className="badge badge-neutral">{exp.suggested_fiscal_category}</span>
+                      <li key={exp.id} className="suggestion-item">
+                        <span>{exp.description || translateExpenseCategory(exp.category)} ({exp.amount} €)</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <ArrowRight size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span className="badge badge-neutral">{translateFiscalCategory(exp.suggested_fiscal_category)}</span>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              <div className="form-actions" style={{ marginTop: '1rem' }}>
-                <button className="btn btn-secondary" onClick={() => setSuggestions(null)} disabled={applying}>
+              <div className="form-actions" style={{ marginTop: '1.5rem' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setSuggestions(null)} disabled={applying}>
                   Cancelar
                 </button>
-                <button className="btn btn-primary" onClick={handleApplyAll} disabled={applying}>
+                <button className="btn btn-primary btn-sm" onClick={handleApplyAll} disabled={applying}>
                   {applying ? "Aplicando..." : "Aplicar Todas las Sugerencias"}
                 </button>
               </div>

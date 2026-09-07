@@ -7,12 +7,16 @@ crean entidades y value objects internamente, y llaman a los repositorios (puert
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+
+from email.utils import parseaddr
 
 from backend.domain.entities import (
     Expense,
     ExpenseCategory,
+    ExpenseSource,
     FiscalExpenseCategory,
     Income,
     IncomeCategory,
@@ -23,6 +27,14 @@ from backend.domain.entities import (
     User,
     LeaseContract,
     LeaseType,
+    LLMProviderError,
+    UtilityExtractionError,
+    EmptyPDFTextError,
+    ExtractionFailedError,
+    PropertyNotFoundForCUPSError,
+    DuplicateInvoiceError,
+    InboundInvoiceItemResult,
+    InboundEmailProcessResult,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -34,9 +46,12 @@ from backend.domain.ports import (
     LeaseContractRepository,
     FiscalReportRendererPort,
     FiscalCarryforwardRepository,
+    LLMProviderPort,
+    PDFTextExtractorPort,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport
+from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, UtilityInvoiceData
+from backend.domain.extraction import ExtractionStrategy, UtilityExtractorRegistry
 
 class CreatePropertyUseCase:
     """Caso de uso: crear y persistir una nueva propiedad."""
@@ -692,4 +707,393 @@ class DownloadFiscalReportPdfUseCase:
         filename = f"borrador_fiscal_{safe_name}_{fiscal_year}.{self._renderer.file_extension()}"
 
         return pdf_bytes, self._renderer.content_type(), filename
+
+
+class CheckLLMHealthUseCase:
+    """Verifica la disponibilidad del proveedor de LLM."""
+    
+    def __init__(self, llm_provider: LLMProviderPort | None):
+        self._llm = llm_provider
+    
+    def execute(self) -> dict:
+        if self._llm is None:
+            return {"status": "not_configured", "model": None}
+        # Intenta una generación trivial para verificar conectividad
+        try:
+            response = self._llm.generate(LLMRequest(user_prompt="ping"))
+            return {"status": "ok", "model": response.model_name}
+        except LLMProviderError as e:
+            return {"status": "error", "model": None, "message": str(e)}
+
+
+@dataclass(frozen=True)
+class ProcessUtilityInvoiceResult:
+    """DTO de resultado de la ingesta y extracción de una factura de suministros."""
+    expense: Expense
+    property: Property
+    invoice_data: UtilityInvoiceData
+    strategy_used: str
+
+
+class ProcessUtilityInvoiceUseCase:
+    """Caso de uso: procesar una factura PDF, extraer sus datos y registrar el gasto directamente verificado."""
+
+    def __init__(
+        self,
+        pdf_extractor: PDFTextExtractorPort,
+        registry: UtilityExtractorRegistry,
+        property_repo: PropertyRepository,
+        expense_repo: ExpenseRepository,
+        fallback_strategy: ExtractionStrategy | None = None,
+    ) -> None:
+        self._pdf_extractor = pdf_extractor
+        self._registry = registry
+        self._property_repo = property_repo
+        self._expense_repo = expense_repo
+        self._fallback_strategy = fallback_strategy
+
+    def execute(self, pdf_bytes: bytes, user_id: str) -> ProcessUtilityInvoiceResult:
+        """Procesa una factura PDF y crea un Expense verificado.
+
+        Args:
+            pdf_bytes: Bytes del archivo PDF de la factura.
+            user_id: ID del usuario autenticado (para matching multi-tenant).
+
+        Returns:
+            ProcessUtilityInvoiceResult con el gasto creado y metadatos.
+
+        Raises:
+            EmptyPDFTextError: Si el PDF no contiene texto digital extraíble.
+            ExtractionFailedError: Si ni Regex ni IA lograron extraer los datos requeridos.
+            PropertyNotFoundForCUPSError: Si el CUPS extraído no pertenece a ninguna propiedad del usuario.
+            DuplicateInvoiceError: Si la factura ya fue importada previamente para la propiedad.
+        """
+        # 1. Extraer texto plano con PyMuPDF
+        raw_text = self._pdf_extractor.extract_text(pdf_bytes)
+
+        # 2. Intentar estrategia Regex según comercializadora
+        invoice_data: UtilityInvoiceData | None = None
+        strategy_used = "unknown"
+        strategy = self._registry.find_strategy(raw_text)
+
+        if strategy is not None:
+            invoice_data = strategy.extract(raw_text)
+            if invoice_data is not None:
+                strategy_used = strategy.provider_name
+
+        # 3. Fallback a IA si no hubo coincidencia Regex o falló la extracción
+        if invoice_data is None:
+            if self._fallback_strategy is None:
+                raise ExtractionFailedError(
+                    "No se pudo extraer la factura con reglas Regex y no hay estrategia de IA configurada."
+                )
+            invoice_data = self._fallback_strategy.extract(raw_text)
+            if invoice_data is None:
+                raise ExtractionFailedError(
+                    "La extracción de la factura no pudo completarse ni por Regex ni por IA."
+                )
+            strategy_used = self._fallback_strategy.provider_name
+
+        # 4. Matching unívoco CUPS -> Property del usuario
+        prop = self._property_repo.find_by_cups(invoice_data.cups, user_id=user_id)
+        if prop is None:
+            raise PropertyNotFoundForCUPSError(
+                f"No se encontró ningún inmueble del usuario con el CUPS '{invoice_data.cups}'.",
+                cups=invoice_data.cups,
+                invoice_data=invoice_data,
+            )
+
+        # 5. Detección de duplicados (Idempotencia)
+        existing_expenses = self._expense_repo.find_by_property_id(prop.id)
+        for exp in existing_expenses:
+            if exp.utility_data is not None and exp.utility_data.cups == invoice_data.cups:
+                # Criterio 1: Mismo número de factura
+                if invoice_data.invoice_number and exp.utility_data.invoice_number == invoice_data.invoice_number:
+                    raise DuplicateInvoiceError(
+                        f"La factura de {invoice_data.provider_name} con nº {invoice_data.invoice_number} ya fue importada previamente.",
+                        existing_expense=exp,
+                        invoice_data=invoice_data,
+                    )
+                # Criterio 2: Misma fecha y mismo importe
+                if exp.date == invoice_data.issue_date and exp.amount.amount == invoice_data.amount:
+                    raise DuplicateInvoiceError(
+                        f"Ya existe una factura de {invoice_data.provider_name} del {invoice_data.issue_date} por importe de {invoice_data.amount} €.",
+                        existing_expense=exp,
+                        invoice_data=invoice_data,
+                    )
+
+        # 6. Crear Expense directamente verificado (AUTO_IMPORT)
+        expense = Expense(
+            property_id=prop.id,
+            amount=Money(invoice_data.amount, "EUR"),
+            date=invoice_data.issue_date,
+            category=ExpenseCategory.UTILITY,
+            description=f"Factura {invoice_data.provider_name} - {invoice_data.invoice_number or invoice_data.cups}",
+            fiscal_category=FiscalExpenseCategory.SERVICIOS_SUMINISTROS,
+            is_verified=True,
+            source=ExpenseSource.AUTO_IMPORT,
+            utility_data=invoice_data,
+        )
+
+        # 7. Persistir el gasto
+        self._expense_repo.save(expense)
+
+        return ProcessUtilityInvoiceResult(
+            expense=expense,
+            property=prop,
+            invoice_data=invoice_data,
+            strategy_used=strategy_used,
+        )
+
+
+@dataclass(frozen=True)
+class BatchInvoiceUploadItem:
+    """Resultado individual dentro de un lote de subida de facturas."""
+    filename: str
+    status: str  # "success" | "duplicate" | "error"
+    expense: Expense | None = None
+    property_name: str | None = None
+    message: str | None = None
+    cups: str | None = None
+    amount: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class BatchInvoiceUploadResult:
+    """Resumen consolidado del procesamiento de un lote de facturas."""
+    total_processed: int
+    successful_count: int
+    duplicate_count: int
+    error_count: int
+    total_amount_imported: Decimal
+    items: list[BatchInvoiceUploadItem]
+
+
+class ProcessBatchUtilityInvoicesUseCase:
+    """Caso de uso: procesar múltiples facturas PDF en lote."""
+
+    def __init__(self, single_invoice_use_case: ProcessUtilityInvoiceUseCase) -> None:
+        self._single_use_case = single_invoice_use_case
+
+    def execute(
+        self, files: list[tuple[str, bytes]], user_id: str
+    ) -> BatchInvoiceUploadResult:
+        items: list[BatchInvoiceUploadItem] = []
+        successful_count = 0
+        duplicate_count = 0
+        error_count = 0
+        total_amount = Decimal("0")
+
+        for filename, pdf_bytes in files:
+            try:
+                res = self._single_use_case.execute(pdf_bytes, user_id)
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="success",
+                        expense=res.expense,
+                        property_name=res.property.name,
+                        amount=res.invoice_data.amount,
+                        cups=res.invoice_data.cups,
+                    )
+                )
+                successful_count += 1
+                total_amount += res.invoice_data.amount
+            except DuplicateInvoiceError as e:
+                duplicate_count += 1
+                cups_val = getattr(e, 'cups', None) or (e.invoice_data.cups if getattr(e, 'invoice_data', None) else None)
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="duplicate",
+                        message=str(e),
+                        cups=cups_val,
+                    )
+                )
+            except Exception as e:
+                error_count += 1
+                items.append(
+                    BatchInvoiceUploadItem(
+                        filename=filename,
+                        status="error",
+                        message=str(e),
+                    )
+                )
+
+        return BatchInvoiceUploadResult(
+            total_processed=len(files),
+            successful_count=successful_count,
+            duplicate_count=duplicate_count,
+            error_count=error_count,
+            total_amount_imported=total_amount,
+            items=items,
+        )
+
+
+class UpdateForwardingEmailUseCase:
+    """Caso de uso: actualizar el email de reenvío autorizado para la ingesta de facturas."""
+
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._user_repo = user_repo
+
+    def execute(self, user_id: str, forwarding_email: str | None) -> User:
+        user = self._user_repo.find_by_id(user_id)
+        if user is None:
+            raise ValueError(f"No existe el usuario con id '{user_id}'.")
+
+        clean = forwarding_email.strip().lower() if forwarding_email and forwarding_email.strip() else None
+        if clean:
+            # Validar sintaxis con el Value Object Email
+            Email(clean)
+
+        self._user_repo.update_forwarding_email(user_id, clean)
+        user.forwarding_email = clean
+        return user
+
+
+class ProcessInboundEmailUseCase:
+    """Caso de uso: Procesar facturas de suministros recibidas por email (F-21).
+
+    Verifica la identidad del remitente contra los emails autorizados del usuario
+    (email de registro o forwarding_email), filtra los adjuntos PDF, extrae los
+    datos de la factura y persiste el gasto verificado si el CUPS pertenece a un
+    inmueble del usuario.
+    """
+
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        single_invoice_use_case: ProcessUtilityInvoiceUseCase,
+    ) -> None:
+        self._user_repo = user_repo
+        self._single_use_case = single_invoice_use_case
+
+    def execute(
+        self,
+        sender: str,
+        recipient: str,
+        subject: str,
+        attachments: list[tuple[str, bytes]],
+    ) -> InboundEmailProcessResult:
+        # 1. Normalizar y extraer email del remitente (RFC 2822)
+        _, sender_address = parseaddr(sender)
+        clean_sender = sender_address.strip().lower()
+        if not clean_sender and "@" in sender:
+            import re
+            m = re.search(r'[\w\.-]+@[\w\.-]+', sender)
+            if m:
+                clean_sender = m.group(0).lower()
+
+        # 2. Anti-Spoofing: Verificar si el remitente corresponde a un usuario registrado o autorizado
+        user = self._user_repo.find_by_sender_email(clean_sender)
+        if user is None:
+            return InboundEmailProcessResult(
+                status="unauthorized_sender",
+                sender=clean_sender or sender,
+                recipient=recipient,
+                subject=subject,
+                total_attachments=len(attachments),
+                processed_count=0,
+                duplicate_count=0,
+                error_count=0,
+                items=[],
+                message=f"El remitente '{clean_sender or sender}' no está registrado ni autorizado como dirección de reenvío.",
+            )
+
+        # 3. Filtrar únicamente adjuntos PDF
+        pdf_attachments = [
+            (filename, content)
+            for filename, content in attachments
+            if filename.lower().endswith(".pdf")
+        ]
+
+        if not pdf_attachments:
+            return InboundEmailProcessResult(
+                status="ignored",
+                sender=clean_sender,
+                recipient=recipient,
+                subject=subject,
+                total_attachments=len(attachments),
+                processed_count=0,
+                duplicate_count=0,
+                error_count=0,
+                items=[],
+                message="No se encontraron archivos adjuntos PDF en el correo recibido.",
+            )
+
+        # 4. Procesar cada archivo PDF usando el user_id autenticado
+        items: list[InboundInvoiceItemResult] = []
+        processed_count = 0
+        duplicate_count = 0
+        error_count = 0
+
+        for filename, pdf_bytes in pdf_attachments:
+            try:
+                res = self._single_use_case.execute(pdf_bytes, user.id)
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="success",
+                        expense=res.expense,
+                        property_name=res.property.name,
+                        amount=res.invoice_data.amount,
+                        cups=res.invoice_data.cups,
+                    )
+                )
+                processed_count += 1
+            except DuplicateInvoiceError as e:
+                duplicate_count += 1
+                cups_val = getattr(e, 'cups', None) or (e.invoice_data.cups if getattr(e, 'invoice_data', None) else None)
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="duplicate",
+                        message=str(e),
+                        cups=cups_val,
+                    )
+                )
+            except PropertyNotFoundForCUPSError as e:
+                error_count += 1
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="cups_not_owned",
+                        message=str(e),
+                        cups=e.cups,
+                    )
+                )
+            except Exception as e:
+                error_count += 1
+                items.append(
+                    InboundInvoiceItemResult(
+                        filename=filename,
+                        status="error",
+                        message=str(e),
+                    )
+                )
+
+        if processed_count > 0 or duplicate_count > 0:
+            status = "success"
+            msg = f"Se procesaron {processed_count} facturas correctamente ({duplicate_count} duplicadas omitidas)."
+        elif error_count > 0:
+            status = "error"
+            msg = "Ocurrieron errores al procesar los adjuntos del correo."
+        else:
+            status = "ignored"
+            msg = "No se procesó ningún documento."
+
+        return InboundEmailProcessResult(
+            status=status,
+            sender=clean_sender,
+            recipient=recipient,
+            subject=subject,
+            total_attachments=len(attachments),
+            processed_count=processed_count,
+            duplicate_count=duplicate_count,
+            error_count=error_count,
+            items=items,
+            message=msg,
+        )
+
+
 

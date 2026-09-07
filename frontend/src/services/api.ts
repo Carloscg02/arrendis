@@ -10,6 +10,7 @@ import type {
   FiscalDataInput,
   LeaseContract,
   LeaseContractInput,
+  BatchInvoiceUploadResponse,
 } from "../types";
 import * as authService from './auth';
 
@@ -25,14 +26,30 @@ async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
   let res = await fetch(url, { ...options, headers });
   
   if (res.status === 401) {
-    try {
-      await authService.refresh();
-      token = authService.getAccessToken();
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
+    const originalToken = token;
+    const currentToken = authService.getAccessToken();
+
+    // Si otra petición concurrente ya refrescó el token mientras esta estaba en vuelo, reutilizarlo
+    if (currentToken && currentToken !== originalToken) {
+      token = currentToken;
+    } else {
+      try {
+        await authService.refresh();
+        token = authService.getAccessToken();
+      } catch {
+        authService.clearSession();
+        window.location.href = '/login';
+        return res;
       }
-      res = await fetch(url, { ...options, headers });
-    } catch (e) {
+    }
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    res = await fetch(url, { ...options, headers });
+
+    // Si aún después de refrescar persiste el 401, la sesión es verdaderamente inválida
+    if (res.status === 401) {
       authService.clearSession();
       window.location.href = '/login';
     }
@@ -96,6 +113,11 @@ export async function createIncome(data: IncomeCreateInput): Promise<Income> {
   return handleResponse<Income>(res);
 }
 
+export async function deleteIncome(incomeId: string): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/incomes/${incomeId}`, { method: "DELETE" });
+  await handleResponse<void>(res);
+}
+
 export async function getExpenses(propertyId: string): Promise<Expense[]> {
   const res = await apiFetch(`${API_BASE}/properties/${propertyId}/expenses`);
   return handleResponse<Expense[]>(res);
@@ -108,6 +130,35 @@ export async function createExpense(data: ExpenseCreateInput): Promise<Expense> 
     body: JSON.stringify(data),
   });
   return handleResponse<Expense>(res);
+}
+
+export async function deleteExpense(expenseId: string): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/expenses/${expenseId}`, { method: "DELETE" });
+  await handleResponse<void>(res);
+}
+
+export async function uploadUtilityInvoices(files: File[]): Promise<BatchInvoiceUploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  const res = await apiFetch(`${API_BASE}/expenses/upload-invoices`, {
+    method: "POST",
+    body: formData,
+  });
+  return handleResponse<BatchInvoiceUploadResponse>(res);
+}
+
+export async function updatePropertyCups(
+  propertyId: string,
+  cups: { cups_electricity?: string | null; cups_gas?: string | null; cups_water?: string | null }
+): Promise<Property> {
+  const res = await apiFetch(`${API_BASE}/properties/${propertyId}/cups`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cups),
+  });
+  return handleResponse<Property>(res);
 }
 
 export async function getProfitReport(propertyId: string): Promise<ProfitReport> {
@@ -229,5 +280,23 @@ export async function downloadFiscalReportPdf(propertyId: string, year: number):
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
+}
+
+import type { ForwardingEmailResponse } from "../types";
+
+export async function getForwardingEmail(): Promise<ForwardingEmailResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/forwarding-email`);
+  return handleResponse<ForwardingEmailResponse>(res);
+}
+
+export async function updateForwardingEmail(
+  forwardingEmail: string | null
+): Promise<ForwardingEmailResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/forwarding-email`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ forwarding_email: forwardingEmail }),
+  });
+  return handleResponse<ForwardingEmailResponse>(res);
 }
 

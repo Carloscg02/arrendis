@@ -20,7 +20,8 @@ from backend.adapters.sqlite_adapter import (
     SQLiteLeaseContractRepository,
     SQLiteFiscalCarryforwardRepository,
 )
-from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository
+from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort
+from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
 def get_db(request: Request) -> SQLiteConnection:
@@ -86,4 +87,54 @@ async def get_current_user(
 def get_fiscal_report_renderer() -> AEATPdfRendererAdapter:
     """Retorna el renderizador de informes fiscales (PDF AEAT por defecto)."""
     return AEATPdfRendererAdapter()
+
+def get_llm_provider(request: Request) -> LLMProviderPort | None:
+    """Retorna el proveedor de LLM configurado (almacenado en app.state), o None si no hay key."""
+    return getattr(request.app.state, "llm_provider", None)
+
+
+def get_utility_registry() -> UtilityExtractorRegistry:
+    from backend.domain.extraction import UtilityExtractorRegistry, RepsolExtractionStrategy
+    return UtilityExtractorRegistry([
+        RepsolExtractionStrategy(),
+    ])
+
+
+def get_process_utility_invoice_use_case(
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    expense_repo: SQLiteExpenseRepository = Depends(get_expense_repo),
+    registry: UtilityExtractorRegistry = Depends(get_utility_registry),
+    llm_provider: LLMProviderPort | None = Depends(get_llm_provider),
+) -> ProcessUtilityInvoiceUseCase:
+    from backend.adapters.pdf_extractor_adapter import PyMuPDFTextExtractorAdapter
+    from backend.domain.extraction import AIExtractionStrategy
+    from backend.application.use_cases import ProcessUtilityInvoiceUseCase
+
+    pdf_extractor = PyMuPDFTextExtractorAdapter()
+    fallback_strategy = AIExtractionStrategy(llm_provider) if llm_provider is not None else None
+    return ProcessUtilityInvoiceUseCase(
+        pdf_extractor=pdf_extractor,
+        registry=registry,
+        property_repo=property_repo,
+        expense_repo=expense_repo,
+        fallback_strategy=fallback_strategy,
+    )
+
+
+def get_process_batch_utility_invoices_use_case(
+    single_use_case: ProcessUtilityInvoiceUseCase = Depends(get_process_utility_invoice_use_case),
+) -> ProcessBatchUtilityInvoicesUseCase:
+    from backend.application.use_cases import ProcessBatchUtilityInvoicesUseCase
+    return ProcessBatchUtilityInvoicesUseCase(single_use_case)
+
+
+def get_process_inbound_email_use_case(
+    user_repo: SQLiteUserRepository = Depends(get_user_repo),
+    single_use_case: ProcessUtilityInvoiceUseCase = Depends(get_process_utility_invoice_use_case),
+) -> ProcessInboundEmailUseCase:
+    from backend.application.use_cases import ProcessInboundEmailUseCase
+    return ProcessInboundEmailUseCase(
+        user_repo=user_repo,
+        single_invoice_use_case=single_use_case,
+    )
 

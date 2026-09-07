@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { LeaseContract, LeaseContractInput } from '../types';
 import { getLeaseContracts, createLeaseContract, updateLeaseContract, deleteLeaseContract } from '../services/api';
 import { ContractForm } from './ContractForm';
+import { ConfirmDialog } from './ConfirmDialog';
+import { useToast } from './Toast';
 import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
 
 interface ContractSectionProps {
@@ -16,50 +18,57 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function ContractSection({ propertyId }: ContractSectionProps) {
+  const toast = useToast();
   const [contracts, setContracts] = useState<LeaseContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<LeaseContract | undefined>();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadContracts = async () => {
+  const loadContracts = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const data = await getLeaseContracts(propertyId);
       setContracts(data);
     } catch (err: any) {
       setError(err.message || 'Error al cargar contratos');
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadContracts();
+    loadContracts(true);
   }, [propertyId]);
 
   const handleSave = async (data: LeaseContractInput) => {
     try {
       if (editingContract) {
         await updateLeaseContract(editingContract.id, data);
+        toast.success("Contrato actualizado correctamente");
       } else {
         await createLeaseContract(propertyId, data);
+        toast.success("Contrato registrado correctamente");
       }
       setIsFormOpen(false);
       setEditingContract(undefined);
-      loadContracts();
+      loadContracts(false);
     } catch (err: any) {
-      alert(err.message || 'Error al guardar contrato');
+      toast.error(err.message || 'Error al guardar contrato');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este contrato?')) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await deleteLeaseContract(id);
-      loadContracts();
+      await deleteLeaseContract(deletingId);
+      toast.success("Contrato eliminado correctamente");
+      setDeletingId(null);
+      loadContracts(false);
     } catch (err: any) {
-      alert(err.message || 'Error al eliminar');
+      toast.error(err.message || 'Error al eliminar');
+      setDeletingId(null);
     }
   };
 
@@ -70,15 +79,15 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
     <div className="contracts-section">
       <div className="section-header">
         <h3>Contratos de Arrendamiento</h3>
-        <button className="btn-primary" onClick={() => { setEditingContract(undefined); setIsFormOpen(true); }}>
-          <Plus size={16} /> Nuevo Contrato
+        <button className="btn btn-sm btn-primary" onClick={() => { setEditingContract(undefined); setIsFormOpen(true); }}>
+          <Plus size={14} style={{ marginRight: '0.3rem' }} /> Nuevo Contrato
         </button>
       </div>
 
       {contracts.length === 0 ? (
         <div className="empty-state">
-          <FileText size={48} className="empty-icon" />
-          <p>No hay contratos registrados para esta propiedad.</p>
+          <FileText size={36} className="empty-icon" strokeWidth={1.5} />
+          <p className="empty-text">No hay contratos registrados para esta propiedad.</p>
         </div>
       ) : (
         <div className="contracts-list">
@@ -88,7 +97,7 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
                 <h4>{contract.tenant_name}</h4>
                 <div className="contract-badges">
                   <span className={`status-badge ${contract.is_active ? 'active' : 'inactive'}`}>
-                    {contract.is_active ? '🟢 Activo' : '🔴 Finalizado'}
+                    {contract.is_active ? 'Activo' : 'Finalizado'}
                   </span>
                   <span className={`type-badge ${contract.lease_type}`}>
                     {TYPE_LABELS[contract.lease_type] || contract.lease_type}
@@ -105,7 +114,7 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
                 <button className="icon-btn" onClick={() => { setEditingContract(contract); setIsFormOpen(true); }} title="Editar">
                   <Edit2 size={16} />
                 </button>
-                <button className="icon-btn delete" onClick={() => handleDelete(contract.id)} title="Eliminar">
+                <button className="icon-btn delete" onClick={() => setDeletingId(contract.id)} title="Eliminar">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -121,6 +130,16 @@ export function ContractSection({ propertyId }: ContractSectionProps) {
           onClose={() => { setIsFormOpen(false); setEditingContract(undefined); }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingId)}
+        title="Eliminar Contrato"
+        message="¿Estás seguro de que deseas eliminar este contrato de arrendamiento? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingId(null)}
+      />
     </div>
   );
 }

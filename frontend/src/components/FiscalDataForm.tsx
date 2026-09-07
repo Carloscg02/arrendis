@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FiscalDataInput } from "../types";
 import { getFiscalData } from "../services/api";
-import { Building, Map } from "lucide-react";
+import { Building, Map, AlertTriangle } from "lucide-react";
 
 interface FiscalDataFormProps {
   propertyId: string;
@@ -112,7 +112,8 @@ export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: Fisca
     <form className="form fiscal-form" onSubmit={handleSubmit}>
       {error && (
         <div className="report-warning" style={{ marginBottom: "1rem" }}>
-          ⚠️ {error}
+          <AlertTriangle size={15} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '0.4rem' }} />
+          {error}
         </div>
       )}
       <div className={`fiscal-section ${expandedSection === "both" || expandedSection === "cadastral" ? "expanded" : "collapsed"}`}>

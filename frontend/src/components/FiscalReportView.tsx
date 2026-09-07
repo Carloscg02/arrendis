@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Download, AlertTriangle } from "lucide-react";
 import type { FiscalReport } from "../types";
 import { getFiscalReport, downloadFiscalReportPdf } from "../services/api";
 import { useToast } from "./Toast";
@@ -65,14 +66,15 @@ export default function FiscalReportView({ propertyId }: Props) {
         <div className="report-content">
           {report.has_warnings && (
             <div className="report-warning">
-              <strong>⚠️ Advertencia:</strong> Tienes {report.unclassified_income_count} ingreso(s) y {report.unclassified_expense_count} gasto(s) sin clasificar. 
+              <AlertTriangle size={16} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '0.5rem' }} />
+              <strong>Advertencia:</strong> Tienes {report.unclassified_income_count} ingreso(s) y {report.unclassified_expense_count} gasto(s) sin clasificar. 
               Clasifícalos para asegurar un cálculo preciso.
             </div>
           )}
 
           {/* Sección 1: Rendimientos Íntegros */}
           <div className="report-section">
-            <div className="report-section-header">📊 1. Rendimientos Íntegros</div>
+            <div className="report-section-header">1. Rendimientos Íntegros</div>
             <div className="report-row">
               <span>Ingresos por Alquiler</span>
               <span>{parseFloat(report.gross_rental_income).toFixed(2)} €</span>
@@ -89,20 +91,24 @@ export default function FiscalReportView({ propertyId }: Props) {
 
           {/* Sección 2: Ocupación */}
           <div className="report-section">
-            <div className="report-section-header">🏠 2. Ocupación (Prorrateo)</div>
-            <p>La vivienda estuvo alquilada <strong>{report.rented_days}</strong> días de {report.total_days_in_year}. Ratio de ocupación: {(parseFloat(report.occupation_ratio) * 100).toFixed(2)}%.</p>
+            <div className="report-section-header">2. Ocupación y Prorrateo</div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              La vivienda estuvo alquilada <strong style={{ color: 'var(--text-primary)' }}>{report.rented_days}</strong> días de {report.total_days_in_year}. Ratio de ocupación: {(parseFloat(report.occupation_ratio) * 100).toFixed(2)}%.
+            </p>
             <div className="occupation-bar-container">
               <div 
                 className="occupation-bar-fill" 
                 style={{ width: `${parseFloat(report.occupation_ratio) * 100}%` }}
               ></div>
             </div>
-            <p className="text-secondary" style={{ fontSize: "0.85rem" }}>Los gastos fijos se prorratearán según este ratio.</p>
+            <p className="text-secondary" style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Los gastos fijos se prorratean según este ratio de ocupación.
+            </p>
           </div>
 
           {/* Sección 3: Gastos Deducibles */}
           <div className="report-section">
-            <div className="report-section-header">💰 3. Gastos Deducibles (Prorrateados)</div>
+            <div className="report-section-header">3. Gastos Deducibles (Prorrateados)</div>
             <div className="report-row">
               <span>Intereses de Capital</span>
               <span>{parseFloat(report.expenses_intereses).toFixed(2)} €</span>
@@ -112,7 +118,7 @@ export default function FiscalReportView({ propertyId }: Props) {
               <span>{parseFloat(report.expenses_reparacion).toFixed(2)} €</span>
             </div>
             
-            <div className="report-row" style={{ marginTop: "1rem" }}>
+            <div className="report-row" style={{ marginTop: "0.5rem" }}>
               <span>Tributos (IBI, Tasas, etc.)</span>
               <span>{parseFloat(report.expenses_tributos).toFixed(2)} €</span>
             </div>
@@ -148,8 +154,10 @@ export default function FiscalReportView({ propertyId }: Props) {
 
           {/* Sección 4: Tope de Reparación e Intereses */}
           <div className="report-section">
-            <div className="report-section-header">⚠️ 4. Tope Art. 23.1.a LIRPF</div>
-            <p className="text-secondary mb-2" style={{ fontSize: "0.85rem" }}>Los gastos de reparación e intereses no pueden superar los rendimientos íntegros.</p>
+            <div className="report-section-header">4. Límite de Reparación e Intereses (Art. 23.1.a LIRPF)</div>
+            <p className="text-secondary mb-2" style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+              Los gastos de reparación e intereses no pueden superar los rendimientos íntegros.
+            </p>
             <div className="report-row">
               <span>Total Reparación + Intereses (Bruto)</span>
               <span>{parseFloat(report.repair_interest_raw).toFixed(2)} €</span>
@@ -184,7 +192,7 @@ export default function FiscalReportView({ propertyId }: Props) {
 
           {/* Sección 5: Amortización */}
           <div className="report-section">
-            <div className="report-section-header">🏗️ 5. Amortización del Inmueble</div>
+            <div className="report-section-header">5. Amortización del Inmueble</div>
             <div className="report-row">
               <span>Base de Amortización (Mayor Const. vs Catastro)</span>
               <span>{parseFloat(report.amortization_base).toFixed(2)} €</span>
@@ -204,8 +212,8 @@ export default function FiscalReportView({ propertyId }: Props) {
           </div>
 
           {/* Sección 6: Rendimiento Neto Previo */}
-          <div className="report-section" style={{ border: "2px solid var(--panel-border)" }}>
-            <div className="report-section-header">📋 6. Rendimiento Neto Previo</div>
+          <div className="report-section">
+            <div className="report-section-header">6. Rendimiento Neto Previo</div>
             <div className="report-row">
               <span>Total Rendimientos Íntegros</span>
               <span>{parseFloat(report.total_income).toFixed(2)} €</span>
@@ -214,7 +222,7 @@ export default function FiscalReportView({ propertyId }: Props) {
               <span>Total Gastos Deducibles (Incl. Amort.)</span>
               <span className="text-danger">-{parseFloat(report.total_deductible_expenses).toFixed(2)} €</span>
             </div>
-            <div className="report-row total" style={{ fontSize: "1.3rem" }}>
+            <div className="report-row total" style={{ fontSize: "1.15rem" }}>
               <span>Rendimiento Neto (Previo Reducciones)</span>
               <span>{parseFloat(report.net_income_before_reduction).toFixed(2)} €</span>
             </div>
@@ -222,7 +230,7 @@ export default function FiscalReportView({ propertyId }: Props) {
 
           {/* Sección 7: Reducción Vivienda Habitual */}
           <div className="report-section">
-            <div className="report-section-header">🏡 7. Reducción Vivienda Habitual (60%)</div>
+            <div className="report-section-header">7. Reducción Vivienda Habitual (60%)</div>
             <div className="report-row">
               <span>Días como Vivienda Habitual</span>
               <span>{report.vivienda_habitual_days}</span>
@@ -244,9 +252,8 @@ export default function FiscalReportView({ propertyId }: Props) {
           {/* Sección 8: Resultado Final */}
           <div className="final-result-card">
             <div className="report-section-header" style={{ justifyContent: "center", marginBottom: "0" }}>
-              ✅ 8. Rendimiento Neto Reducido
+              8. Rendimiento Neto Reducido
             </div>
-            <p className="text-secondary">Este es el importe final a declarar en el IRPF</p>
             <div className="final-result-value">
               {parseFloat(report.net_income_final).toFixed(2)} €
             </div>
@@ -265,7 +272,10 @@ export default function FiscalReportView({ propertyId }: Props) {
                   Generando PDF...
                 </>
               ) : (
-                <>📄 Descargar Borrador Fiscal (PDF)</>
+                <>
+                  <Download size={16} />
+                  Descargar Borrador Fiscal (PDF)
+                </>
               )}
             </button>
             <p className="fiscal-report-download-disclaimer">

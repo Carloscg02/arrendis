@@ -7,11 +7,13 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import AppHeader from './components/AppHeader';
 import { AuthProvider } from './components/AuthProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Routes>
         {/* Rutas protegidas */}
         <Route path="/" element={
           <ProtectedRoute>
@@ -38,7 +40,8 @@ function App() {
           </PublicOnlyRoute>
         } />
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

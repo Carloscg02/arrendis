@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Plus, Building2 } from "lucide-react";
 import type { Property, PropertyCreateInput } from "../types";
 import { getProperties, createProperty } from "../services/api";
 import PropertyCard from "../components/PropertyCard";
@@ -46,13 +47,13 @@ export default function PropertyList() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Portafolio de Inmuebles</h1>
-          <p className="page-subtitle">Gestiona tus propiedades de alquiler</p>
         </div>
         <button
           className="btn btn-primary"
           onClick={() => setIsModalOpen(true)}
         >
-          + Nueva Propiedad
+          <Plus size={16} style={{ marginRight: '0.4rem' }} />
+          Nueva Propiedad
         </button>
       </div>
 
@@ -60,13 +61,14 @@ export default function PropertyList() {
         <SkeletonLoader variant="card" count={6} />
       ) : properties.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">🏢</div>
+          <Building2 size={36} strokeWidth={1.5} className="empty-icon" />
           <h3>No se encontraron propiedades</h3>
           <p>Comienza añadiendo tu primera propiedad de alquiler.</p>
           <button
             className="btn btn-primary mt-4"
             onClick={() => setIsModalOpen(true)}
           >
+            <Plus size={16} style={{ marginRight: '0.4rem' }} />
             Añadir Propiedad
           </button>
         </div>

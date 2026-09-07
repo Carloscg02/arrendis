@@ -287,41 +287,35 @@ def scrub_text(raw_text: str) -> str:
 
 ## 📩 Disyuntiva 4: Mecanismo de Ingesta de Correo
 
-### Veredicto: **Subida manual de PDF (fase 1) → IMAP Polling con plus-addressing (fase 2)**
+### Veredicto: **Subida manual de PDF (fase 1) → Inbound Parse Webhook con buzón virtual por usuario/inmueble (fase 2)**
 
 ### Análisis de opciones
 
-| Criterio | IMAP Polling | Inbound Email Webhook (Cloudflare Email Routing) |
+| Criterio | IMAP Polling (Lectura directa buzón usuario) | Inbound Parse Webhook (SendGrid, Mailgun, Postmark, Cloudflare) |
 |---|---|---|
-| **Complejidad de setup** | Baja (solo credenciales IMAP) | Media (DNS MX, dominio, Worker, Auth) |
-| **Coste** | $0 (Gmail/Outlook IMAP gratuito) | $0 (Cloudflare tiene free tier para Email Routing) |
-| **Latencia** | Configurable (cada 5-15 min) | Tiempo real (~segundos) |
-| **Requiere IP/dominio público** | ❌ No | ✅ Sí (endpoint HTTPS) |
-| **Resiliencia a caídas del backend** | ✅ Los correos esperan en el buzón | ⚠️ Si el endpoint falla, el webhook se pierde (salvo reintentos) |
-| **Multi-tenancy** | ⚠️ Complejo (¿un buzón por usuario?) | ⚠️ Mismo problema |
+| **Compliance & Seguridad** | ⛔ Crítico: Exige permisos intrusivos (`gmail.readonly` requiere auditoría CASA de 15k-75k$) | 🟢 Cero fricción: El usuario no cede acceso a su cuenta personal |
+| **Confianza del Usuario** | ❌ Baja (nadie quiere dar acceso a su bandeja personal) | 🟢 Alta (el usuario solo reenvía a una dirección dedicada) |
+| **Complejidad de setup** | Media (gestión de contraseñas de aplicación/OAuth) | Baja/Media (configurar MX y endpoint webhook) |
+| **Coste** | $0 inicial, pero caro en consumo de polling a escala | $0 (tiers gratuitos en Cloudflare Email Routing / SendGrid / Mailgun) |
+| **Latencia / Eficiencia** | Polling periódico (inmeficiente a escala) | Tiempo real (Event-Driven, push inmediato) |
+| **Multi-tenancy** | Muy complejo y propenso a bloqueos por rate-limit | 🟢 Nativo: Subdirecciones o subdominios únicos por usuario (`facturas+{user_id}@...`) |
 
-### Problema del multi-tenancy en la ingesta
+### Arquitectura de Multi-tenancy en la Ingesta (Fase 2)
 
-Un punto crítico que la visión original no abordó: **¿cómo sabe el sistema a qué propietario pertenece cada correo?**
-
-**Opción A — Buzón compartido con detección por CUPS:**
-- Todos los propietarios reenvían sus facturas a `facturas@rental-handler.com`.
-- El sistema extrae el CUPS del PDF y busca en la BD a qué propiedad (y por tanto a qué propietario) corresponde.
-- ⚠️ **Riesgo:** Si dos propietarios registran el mismo CUPS (poco probable pero posible en caso de error de datos), habría conflicto.
-
-**Opción B — Buzón con identificador de usuario:**
-- Cada usuario tiene una dirección única: `facturas+{user_id}@rental-handler.com` (plus-addressing).
-- El sistema sabe de antemano a quién pertenece el correo.
-- ✅ **Más seguro para multi-tenancy.**
+**Buzón virtual con identificador único (Inbound Parse Webhook):**
+- A cada usuario o propiedad se le asigna un alias/correo de ingesta (ej. `facturas+{user_id}@rental-handler.com` o `inmueble-123@inbound.rental-handler.com`).
+- El usuario configura en su comercializadora (o regla de reenvío en su correo) el envío a esa dirección.
+- El proveedor transaccional (SendGrid / Mailgun / Cloudflare Email Routing) recibe el correo y dispara un `POST` al endpoint webhook `/api/v1/webhooks/incoming-email` con el payload y el PDF adjunto.
+- El webhook valida la firma, guarda el PDF y delega la ejecución al caso de uso `ProcessUtilityInvoiceUseCase` (síncrono o vía cola/worker asíncrono).
 
 ### Decisión Recomendada
 
-**Fase 1 (MVP simplificado):** No implementar ingesta automática por email al principio. En su lugar:
-- **Subida manual del PDF desde la interfaz web.** El propietario sube el archivo PDF directamente desde su área de propiedades.
-- El backend aplica el mismo pipeline de extracción (PyMuPDF → Regex/IA → matching CUPS → PendingReviewExpense).
-- Esto elimina toda la complejidad de IMAP, buzones, DNS y autenticación de correos.
+**Fase 1 (MVP actual):** Subida manual del PDF desde la interfaz web.
+- El propietario sube el archivo PDF directamente desde su área de propiedades.
+- El backend aplica el pipeline completo de extracción (PyMuPDF → Regex/IA → matching CUPS → PendingReviewExpense).
+- Esto permite validar el 100% de la lógica de dominio y motor de parsing con **cero complejidad de infraestructura de correos**.
 
-**Fase 2 (ingesta automática):** Una vez validado el pipeline de extracción, añadir ingesta por email vía IMAP polling con plus-addressing.
+**Fase 2 (ingesta desatendida):** Inbound Parse Webhook con buzón dedicado por usuario. Se descarta definitivamente el polling IMAP directo a cuentas de usuario.
 
 > [!IMPORTANT]
 > Esta decisión de **empezar con subida manual de PDF** en lugar de ingesta IMAP reduce drásticamente el alcance de la primera iteración. El valor diferencial de la épica (automatizar el parseo del PDF y extraer datos estructurados) se mantiene intacto. La ingesta por correo se convierte en una mejora incremental posterior.
@@ -410,7 +404,7 @@ class Property:
 | **1** | Regex vs. IA | **Híbrido con Fallback:** Regex local primero (por comercializadora conocida), IA (Gemini Flash free tier) como respaldo. Patrón Strategy + Fallback. |
 | **2** | Almacenamiento de PDFs | **Fase 1: Disco local** (`data/receipts/`), servido por endpoint FastAPI. **Fase 2: Cloudflare R2** (10 GB gratis, $0 egreso). Puerto `ReceiptStoragePort` con adaptadores intercambiables. Política de purgado: 5 años. |
 | **3** | GDPR / Privacidad | **Scrubbing obligatorio** antes de enviar a Vía B. Eliminar NIFs, nombres, direcciones, IBANs. Conservar solo CUPS, importes, fechas y conceptos. |
-| **4** | Ingesta de correo | **Fase 1: Subida manual de PDF** desde la interfaz web (zero infraestructura). **Fase 2: IMAP polling** con plus-addressing. Se postpone la complejidad IMAP/Webhook. |
+| **4** | Ingesta de correo | **Fase 1: Subida manual de PDF** desde la interfaz web (zero infraestructura). **Fase 2: Inbound Parse Webhook** con buzón dedicado por usuario (`facturas+{user_id}@...`). Se descarta IMAP directo por compliance y escalabilidad. |
 | **5** | Validación humana | **Estado `is_verified = False`** para gastos auto-importados. Panel de revisión con vista previa del PDF, campos editables y confirmación 1-click. Los gastos no verificados no computan en borradores fiscales. |
 
 ---
@@ -422,7 +416,8 @@ Tras el análisis, se recomienda **reenfocar las features** para reflejar la dec
 | ID | Título Revisado | Estado | Notas |
 |---|---|---|---|
 | **F-16** | Modelo de Dominio de Suministros: CUPS en Property, `is_verified` y `receipt_path` en Expense, `UtilityInvoiceData` VO | `backlog` | Base para todo lo demás |
-| **F-17** | Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex Repsol + Gemini Flash Fallback) + Privacy Scrubber | `backlog` | Núcleo del pipeline |
-| **F-18** | Almacenamiento de Recibos PDF + Endpoint de Descarga + Política de Retención 5 años | `backlog` | Disco local fase 1, R2 fase 2 |
-| **F-19** | Interfaz UI: Subida Manual de PDF, Panel de Gastos Pendientes y Confirmación | `backlog` | La ingesta manual reemplaza IMAP en fase 1 |
-| **F-20** *(nuevo)* | Ingesta Automática por Email: IMAP Polling + Plus-Addressing | `backlog` | Fase 2, tras validar el pipeline |
+| **F-17** | Puerto y Adaptador Genérico de LLM (`LLMProviderPort` + `GeminiFlashAdapter`) | `backlog` | Infraestructura transversal reutilizable |
+| **F-18** | Motor de Extracción de Datos: PyMuPDF + Strategy Pattern (Regex Repsol + Gemini Flash Fallback) + Privacy Scrubber | `backlog` | Núcleo del pipeline |
+| **F-19** | Almacenamiento Documental de Recibos PDF y Política de Retención 5 años | `deferred` | Disco local fase 1, Cloudflare R2 fase 2 |
+| **F-20** | Interfaz UI: Subida Manual de PDF, Panel de Gastos Pendientes y Confirmación | `backlog` | La ingesta manual valida el pipeline en fase 1 |
+| **F-21** | Ingesta Automática por Email: Inbound Parse Webhook (SendGrid/Mailgun/Cloudflare) | `deferred` | Fase 2, buzón dedicado por usuario sin acceso a buzones personales |

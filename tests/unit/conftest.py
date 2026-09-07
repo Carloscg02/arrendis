@@ -3,7 +3,8 @@ import pytest
 from datetime import date
 from backend.domain.entities import Expense, Income, Property, User, LeaseContract
 from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, PasswordHasherPort, TokenServicePort, LeaseContractRepository
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost
+from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, LLMResponse
+from backend.domain.ports import LLMProviderPort
 
 
 class InMemoryPropertyRepository(PropertyRepository):
@@ -51,6 +52,27 @@ class InMemoryPropertyRepository(PropertyRepository):
             prop.acquisition_cost = acquisition_cost
             prop.acquisition_date = acquisition_date
 
+    def find_by_cups(self, cups: str, user_id: str) -> Property | None:
+        for p in self._store.values():
+            if p.user_id == user_id and (
+                p.cups_electricity == cups or p.cups_gas == cups or p.cups_water == cups
+            ):
+                return p
+        return None
+
+    def update_cups(
+        self,
+        property_id: str,
+        cups_electricity: str | None,
+        cups_gas: str | None,
+        cups_water: str | None,
+    ) -> None:
+        prop = self._store.get(property_id)
+        if prop:
+            prop.cups_electricity = cups_electricity
+            prop.cups_gas = cups_gas
+            prop.cups_water = cups_water
+
 
 class InMemoryIncomeRepository(IncomeRepository):
     """Implementación in-memory de IncomeRepository para tests unitarios."""
@@ -63,6 +85,9 @@ class InMemoryIncomeRepository(IncomeRepository):
 
     def find_by_property_id(self, property_id: str) -> list[Income]:
         return [i for i in self._store.values() if i.property_id == property_id]
+
+    def find_by_id(self, income_id: str) -> Income | None:
+        return self._store.get(income_id)
 
     def delete(self, income_id: str) -> None:
         self._store.pop(income_id, None)
@@ -85,6 +110,9 @@ class InMemoryExpenseRepository(ExpenseRepository):
 
     def find_by_property_id(self, property_id: str) -> list[Expense]:
         return [e for e in self._store.values() if e.property_id == property_id]
+
+    def find_by_id(self, expense_id: str) -> Expense | None:
+        return self._store.get(expense_id)
 
     def delete(self, expense_id: str) -> None:
         self._store.pop(expense_id, None)
@@ -123,6 +151,21 @@ class InMemoryUserRepository(UserRepository):
         return next((u for u in self._users if u.id == user_id), None)
     def find_by_email(self, email: str) -> User | None:
         return next((u for u in self._users if u.email.value == email.lower()), None)
+    def find_by_sender_email(self, email: str) -> User | None:
+        clean = email.strip().lower()
+        return next(
+            (
+                u
+                for u in self._users
+                if u.email.value == clean
+                or (u.forwarding_email and u.forwarding_email.strip().lower() == clean)
+            ),
+            None,
+        )
+    def update_forwarding_email(self, user_id: str, forwarding_email: str | None) -> None:
+        u = self.find_by_id(user_id)
+        if u:
+            u.forwarding_email = forwarding_email.strip().lower() if forwarding_email else None
 
 class FakePasswordHasherAdapter(PasswordHasherPort):
     """Hasher falso para tests: hash = '$2b$fake$' + password, verify = comparación directa."""
@@ -185,3 +228,23 @@ def sqlite_connection():
     conn = SQLiteConnection(db_path=":memory:")
     yield conn
     conn.close()
+
+
+class FakeLLMProviderAdapter(LLMProviderPort):
+    """LLM falso para tests: retorna un texto fijo."""
+    def __init__(self, response_text: str = "fake response") -> None:
+        self._response_text = response_text
+
+    def generate(self, request) -> LLMResponse:
+        return LLMResponse(
+            text=self._response_text,
+            model_name="fake-model",
+            input_tokens=5,
+            output_tokens=10,
+        )
+
+
+@pytest.fixture
+def fake_llm():
+    return FakeLLMProviderAdapter()
+
