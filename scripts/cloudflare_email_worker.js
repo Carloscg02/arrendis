@@ -1,104 +1,130 @@
 /**
- * Cloudflare Email Routing + Worker para Rental Handler (Feature F-21)
- * 
- * Este worker recibe correos dirigidos a facturas@tudominio.com (o cualquier alias configurado),
- * extrae los archivos adjuntos PDF mediante postal-mime y los reenvía de forma segura
- * vía HTTP POST (multipart/form-data) al Webhook de Rental Handler.
- * 
- * Coste: 100% Gratuito en el plan Free de Cloudflare (hasta 100.000 invocaciones/día).
- * 
- * ==============================================================================
- * GUÍA DE DESPLIEGUE EN CLOUDFLARE (Paso a Paso):
- * ==============================================================================
- * 1. Prerrequisitos:
- *    - Tener tu dominio gestionado en Cloudflare (DNS activo).
- *    - Node.js instalado para Wrangler CLI (opcional, o hacerlo desde el Dashboard Web).
- * 
- * 2. Configurar Email Routing en Cloudflare:
- *    - En el panel de Cloudflare, entra a tu dominio -> "Email Routing".
- *    - Haz clic en "Enable Email Routing" (Cloudflare configurará los registros MX y SPF automáticamente).
- * 
- * 3. Crear el Worker:
- *    - En el panel lateral de Cloudflare: "Workers & Pages" -> "Create application" -> "Create Worker".
- *    - Nómbralo: `rental-handler-email-ingest`.
- *    - Pega este archivo en el editor de código.
- *    - Si usas `wrangler`, añade el paquete npm `postal-mime`:
- *        npm install postal-mime
- * 
- * 4. Configurar Variables de Entorno y Secretos:
- *    - En la pestaña "Settings" -> "Variables" del Worker, añade:
- *        - `RENTAL_HANDLER_WEBHOOK_URL`: https://tu-dominio.com/api/webhooks/inbound-email
- *        - `RENTAL_HANDLER_WEBHOOK_SECRET` (como Secret / cifrado): tu clave secreta
- * 
- * 5. Vincular Email Routing con el Worker:
- *    - Vuelve a tu dominio -> "Email Routing" -> "Routing Rules".
- *    - Crea una regla de captura personalizada:
- *        - Match: "Custom address" -> facturas@tudominio.com (o * para catch-all)
- *        - Action: "Send to a Worker" -> Selecciona `rental-handler-email-ingest`.
- *    - Guarda la regla.
- * 
- * ¡Listo! Cualquier correo reenviado por los propietarios a esa dirección se procesará
- * automáticamente y contabilizará sus gastos en Rental Handler de forma inmediata.
+ * Cloudflare Email Worker - Zero Dependencies Standalone
+ * Procesa emails entrantes de Cloudflare Email Routing y reenvía
+ * los archivos adjuntos PDF al webhook de FastAPI.
  */
 
-import PostalMime from 'postal-mime';
-
 export default {
-  /**
-   * Handler de eventos de correo entrante de Cloudflare Email Routing.
-   * @param {EmailMessage} message
-   * @param {Record<string, string>} env
-   * @param {ExecutionContext} ctx
-   */
   async email(message, env, ctx) {
     try {
+      const from = message.from || '';
+      const to = message.to || '';
+      const headers = message.headers;
+      const subject = headers ? (headers.get('subject') || '') : '';
+
+      // Leer el contenido MIME completo del email
       const rawEmail = await new Response(message.raw).arrayBuffer();
-      const parser = new PostalMime();
-      const parsedEmail = await parser.parse(rawEmail);
+      
+      // Parsear los adjuntos PDF directamente del stream MIME sin librerías externas
+      const pdfs = extractPdfAttachments(rawEmail);
 
-      const formData = new FormData();
-      formData.append('from', message.from || parsedEmail.from?.address || '');
-      formData.append('to', message.to || '');
-      formData.append('subject', parsedEmail.subject || '');
+      console.log(`Recibido correo de: ${from}, Asunto: "${subject}", PDFs extraídos: ${pdfs.length}`);
 
-      let pdfCount = 0;
-      if (parsedEmail.attachments && parsedEmail.attachments.length > 0) {
-        for (const att of parsedEmail.attachments) {
-          const isPdf = att.mimeType === 'application/pdf' ||
-                        (att.filename && att.filename.toLowerCase().endsWith('.pdf'));
-          if (isPdf && att.content) {
-            const blob = new Blob([att.content], { type: 'application/pdf' });
-            formData.append('files', blob, att.filename || `factura_${pdfCount + 1}.pdf`);
-            pdfCount++;
-          }
-        }
-      }
+      const webhookUrl = env.RENTAL_HANDLER_WEBHOOK_URL;
+      const webhookSecret = env.RENTAL_HANDLER_WEBHOOK_SECRET;
 
-      if (pdfCount === 0) {
-        console.log(`[Email Worker] Correo de ${message.from} ignorado: sin adjuntos PDF.`);
+      if (!webhookUrl) {
+        console.error('ERROR: RENTAL_HANDLER_WEBHOOK_URL no está configurada.');
         return;
       }
 
-      const webhookUrl = env.RENTAL_HANDLER_WEBHOOK_URL || 'http://localhost:8000/api/webhooks/inbound-email';
-      const webhookSecret = env.RENTAL_HANDLER_WEBHOOK_SECRET || 'dev-inbound-secret';
+      const formData = new FormData();
+      formData.append('from', from);
+      formData.append('to', to);
+      formData.append('subject', subject);
+
+      for (const pdf of pdfs) {
+        const blob = new Blob([pdf.data], { type: 'application/pdf' });
+        formData.append('files', blob, pdf.filename);
+      }
+
+      const requestHeaders = {};
+      if (webhookSecret) {
+        requestHeaders['X-Webhook-Secret'] = webhookSecret;
+      }
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: {
-          'X-Webhook-Secret': webhookSecret,
-        },
+        headers: requestHeaders,
         body: formData,
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Email Worker] Error al enviar al webhook (${response.status}): ${errorText}`);
+        const errText = await response.text();
+        console.error(`Error enviando al webhook (${response.status}): ${errText}`);
       } else {
-        const result = await response.json();
-        console.log(`[Email Worker] Procesado con éxito:`, JSON.stringify(result));
+        const json = await response.json();
+        console.log('Webhook procesado con éxito:', JSON.stringify(json));
       }
     } catch (err) {
-      console.error('[Email Worker] Excepción no controlada procesando correo:', err);
+      console.error('Error procesando email entrante:', err.message, err.stack);
     }
-  },
+  }
 };
+
+/**
+ * Extractor nativo simple y robusto de adjuntos PDF en flujos RFC 2046 MIME
+ */
+function extractPdfAttachments(arrayBuffer) {
+  const textDecoder = new TextDecoder('latin1');
+  const rawString = textDecoder.decode(arrayBuffer);
+  const pdfs = [];
+
+  // Buscar límites de multipart
+  const boundaryMatch = rawString.match(/boundary="?([^";\r\n]+)"?/i);
+  if (!boundaryMatch) return pdfs;
+
+  const boundary = boundaryMatch[1];
+  const parts = rawString.split(new RegExp(`--${escapeRegExp(boundary)}`));
+
+  for (const part of parts) {
+    if (!part || part.startsWith('--')) continue;
+
+    const headerEndIndex = part.indexOf('\r\n\r\n');
+    const headerEndAlt = part.indexOf('\n\n');
+    const splitIndex = headerEndIndex !== -1 ? headerEndIndex + 4 : (headerEndAlt !== -1 ? headerEndAlt + 2 : -1);
+
+    if (splitIndex === -1) continue;
+
+    const headersText = part.substring(0, splitIndex);
+    const bodyText = part.substring(splitIndex);
+
+    const isPdf = /content-type:[^\r\n]*application\/pdf/i.test(headersText) ||
+                  /filename="?[^"]*\.pdf"?/i.test(headersText);
+
+    if (!isPdf) continue;
+
+    // Extraer nombre de fichero
+    const filenameMatch = headersText.match(/filename="?([^"\r\n]+)"?/i);
+    const filename = filenameMatch ? filenameMatch[1].replace(/[\r\n]/g, '').trim() : `factura_${Date.now()}.pdf`;
+
+    // Extraer encoding (usualmente base64)
+    const isBase64 = /content-transfer-encoding:[^\r\n]*base64/i.test(headersText);
+    
+    let pdfBytes;
+    if (isBase64) {
+      const cleanBase64 = bodyText.replace(/[\r\n\s]/g, '');
+      const binaryString = atob(cleanBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      pdfBytes = bytes;
+    } else {
+      const bytes = new Uint8Array(bodyText.length);
+      for (let i = 0; i < bodyText.length; i++) {
+        bytes[i] = bodyText.charCodeAt(i);
+      }
+      pdfBytes = bytes;
+    }
+
+    pdfs.push({ filename, data: pdfBytes });
+  }
+
+  return pdfs;
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
