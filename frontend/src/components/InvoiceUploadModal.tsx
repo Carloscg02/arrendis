@@ -8,13 +8,12 @@ import {
   Loader2, 
   ArrowRight,
   Mail,
-  Copy,
-  Check,
   ShieldCheck
 } from "lucide-react";
 import Modal from "./Modal";
 import { uploadUtilityInvoices, getForwardingEmail, updateForwardingEmail } from "../services/api";
 import { useAuth } from "./AuthProvider";
+import GmailForwardingGuide from "./GmailForwardingGuide";
 import type { BatchInvoiceUploadResponse, InvoiceUploadItemResult } from "../types";
 
 interface InvoiceUploadModalProps {
@@ -38,7 +37,6 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
   const [forwardingEmailInput, setForwardingEmailInput] = useState<string>('');
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,14 +59,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
     setErrorMessage(null);
     setActiveTab('upload');
     setSaveMessage(null);
-    setCopied(false);
     setHasImported(false);
-  };
-
-  const handleCopyAddress = () => {
-    navigator.clipboard.writeText(inboundAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSaveForwardingEmail = async () => {
@@ -159,7 +150,12 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Importar Facturas de Suministros">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title={activeTab === "email" ? "Automatización con Reenvío de Facturas" : "Importar Facturas de Suministros"}
+      maxWidth={activeTab === "email" ? "740px" : "580px"}
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {/* Tab Switcher */}
         {!result && (
@@ -451,57 +447,18 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
             </>
           ) : (
             /* Email Tab */
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 0.25rem 0" }}>
-                  Ingesta automática por reenvío de correo
+                <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 0.25rem 0" }}>
+                  Automatización con reenvío de facturas (Gmail)
                 </h3>
                 <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
-                  Configura una regla de reenvío en tu correo o reenvía directamente tus facturas en PDF. El sistema identificará tu propiedad a través del CUPS y registrará el gasto verificado automáticamente.
+                  Configura una regla en Gmail una única vez. Tus facturas se importarán y contabilizarán automáticamente al recibirlas, sin descargas manuales ni intervención.
                 </p>
               </div>
 
-              {/* Inbound Address Well */}
-              <div
-                style={{
-                  padding: "0.85rem 1rem",
-                  backgroundColor: "var(--bg-tertiary)",
-                  border: "1px solid var(--panel-border)",
-                  borderRadius: "var(--radius-md)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                }}
-              >
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>
-                  Dirección de recepción
-                </span>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-                  <code
-                    style={{
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                      color: "var(--text-primary)",
-                      backgroundColor: "var(--bg-secondary)",
-                      padding: "0.3rem 0.6rem",
-                      borderRadius: "var(--radius-sm)",
-                      border: "1px solid var(--panel-border)",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {inboundAddress}
-                  </code>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}
-                    onClick={handleCopyAddress}
-                  >
-                    {copied ? <Check size={14} style={{ color: "var(--success)" }} /> : <Copy size={14} />}
-                    {copied ? "Copiado" : "Copiar"}
-                  </button>
-                </div>
-              </div>
+              {/* Interactive Step-by-Step Visual Guide with Real Screenshots */}
+              <GmailForwardingGuide inboundAddress={inboundAddress} />
 
               {/* Anti-Spoofing & Sender Configuration */}
               <div
