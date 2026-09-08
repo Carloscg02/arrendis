@@ -38,7 +38,7 @@
     { "id": "F-21", "epic": "E-02", "title": "Ingesta Automática por Email: Inbound Parse Webhook con Búsqueda Global de CUPS", "status": "done" },
     { "id": "F-22", "title": "Refactor Canónico de Persistencia en FastAPI: Ciclo de Vida por Petición (Request-Scoped Depends con yield) y Eliminación de threading.local", "status": "backlog" },
     { "id": "F-23", "title": "Infraestructura y Configuración de Despliegue en Producción (Docker, Compose, Caddy, Requirements)", "status": "done" },
-    { "id": "F-24", "title": "Pipeline Automatizado de CI/CD para Producción (GitHub Actions Tests + Auto-deploy SSH)", "status": "in_progress" },
+    { "id": "F-24", "title": "Pipeline Automatizado de CI/CD para Producción (GitHub Actions Tests + Auto-deploy SSH)", "status": "done" },
     { "id": "F-25", "title": "Entorno de Pre-producción (Staging) Aislado y Dual Branch Workflow (Cloudflare + Oracle VM)", "status": "backlog" }
   ]
 }
