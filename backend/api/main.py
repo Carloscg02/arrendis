@@ -50,7 +50,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — permitir origenes, en este caso el frontend en local
+# CORS — permitir origenes tanto en local como en producción (Cloudflare Pages y dominio arrendis)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -58,7 +58,11 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://arrendis.com",
+        "https://app.arrendis.com",
+        "https://staging.arrendis.com",
     ],
+    allow_origin_regex=r"^https://.*\.arrendis\.(com|es)$|^https://.*\.pages\.dev$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
