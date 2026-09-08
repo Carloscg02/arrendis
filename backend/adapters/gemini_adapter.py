@@ -11,10 +11,12 @@ from backend.domain.value_objects import LLMRequest, LLMResponse
 from backend.domain.entities import LLMProviderError, RateLimitError
 
 
+import os
+
 class GeminiFlashAdapter(LLMProviderPort):
     """Adaptador que implementa LLMProviderPort usando Google Gemini Flash."""
 
-    MODEL_NAME = "gemini-2.0-flash"
+    MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
     PROVIDER_NAME = "gemini"
     MAX_RETRIES = 3
     INITIAL_BACKOFF_SECONDS = 1.0

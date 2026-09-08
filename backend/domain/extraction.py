@@ -8,10 +8,13 @@ anonimización de datos personales (PrivacyScrubber) conforme al RGPD / GDPR.
 
 from __future__ import annotations
 
+import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import date, datetime
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 from backend.domain.entities import ExtractionConfidence, UtilityType
 from backend.domain.ports import LLMProviderPort
@@ -274,7 +277,8 @@ class AIExtractionStrategy(ExtractionStrategy):
                 invoice_number=data.get("invoice_number"),
                 extraction_confidence=ExtractionConfidence.MEDIUM,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error en AIExtractionStrategy al extraer datos con LLM: {e}", exc_info=True)
             return None
 
 
