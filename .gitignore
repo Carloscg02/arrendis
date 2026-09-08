@@ -22,3 +22,4 @@ data/images/
 .impeccable/*.db-shm
 *.db-wal
 data/*.db*
+*.key
