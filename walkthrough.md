@@ -238,4 +238,26 @@ En la feature F-17 hemos implementado el puerto de servicio genérico e infraest
 - Suite Backend ejecutada con **277 tests en verde** (0 fallos, 0 regresiones).
 - Compilación de Frontend exitosa con TypeScript y Vite en 447ms.
 
+---
+
+# Walkthrough y Resumen - Feature F-26
+
+## Retirada de 'Clasificación Fiscal Inteligente' de la UI y Limpieza de Deuda Técnica
+
+### Diagnóstico y Justificación
+- La herramienta de "Clasificación Fiscal Inteligente" (`FiscalClassificationPanel`) consistía en un envoltorio sobre un diccionario estático en backend (`FiscalCategoryMapper`) originalmente concebido en F-11 como migrador temporal de datos.
+- En el flujo actual de la aplicación, los formularios de ingresos y gastos (`IncomeForm` y `ExpenseForm`) y el procesador de facturas PDF ya asignan las categorías fiscales directamente en el momento del registro.
+- En consecuencia, el panel resultaba redundante, no permitía edición granular y generaba ruido visual ("IA slop") en la pestaña "Datos Fiscales".
+
+### Cambios Realizados
+- **Frontend**:
+  - Eliminado el componente [`FiscalClassificationPanel.tsx`](file:///home/carlos/rental-handler/frontend/src/components/FiscalClassificationPanel.tsx).
+  - Retirada la inclusión de dicho panel en [`PropertyDetail.tsx`](file:///home/carlos/rental-handler/frontend/src/pages/PropertyDetail.tsx), dejando la pestaña Fiscal estructurada limpiamente en:
+    1. Datos Catastrales y Adquisición (`FiscalDataForm`).
+    2. Motor de Cálculo Fiscal IRPF y descarga de Borrador AEAT en PDF (`FiscalReportView`).
+  - Limpieza de estilos CSS obsoletos en `frontend/src/index.css`.
+- **Backlog**:
+  - Registrada la tarea `F-26` en `feature_list.json`.
+
+
 

@@ -42,7 +42,6 @@ import {
 import IncomeForm from "../components/IncomeForm";
 import ExpenseForm from "../components/ExpenseForm";
 import FiscalDataForm from "../components/FiscalDataForm";
-import FiscalClassificationPanel from "../components/FiscalClassificationPanel";
 import FiscalReportView from "../components/FiscalReportView";
 import { ContractSection } from "../components/ContractSection";
 import Modal from "../components/Modal";
@@ -549,7 +548,6 @@ export default function PropertyDetail() {
               onSubmit={handleUpdateFiscalData} 
               onCancel={() => setActiveTab("dashboard")} 
             />
-            <FiscalClassificationPanel propertyId={property.id} onClassified={() => loadData(false)} />
             <FiscalReportView propertyId={property.id} />
           </div>
         )}
