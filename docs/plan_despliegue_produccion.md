@@ -18,7 +18,7 @@ Este documento detalla la hoja de ruta técnica completa y paso a paso para llev
                 │                                              ▼
                 │ (Peticiones API)             ┌───────────────────────────────┐
                 │                              │    Cloudflare Email Worker    │
-                │                              │   (Parsea PDF y multipart)    │
+                │                              │ (Standalone Zero-Dependencies)│
                 │                              └───────────────┬───────────────┘
                 │                                              │ (POST Webhook + Secret)
                 ▼                                              ▼
@@ -26,19 +26,20 @@ Este documento detalla la hoja de ruta técnica completa y paso a paso para llev
 │                    Oracle Cloud Infrastructure (Always Free)                 │
 │                                                                              │
 │   ┌──────────────────────────────────────────────────────────────────────┐   │
-│   │ Caddy / Nginx Reverse Proxy (SSL automático Let's Encrypt)           │   │
-│   │ Dominio: api.arrendis.com                                            │   │
+│   │ Caddy Reverse Proxy (SSL automático Let's Encrypt + HTTP->HTTPS)     │   │
+│   │ Dominio: api.arrendis.com (Puertos 80 y 443)                         │   │
 │   └──────────────────────────────────┬───────────────────────────────────┘   │
-│                                      │                                       │
+│                                      │ (Red interna Docker)                  │
 │   ┌──────────────────────────────────▼───────────────────────────────────┐   │
-│   │ Contenedor Docker: Backend FastAPI (Python 3.12 / 3.14)              │   │
+│   │ Contenedor Docker: Backend FastAPI (Python 3.12 en Ubuntu 22.04/24.04)│   │
 │   │  - Pipeline Extracción Suministros (PyMuPDF + Regex / Gemini)        │   │
 │   │  - Motor Fiscal AEAT (IRPF, Amortizaciones, Rendimiento Neto)        │   │
 │   │  - Autenticación Segura (JWT Shielded + Bcrypt)                      │   │
+│   │  - CORS configurado para Cloudflare Pages y dominio de producción    │   │
 │   └──────────────────────────────────┬───────────────────────────────────┘   │
 │                                      │ (Volumen Persistente)                 │
 │   ┌──────────────────────────────────▼───────────────────────────────────┐   │
-│   │ Disco NVMe Persistente (200 GB):                                     │   │
+│   │ Disco NVMe Persistente (50 a 100 GB):                                │   │
 │   │  - data/rental.db (SQLite en modo WAL)                               │   │
 │   │  - data/images/   (Imágenes de propiedades)                          │   │
 │   └──────────────────────────────────────────────────────────────────────┘   │
@@ -55,13 +56,13 @@ Para evitar registradores que cobran precios inflados tras el primer año (como 
 1. Ve a [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/).
 2. Crea una cuenta gratuita en Cloudflare.
 3. En el menú lateral, ve a **Domain Registration** > **Register Domain**.
-4. Busca `arrendis.com`.
+4. Busca tu dominio (ej. `arrendis.com`).
 5. El coste es el precio de coste fijado por el registro ICANN (~**9,50 € / año** sin comisiones ni sobreprecios).
 6. Al comprarlo en Cloudflare, el dominio ya queda automáticamente configurado con DNS ultrarrápido y protección DDoS.
 
 ### Opción B: Si eliges `.es` (`arrendis.es`)
-1. Cloudflare Registrar opera principalmente con TLDs globales (`.com`, `.net`, `.org`). Para dominios españoles `.es`, el registrador más recomendado, limpio y sin sobreprecios ocultos en España es **DonDominio** o **Porkbun** (~**8-10 € / año**).
-2. Tras comprar `arrendis.es` en DonDominio:
+1. Cloudflare Registrar opera principalmente con TLDs globales (`.com`, `.net`, `.org`). Para dominios españoles `.es`, el registrador recomendado y sin sobreprecios ocultos en España es **DonDominio** o **Porkbun** (~**8-10 € / año**).
+2. Tras comprar `arrendis.es`:
    - Añades el dominio a tu panel gratuito de Cloudflare ("Add a site").
    - Cloudflare te dará dos servidores DNS (ej. `ana.ns.cloudflare.com` y `bob.ns.cloudflare.com`).
    - En el panel de DonDominio, cambias las DNS por las de Cloudflare. Listo.
@@ -70,13 +71,13 @@ Para evitar registradores que cobran precios inflados tras el primer año (como 
 
 ## 💻 Fase 2: Despliegue del Frontend (Cloudflare Pages — 100% Gratis)
 
-Cloudflare Pages aloja aplicaciones React con tráfico y ancho de banda ilimitados, CDN global y SSL automático.
+Cloudflare Pages aloja aplicaciones React como archivos estáticos puros distribuidos por su CDN global, con ancho de banda ilimitado y SSL automático (**no necesita Docker**).
 
 1. **Subir el código a GitHub:**
-   Asegúrate de que tu repositorio (puede ser privado) esté subido a tu cuenta de GitHub.
+   Asegúrate de que tu repositorio esté subido a tu cuenta de GitHub (`Carloscg02/arrendis`).
 
 2. **Crear el proyecto en Cloudflare Pages:**
-   - En el panel de Cloudflare: **Workers & Pages** > **Create application** > pestaña **Pages** > **Connect to Git**.
+   - En el panel de Cloudflare: ve a **Workers & Pages** (o **Compute**) > **Create application** > pestaña **Pages** (¡ojo, no en la pestaña Workers!) > **Connect to Git**.
    - Selecciona el repositorio de Arrendis.
 
 3. **Configuración de Build:**
@@ -84,7 +85,7 @@ Cloudflare Pages aloja aplicaciones React con tráfico y ancho de banda ilimitad
    - **Root directory:** `frontend`
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
-   - **Variables de entorno (Environment Variables):**
+   - **Environment Variables:**
      - `VITE_API_URL`: `https://api.arrendis.com/api`
 
 4. **Asignar Dominio Personalizado:**
@@ -98,18 +99,24 @@ Cloudflare Pages aloja aplicaciones React con tráfico y ancho de banda ilimitad
 Permite que cualquier correo enviado a `facturas@arrendis.com` se procese y contabilice automáticamente.
 
 1. **Activar Email Routing:**
-   - En tu panel de Cloudflare, selecciona tu dominio `arrendis.com` > **Email Routing**.
-   - Haz clic en **Enable Email Routing** (Cloudflare añade los registros MX y SPF automáticamente).
+   - En tu panel de Cloudflare, selecciona tu dominio > **Email Routing**.
+   - Haz clic en **+ Onboard Domain** (o **Enable Email Routing**).
+   - Cloudflare te mostrará los registros DNS (MX y SPF). Pulsa el botón para que Cloudflare los añada automáticamente.
 
 2. **Crear el Worker:**
-   - En **Workers & Pages** > **Create application** > **Create Worker**.
+   - En **Workers & Pages** > **Create application** > selecciona **Start with Hello World!**.
    - Nómbralo: `arrendis-email-ingest`.
-   - Pega el código del script que dejamos preparado en `scripts/cloudflare_email_worker.js`.
-   - En **Settings** > **Variables**:
-     - Variable: `RENTAL_HANDLER_WEBHOOK_URL` = `https://api.arrendis.com/api/webhooks/inbound-email`
-     - Secret (cifrado): `RENTAL_HANDLER_WEBHOOK_SECRET` = `tu-clave-secreta-super-segura`
+   - Haz clic en **Deploy**, luego entra a **Edit code**.
+   - Borra el código de ejemplo y pega el contenido completo de [`scripts/cloudflare_email_worker.js`](file:///home/carlos/rental-handler/scripts/cloudflare_email_worker.js).
+   - Haz clic en **Save and deploy**.
 
-3. **Configurar la Regla de Reenvío:**
+3. **Configurar Variables y Secretos del Worker:**
+   - En la página principal del Worker > **Settings** > **Variables and Secrets** > **Add**:
+     - Variable normal: `RENTAL_HANDLER_WEBHOOK_URL` = `https://api.arrendis.com/api/webhooks/inbound-email`
+     - Secret (cifrado): `RENTAL_HANDLER_WEBHOOK_SECRET` = `302067091229670529e260dd3b4a67d7181888a571034436` (o la clave aleatoria que elijas; debe ser idéntica a la del `.env` del backend).
+   - Guarda los cambios.
+
+4. **Configurar la Regla de Reenvío:**
    - En **Email Routing** > **Routing Rules** > **Create rule**:
      - Custom address: `facturas@arrendis.com`
      - Action: **Send to a Worker** > Selecciona `arrendis-email-ingest`.
@@ -117,125 +124,108 @@ Permite que cualquier correo enviado a `facturas@arrendis.com` se procese y cont
 
 ---
 
-## ⚙️ Fase 4: Despliegue del Backend y Base de Datos (FastAPI + SQLite)
-
-Para que SQLite y las imágenes no se borren nunca, el backend necesita un entorno con almacenamiento persistente.
+## ⚙️ Fase 4: Despliegue del Backend y Base de Datos (FastAPI + SQLite + Caddy)
 
 ### Opción Recomendada: Oracle Cloud "Always Free" (Coste: 0,00 €/mes)
 
-Oracle Cloud regala de por vida instancias ARM de hasta **4 núcleos, 24 GB de RAM y 200 GB de disco NVMe**.
+Oracle Cloud ofrece instancias gratuitas de por vida. La configuración ideal para Arrendis es **1 OCPU y 4 a 6 GB de RAM** con **50 GB de disco NVMe**, consumiendo una fracción mínima de tu cuota gratuita.
 
-#### Paso 1: Crear la cuenta y la Máquina Virtual
-1. Regístrate en [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/).  
-   *(Pide tarjeta para verificar identidad; hace un cargo temporal de ~1€ que se reembolsa al instante).*
-2. En el panel de OCI: **Compute** > **Instances** > **Create Instance**.
-   - **Image:** Ubuntu 22.04 o 24.04 LTS.
-   - **Shape:** `Ampere VM.Standard.A1.Flex` (Configura 2 o 4 OCPUs y 12 a 24 GB de RAM).
-   - **Boot Volume:** 50 a 100 GB.
-   - Descarga la clave privada SSH (`id_rsa`).
-3. En la sección de Red (Virtual Cloud Network / Security Lists): abre los puertos `80` (HTTP) y `443` (HTTPS) en el Firewall.
+#### Paso 1: Crear la Red Virtual (VCN) y la Instancia
+1. Regístrate en [Oracle Cloud Free Tier](https://www.oracle.com/cloud/free/).
+   > [!TIP]
+   > Si al crear la máquina Ampere recibes el error *"Out of capacity in availability domain"*, puedes hacer el **Upgrade to Pay-As-You-Go**. Oracle verifica la tarjeta (con una fianza temporal devuelta), elimina la cola de bots y te da acceso prioritario al hardware. La factura mensual sigue siendo **0,00 €** siempre que te mantengas dentro de los límites gratuitos.
 
-#### Paso 2: Conectarse y preparar Docker
-Conéctate por terminal a tu máquina:
+2. **Crear la Red (VCN):**
+   - Menú lateral > **Networking** > **Virtual Cloud Networks** > **Start VCN Wizard**.
+   - Selecciona **Create VCN with Internet Connectivity** > ponle de nombre `main-vcn` > **Next** > **Create**.
+
+3. **Crear la Máquina Virtual (Compute Instance):**
+   - Menú lateral > **Compute** > **Instances** > **Create Instance**.
+   - **Image:** Canonical Ubuntu 22.04 o 24.04 LTS.
+   - **Shape:** `Ampere VM.Standard.A1.Flex` (1 OCPU, 4 a 6 GB RAM).
+   - **Networking:**
+     - Select existing virtual cloud network: `main-vcn`.
+     - Subnet: `public subnet-main-vcn`.
+     - **Public IPv4 address:** Comprobar que en el resumen final marque **`Yes`**.
+   - **SSH Keys:** Selecciona *Generate SSH key pair for me* y pulsa **Save private key** para descargar el archivo `.key`.
+   - **Boot Volume:** 50 GB.
+   - Haz clic en **Create**.
+
+4. **Abrir Puertos en el Firewall de Oracle (Security List):**
+   - En la pantalla de la instancia creada, baja a **Attached VNICs** > haz clic en la subred pública.
+   - Entra en **Default Security List for main-vcn** > **Add Ingress Rules**:
+     - **Regla 1:** Source `0.0.0.0/0`, Protocol `TCP`, Destination Port `80`, Description `HTTP`.
+     - **Regla 2:** Source `0.0.0.0/0`, Protocol `TCP`, Destination Port `443`, Description `HTTPS`.
+
+#### Paso 2: Conectarse por SSH y preparar el Servidor
+1. Desde tu terminal local, da permisos seguros a la clave descargada:
+   ```bash
+   chmod 600 /ruta/a/tu/clave.key
+   ```
+2. Conéctate a la máquina:
+   ```bash
+   ssh -i /ruta/a/tu/clave.key ubuntu@<IP_PUBLICA_DE_ORACLE>
+   ```
+3. Dentro de la máquina, instala Docker, **Docker Compose v2** y abre el firewall interno de Ubuntu:
+   ```bash
+   sudo apt update && sudo apt install -y docker.io docker-compose-v2 git iptables-persistent
+   sudo usermod -aG docker ubuntu
+   newgrp docker
+
+   # Abrir puertos 80 y 443 en iptables
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+   sudo netfilter-persistent save
+   ```
+
+#### Paso 3: Clonar el repositorio y configurar variables
 ```bash
-ssh -i id_rsa ubuntu@<IP_PUBLICA_DE_ORACLE>
-```
-
-Instala Docker y Docker Compose:
-```bash
-sudo apt update && sudo apt install -y docker.io docker-compose git
-sudo usermod -aG docker ubuntu
-```
-
-#### Paso 3: Clonar el repositorio y configurar producción
-```bash
-git clone https://github.com/tu-usuario/rental-handler.git arrendis
+git clone https://github.com/Carloscg02/arrendis.git arrendis
 cd arrendis
 ```
+*(Si te pide credenciales y quieres guardarlas permanentemente en local para no escribirlas en cada push, usa `git config --global credential.helper store`).*
 
 Crea el archivo `.env` de producción:
 ```bash
-cat << 'EOF' > .env
-DATABASE_PATH=data/rental.db
-JWT_SECRET=genera-una-cadena-aleatoria-de-64-caracteres
-INBOUND_WEBHOOK_SECRET=tu-clave-secreta-super-segura
+echo 'DATABASE_PATH=data/rental.db
+JWT_SECRET=1a354dc6b820188c7bf00107378fcc82998243a9d72ebaaf64f2f9ec567d7924
+INBOUND_WEBHOOK_SECRET=302067091229670529e260dd3b4a67d7181888a571034436
 INBOUND_EMAIL_ADDRESS=facturas@arrendis.com
-GEMINI_API_KEY=tu-clave-de-gemini-opcional
-EOF
+GEMINI_API_KEY=tu-clave-de-gemini-aqui' > .env
 ```
+*(Puedes obtener tu clave gratuita de Gemini en [Google AI Studio](https://aistudio.google.com/)).*
 
-#### Paso 4: Levantar Backend con Caddy (HTTPS automático)
-Crea un `docker-compose.prod.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
-    env_file: .env
-    volumes:
-      - ./data:/app/data
-    expose:
-      - "8000"
-
-  caddy:
-    image: caddy:2-alpine
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
-
-volumes:
-  caddy_data:
-  caddy_config:
-```
-
-Crea el archivo `Caddyfile` (Caddy gestiona automáticamente los certificados SSL con Let's Encrypt):
-```caddy
-api.arrendis.com {
-    reverse_proxy backend:8000
-}
-```
-
-Crea el `Dockerfile` optimizado:
-```dockerfile
-FROM python:3.12-slim
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends     build-essential     && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 8000
-
-CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
-```
-
-Lanza el servicio:
+Crea el directorio persistente para SQLite y fotos:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d --build
+mkdir -p data/images
 ```
+
+#### Paso 4: Levantar Backend con Caddy (Docker Compose v2)
+Los archivos `Dockerfile`, `docker-compose.prod.yml` y `Caddyfile` ya están incluidos en el repositorio.
+Ejecuta el arranque con **Docker Compose v2** (`docker compose` con espacio):
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+> [!IMPORTANT]
+> Usa siempre `docker compose` (con espacio) y no la versión antigua `docker-compose` (con guion), para evitar el error `KeyError: ContainerConfig`.
 
 #### Paso 5: Apuntar el subdominio DNS en Cloudflare
-En el panel DNS de Cloudflare para `arrendis.com`:
+En el panel DNS de Cloudflare para tu dominio:
 - Añade un registro **A**:
+  - **Type:** `A`
   - **Name:** `api`
   - **IPv4 address:** `<IP_PUBLICA_DE_ORACLE>`
-  - **Proxy status:** Proxied (nube naranja activada) o DNS Only.
+  - **Proxy status:** DNS Only (nube gris) inicialmente, o Proxied con SSL en modo "Full".
+  - Guarda el registro.
+
+Si Caddy arrancó antes de existir el registro DNS, reinícialo para que obtenga el certificado de Let's Encrypt de inmediato:
+```bash
+docker compose -f docker-compose.prod.yml restart caddy
+```
+
+Comprueba que responde entrando en tu navegador a:  
+👉 **`https://api.arrendis.com/docs`**
 
 ---
 
@@ -247,8 +237,13 @@ Crea un script diario en el servidor (`/home/ubuntu/backup.sh`):
 ```bash
 #!/bin/bash
 FECHA=$(date +%Y%m%d_%H%M%S)
+mkdir -p /home/ubuntu/backups
 sqlite3 /home/ubuntu/arrendis/data/rental.db ".backup '/home/ubuntu/backups/rental_$FECHA.db'"
 find /home/ubuntu/backups/ -type f -mtime +30 -delete
+```
+Darle permisos de ejecución:
+```bash
+chmod +x /home/ubuntu/backup.sh
 ```
 
 Añádelo al `crontab -e` para que se ejecute cada noche a las 03:00 AM:
@@ -260,10 +255,8 @@ Añádelo al `crontab -e` para que se ejecute cada noche a las 03:00 AM:
 
 ## ✅ Fase 6: Checklist de Verificación Final en Producción
 
-Una vez completado el despliegue:
-
-1. [ ] **Acceso Web:** Entrar a `https://app.arrendis.com` y verificar que carga con candado verde HTTPS.
-2. [ ] **Registro / Login:** Registrar tu usuario de administrador y verificar que el token JWT funciona.
+1. [ ] **Acceso Web:** Entrar a `https://app.arrendis.com` (o tu URL de Cloudflare Pages) y verificar que carga con candado verde HTTPS.
+2. [ ] **Registro / Login:** Registrar tu usuario de administrador. Comprobar que no hay errores de CORS y que el token JWT redirige al Dashboard.
 3. [ ] **Crear Propiedad:** Crear un inmueble y asignarle su CUPS de electricidad real.
-4. [ ] **Reenvío Real desde Gmail:** Abrir tu aplicación de correo y reenviar una factura PDF a `facturas@arrendis.com`.
-5. [ ] **Contabilización:** Refrescar la propiedad y comprobar que el gasto aparece automáticamente con estado **Verificado** y categoría fiscal de suministros.
+4. [ ] **Reenvío Real desde Gmail:** Abrir tu correo y reenviar una factura PDF a `facturas@arrendis.com`.
+5. [ ] **Contabilización Automática:** Refrescar la propiedad y comprobar que el gasto aparece automáticamente con estado **Verificado** y categoría fiscal de suministros.
