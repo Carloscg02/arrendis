@@ -34,7 +34,7 @@ Desarrollador hace 'git push origin main'
           [ Conexión SSH segura a Oracle Cloud ]
                        │
                        ├── git pull origin main
-                       └── docker compose -f docker-compose.prod.yml up -d --build backend
+                       └── docker compose -f cicd/docker-compose.prod.yml up -d --build backend
 ```
 
 ---
@@ -136,7 +136,7 @@ jobs:
           script: |
             cd /home/ubuntu/arrendis
             git pull origin main
-            docker compose -f docker-compose.prod.yml up -d --build backend
+            docker compose -f cicd/docker-compose.prod.yml up -d --build backend
 ```
 
 ---

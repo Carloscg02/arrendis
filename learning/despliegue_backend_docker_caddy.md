@@ -78,7 +78,7 @@ Podrías arrancar cada contenedor a mano con comandos larguísimos de terminal (
 **Docker Compose** es una herramienta que lee un archivo YAML (`docker-compose.prod.yml`) y **levanta, conecta y configura todos los contenedores a la vez con un solo comando**:
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f cicd/docker-compose.prod.yml up -d
 ```
 
 ### ¿Qué hace nuestro `docker-compose.prod.yml`?
@@ -170,12 +170,12 @@ Cuando estés conectado por SSH a la máquina de Oracle Cloud, estos son los ún
 
 | Comando | Para qué sirve |
 | :--- | :--- |
-| `docker-compose -f docker-compose.prod.yml up -d --build` | Construye y arranca todo en segundo plano (modo daemon `-d`). |
-| `docker-compose -f docker-compose.prod.yml ps` | Muestra el estado de los contenedores (si están corriendo o parados). |
-| `docker-compose -f docker-compose.prod.yml logs -f backend` | Ver los logs en tiempo real del backend (para depurar errores). |
-| `docker-compose -f docker-compose.prod.yml logs -f caddy` | Ver los logs de Caddy y la emisión de certificados SSL. |
-| `docker-compose -f docker-compose.prod.yml down` | Apaga los contenedores de forma ordenada (sin borrar los datos del disco). |
-| `docker-compose -f docker-compose.prod.yml restart backend` | Reinicia únicamente el proceso del backend. |
+| `docker compose -f cicd/docker-compose.prod.yml up -d --build` | Construye y arranca todo en segundo plano (modo daemon `-d`). |
+| `docker compose -f cicd/docker-compose.prod.yml ps` | Muestra el estado de los contenedores (si están corriendo o parados). |
+| `docker compose -f cicd/docker-compose.prod.yml logs -f backend` | Ver los logs en tiempo real del backend (para depurar errores). |
+| `docker compose -f cicd/docker-compose.prod.yml logs -f caddy` | Ver los logs de Caddy y la emisión de certificados SSL. |
+| `docker compose -f cicd/docker-compose.prod.yml down` | Apaga los contenedores de forma ordenada (sin borrar los datos del disco). |
+| `docker compose -f cicd/docker-compose.prod.yml restart backend` | Reinicia únicamente el proceso del backend. |
 
 ---
 
