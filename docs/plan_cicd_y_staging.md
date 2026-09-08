@@ -29,9 +29,19 @@ Este documento describe la arquitectura, flujo de trabajo y configuración técn
 | **Frontend URL** | `https://staging.arrendis.com` | `https://app.arrendis.com` | 0 € (Subdominio Cloudflare) |
 | **Hosting Frontend** | Cloudflare Pages (Branch Deployment) | Cloudflare Pages (Production) | 0 € |
 | **Backend API URL** | `https://api-staging.arrendis.com` | `https://api.arrendis.com` | 0 € (Subdominio Cloudflare) |
+| **Variable `VITE_API_URL`** | `https://api-staging.arrendis.com/api` (Preview env) | `https://api.arrendis.com/api` (Production env) | 0 € |
 | **Puerto Docker Host** | `8001` (contenedor `backend_staging`) | `8000` (contenedor `backend_prod`) | 0 € (Misma VM Oracle) |
 | **Base de Datos SQLite** | `data/staging/rental.db` | `data/rental.db` | 0 € (Disco persistente NVMe) |
 | **Base de Datos Estado** | Datos volátiles / de prueba | Datos reales persistentes y con backup | 0 € |
+
+> [!IMPORTANT]
+> **¿Cómo sabe el Frontend a qué Backend conectarse en cada entorno?**  
+> El código del frontend nunca lleva URLs fijas (`http://localhost:8000`), sino que evalúa dinámicamente:  
+> `const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";`  
+> 1. **En Local:** Al no existir la variable en el sistema local, hace fallback automático a `http://localhost:8000/api`.  
+> 2. **En Cloudflare Pages (Producción - rama `main`):** Cloudflare inyecta `VITE_API_URL=https://api.arrendis.com/api` durante el build.  
+> 3. **En Cloudflare Pages (Staging - rama `develop`):** Cloudflare permite definir variables específicas para *Preview deployments*. Se configura `VITE_API_URL=https://api-staging.arrendis.com/api` y Vite la incrusta en el código compilado de staging.  
+> Ningún entorno puede comunicarse por error con el backend o la base de datos equivocada.
 
 ---
 
