@@ -42,9 +42,14 @@ export default function CupsModal({
     setSaving(true);
     setError(null);
 
-    const cleanElec = cupsElectricity.trim().toUpperCase() || null;
-    const cleanGas = cupsGas.trim().toUpperCase() || null;
-    const cleanWater = cupsWater.trim().toUpperCase() || null;
+    const sanitizeCups = (val: string) => {
+      const clean = val.replace(/\s+/g, "").toUpperCase();
+      return clean.length > 0 ? clean : null;
+    };
+
+    const cleanElec = sanitizeCups(cupsElectricity);
+    const cleanGas = sanitizeCups(cupsGas);
+    const cleanWater = sanitizeCups(cupsWater);
 
     try {
       await updatePropertyCups(propertyId, {
@@ -107,7 +112,7 @@ export default function CupsModal({
             style={{ textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: "monospace" }}
           />
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
-            20 o 22 caracteres (empieza por ES). Lo encuentras en el encabezado de tu factura de luz.
+            20 o 22 caracteres (empieza por ES). Puedes pegarlo con espacios tal cual viene en tu factura; los limpiaremos automáticamente.
           </span>
         </div>
 

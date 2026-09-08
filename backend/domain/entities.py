@@ -152,12 +152,19 @@ class Property:
                 )
 
         _CUPS_PATTERN = re.compile(r'^ES\d{16,18}[A-Z0-9]{0,4}$')
-        for field_name in ("cups_electricity", "cups_gas", "cups_water"):
+        for field_name, label in (
+            ("cups_electricity", "El código CUPS de electricidad"),
+            ("cups_gas", "El código CUPS de gas"),
+            ("cups_water", "El código CUPS de agua"),
+        ):
             value = getattr(self, field_name)
-            if value is not None and not _CUPS_PATTERN.match(value):
-                raise ValueError(
-                    f"{field_name} no tiene formato CUPS válido: '{value}'"
-                )
+            if value is not None:
+                cleaned = "".join(value.split()).upper()
+                setattr(self, field_name, cleaned)
+                if not _CUPS_PATTERN.match(cleaned):
+                    raise ValueError(
+                        f"{label} no tiene formato CUPS válido ('{value}'). Debe comenzar por 'ES' seguido de 16 a 18 dígitos y 2 a 4 caracteres de control (ejemplo: ES0031103721971011PR0F)."
+                    )
 
     @property
     def has_fiscal_data(self) -> bool:
