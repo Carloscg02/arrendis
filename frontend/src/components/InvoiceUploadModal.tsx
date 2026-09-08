@@ -20,11 +20,17 @@ interface InvoiceUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialTab?: 'upload' | 'email';
 }
 
-export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: InvoiceUploadModalProps) {
+export default function InvoiceUploadModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialTab = 'upload',
+}: InvoiceUploadModalProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upload' | 'email'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'email'>(initialTab);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,6 +48,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
 
   useEffect(() => {
     if (isOpen) {
+      if (initialTab) setActiveTab(initialTab);
       getForwardingEmail()
         .then((res) => {
           if (res.inbound_address) setInboundAddress(res.inbound_address);
@@ -49,7 +56,7 @@ export default function InvoiceUploadModal({ isOpen, onClose, onSuccess }: Invoi
         })
         .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   const resetState = () => {
     setSelectedFiles([]);
