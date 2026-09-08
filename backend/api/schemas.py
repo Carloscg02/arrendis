@@ -232,6 +232,14 @@ class PropertyCupsUpdate(BaseModel):
     cups_gas: str | None = None
     cups_water: str | None = None
 
+    @field_validator("cups_electricity", "cups_gas", "cups_water", mode="before")
+    @classmethod
+    def sanitize_cups(cls, v: str | None) -> str | None:
+        if v is not None and isinstance(v, str):
+            clean = "".join(v.split()).upper()
+            return clean if clean else None
+        return v
+
 
 # ──────────────────────────────────────────────
 # Lease Contract Schemas

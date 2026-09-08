@@ -209,7 +209,7 @@ class AIExtractionStrategy(ExtractionStrategy):
     SYSTEM_PROMPT = (
         "Eres un asistente contable experto en facturas de suministros españoles (luz, gas y agua).\n"
         "Tu objetivo es extraer con máxima precisión los siguientes campos de la factura proporcionada:\n"
-        "- cups: Código Unificado de Punto de Suministro (formato español: ES + 16-18 dígitos + caracteres alfanuméricos).\n"
+        "- cups: Código Unificado de Punto de Suministro (formato español: ES + 16-18 dígitos + 2-4 caracteres alfanuméricos, SIN ESPACIOS intermedios ni separadores).\n"
         "- amount: Importe total de la factura a pagar en euros (número decimal positivo).\n"
         "- issue_date: Fecha de emisión de la factura en formato ISO (YYYY-MM-DD).\n"
         "- provider_name: Nombre de la empresa comercializadora o suministradora.\n"
@@ -261,8 +261,12 @@ class AIExtractionStrategy(ExtractionStrategy):
             if not data or not data.get("cups") or data.get("amount") is None:
                 return None
 
+            clean_cups = "".join(data["cups"].split()).upper()
+            if not clean_cups:
+                return None
+
             return UtilityInvoiceData(
-                cups=data["cups"].strip().upper(),
+                cups=clean_cups,
                 amount=Decimal(str(data["amount"])),
                 issue_date=date.fromisoformat(data["issue_date"]),
                 provider_name=data["provider_name"].strip(),
