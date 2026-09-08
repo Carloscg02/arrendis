@@ -40,6 +40,7 @@
     { "id": "F-23", "title": "Infraestructura y Configuración de Despliegue en Producción (Docker, Compose, Caddy, Requirements)", "status": "done" },
     { "id": "F-24", "title": "Pipeline Automatizado de CI/CD para Producción (GitHub Actions Tests + Auto-deploy SSH)", "status": "done" },
     { "id": "F-25", "title": "Entorno de Pre-producción (Staging) Aislado y Dual Branch Workflow (Cloudflare + Oracle VM)", "status": "backlog" },
-    { "id": "F-26", "epic": "E-01", "title": "Retirada de 'Clasificación Fiscal Inteligente' de la UI y Limpieza de Deuda Técnica", "status": "done" }
+    { "id": "F-26", "epic": "E-01", "title": "Retirada de 'Clasificación Fiscal Inteligente' de la UI y Limpieza de Deuda Técnica", "status": "done" },
+    { "id": "F-27", "epic": "E-02", "title": "Guía Interactiva Paso a Paso con Capturas Reales para Automatización de Reglas en Gmail", "status": "done" }
   ]
 }

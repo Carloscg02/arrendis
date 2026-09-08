@@ -8,9 +8,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  maxWidth?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         <div className="modal-overlay" onClick={onClose}>
           <motion.div
             className="modal-content"
+            style={maxWidth ? { maxWidth } : undefined}
             ref={modalRef}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.96 }}
