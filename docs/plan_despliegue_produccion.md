@@ -201,11 +201,11 @@ mkdir -p data/images
 ```
 
 #### Paso 4: Levantar Backend con Caddy (Docker Compose v2)
-Los archivos `Dockerfile`, `docker-compose.prod.yml` y `Caddyfile` ya están incluidos en el repositorio.
+Los archivos `Dockerfile`, `docker-compose.prod.yml`, `Caddyfile` y `.env.example` se encuentran organizados dentro del directorio `cicd/`.
 Ejecuta el arranque con **Docker Compose v2** (`docker compose` con espacio):
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f cicd/docker-compose.prod.yml up -d --build
 ```
 > [!IMPORTANT]
 > Usa siempre `docker compose` (con espacio) y no la versión antigua `docker-compose` (con guion), para evitar el error `KeyError: ContainerConfig`.
@@ -221,7 +221,7 @@ En el panel DNS de Cloudflare para tu dominio:
 
 Si Caddy arrancó antes de existir el registro DNS, reinícialo para que obtenga el certificado de Let's Encrypt de inmediato:
 ```bash
-docker compose -f docker-compose.prod.yml restart caddy
+docker compose -f cicd/docker-compose.prod.yml restart caddy
 ```
 
 Comprueba que responde entrando en tu navegador a:  

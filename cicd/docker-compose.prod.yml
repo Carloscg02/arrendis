@@ -3,12 +3,12 @@ version: '3.8'
 services:
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: cicd/Dockerfile
     restart: always
-    env_file: .env
+    env_file: ../.env
     volumes:
-      - ./data:/app/data
+      - ../data:/app/data
     expose:
       - "8000"
 

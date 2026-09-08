@@ -19,7 +19,7 @@ cd /home/ubuntu/arrendis
 ### 1.1. Ver si los contenedores están vivos
 Muestra el estado de tus dos servicios (`Up` o `Exit`), los puertos y los nombres de los contenedores.
 ```bash
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f cicd/docker-compose.prod.yml ps
 ```
 > **Qué debes ver:**
 > - `arrendis_backend_1`: Estado `Up` (puerto 8000 expuesto internamente).
@@ -39,26 +39,26 @@ Verás que entre los dos no suelen pasar de 150-200 MB de RAM.
 
 ### 2.1. Ver los logs de ambos servicios a la vez
 ```bash
-docker-compose -f docker-compose.prod.yml logs
+docker compose -f cicd/docker-compose.prod.yml logs
 ```
 
 ### 2.2. Ver logs en tiempo real (modo "seguir" / streaming)
 Se queda escuchando en la terminal e imprime cada petición HTTP o error al instante:
 ```bash
-docker-compose -f docker-compose.prod.yml logs -f
+docker compose -f cicd/docker-compose.prod.yml logs -f
 ```
 *(Pulsa `Ctrl + C` para salir).*
 
 ### 2.3. Ver solo los logs del Backend (FastAPI)
 Ideal cuando quieres ver qué pasa al crear una propiedad, procesar una factura o validar un token JWT:
 ```bash
-docker-compose -f docker-compose.prod.yml logs -f backend
+docker compose -f cicd/docker-compose.prod.yml logs -f backend
 ```
 
 ### 2.4. Ver solo los logs de Caddy (Certificados SSL y Tráfico Web)
 Ideal para verificar si Let's Encrypt ha emitido el certificado HTTPS correctamente:
 ```bash
-docker-compose -f docker-compose.prod.yml logs -f caddy
+docker compose -f cicd/docker-compose.prod.yml logs -f caddy
 ```
 
 ---
@@ -68,19 +68,19 @@ docker-compose -f docker-compose.prod.yml logs -f caddy
 ### 3.1. Reiniciar un servicio sin tocar el otro
 Si cambiaste algo rápido y quieres reiniciar solo el proceso de Python sin interrumpir Caddy:
 ```bash
-docker-compose -f docker-compose.prod.yml restart backend
+docker compose -f cicd/docker-compose.prod.yml restart backend
 ```
 
 ### 3.2. Apagar los servicios ordenadamente
 Detiene y elimina los contenedores y la red virtual, pero **respeta al 100% tu base de datos y archivos en `./data`**:
 ```bash
-docker-compose -f docker-compose.prod.yml down
+docker compose -f cicd/docker-compose.prod.yml down
 ```
 
 ### 3.3. Levantar todo de nuevo en segundo plano
 Vuelve a encender los contenedores usando la imagen ya construida:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f cicd/docker-compose.prod.yml up -d
 ```
 *(El `-d` significa **detached**: se ejecuta en segundo plano y te devuelve el control de la terminal).*
 
@@ -95,7 +95,7 @@ Cuando en tu ordenador hagas cambios en el código de Python, hagas commit y `gi
 git pull origin main
 
 # 2. Reconstruir la imagen de Docker y reiniciar el backend sin tiempo de caída
-docker-compose -f docker-compose.prod.yml up -d --build backend
+docker compose -f cicd/docker-compose.prod.yml up -d --build backend
 ```
 > **¿Por qué `--build`?**
 > Porque el código de Python se copia dentro de la imagen en el `Dockerfile`. Al añadir `--build`, Docker detecta qué archivos han cambiado, recompila solo esas capas y reinicia el contenedor en 3 segundos.
@@ -108,7 +108,7 @@ A veces necesitas entrar dentro de la caja para ver los archivos como los ve Pyt
 
 ### 5.1. Abrir una terminal Bash dentro del backend
 ```bash
-docker-compose -f docker-compose.prod.yml exec backend bash
+docker compose -f cicd/docker-compose.prod.yml exec backend bash
 ```
 Una vez dentro (`root@...:/app#`):
 - `ls -la`: Verás los archivos del backend tal como los empaquetó Docker.
@@ -139,7 +139,7 @@ docker system prune -f
 
 | Necesidad | Comando |
 | :--- | :--- |
-| **¿Está todo funcionando?** | `docker-compose -f docker-compose.prod.yml ps` |
-| **Ver qué falla en tiempo real** | `docker-compose -f docker-compose.prod.yml logs -f backend` |
-| **Actualizar con nuevo código** | `git pull origin main && docker-compose -f docker-compose.prod.yml up -d --build` |
-| **Reiniciar el backend** | `docker-compose -f docker-compose.prod.yml restart backend` |
+| **¿Está todo funcionando?** | `docker compose -f cicd/docker-compose.prod.yml ps` |
+| **Ver qué falla en tiempo real** | `docker compose -f cicd/docker-compose.prod.yml logs -f backend` |
+| **Actualizar con nuevo código** | `git pull origin main && docker compose -f cicd/docker-compose.prod.yml up -d --build` |
+| **Reiniciar el backend** | `docker compose -f cicd/docker-compose.prod.yml restart backend` |
