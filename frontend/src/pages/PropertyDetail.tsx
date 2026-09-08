@@ -12,9 +12,10 @@ import {
   ReceiptText, 
   Plus,
   ChevronRight,
-  UploadCloud,
-  SlidersHorizontal
+  Sparkles,
+  Receipt,
 } from "lucide-react";
+import SuppliesAutomationPanel from "../components/SuppliesAutomationPanel";
 import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
   Property,
@@ -73,6 +74,8 @@ export default function PropertyDetail() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
   const [isIncomesOpen, setIsIncomesOpen] = useState(false);
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
+  const [expensesTab, setExpensesTab] = useState<"list" | "automate">("list");
+  const [uploadModalTab, setUploadModalTab] = useState<"upload" | "email">("upload");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async (isInitial = false) => {
@@ -439,19 +442,19 @@ export default function PropertyDetail() {
                 <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn btn-sm btn-secondary"
-                    onClick={() => setIsCupsModalOpen(true)}
-                    title={property.cups_electricity ? `CUPS Luz: ${property.cups_electricity}` : "Configurar código CUPS de luz, gas o agua"}
+                    onClick={() => {
+                      setIsExpensesOpen(true);
+                      setExpensesTab("automate");
+                    }}
+                    title="Configurar CUPS y automatizar el registro de facturas por email o PDF"
+                    style={{
+                      borderColor: expensesTab === "automate" && isExpensesOpen ? "var(--accent-secondary, #2563eb)" : undefined,
+                      backgroundColor: expensesTab === "automate" && isExpensesOpen ? "rgba(37, 99, 235, 0.08)" : undefined,
+                      color: expensesTab === "automate" && isExpensesOpen ? "var(--accent-secondary, #2563eb)" : undefined,
+                    }}
                   >
-                    <SlidersHorizontal size={14} style={{ marginRight: '0.35rem' }} />
-                    Configurar CUPS
-                  </button>
-                  <button
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => setIsUploadModalOpen(true)}
-                    title="Importar una o varias facturas de suministros en PDF"
-                  >
-                    <UploadCloud size={14} style={{ marginRight: '0.3rem' }} />
-                    Importar Facturas PDF
+                    <Sparkles size={14} style={{ marginRight: '0.35rem' }} />
+                    Automatizar Suministros
                   </button>
                   <button
                     className="btn btn-sm btn-secondary"
@@ -465,73 +468,162 @@ export default function PropertyDetail() {
 
               {isExpensesOpen && (
                 <div className="collapsible-content">
-                  {expenses.length === 0 ? (
-                    <p className="empty-text">Aún no hay gastos registrados.</p>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Fecha</th>
-                          <th>Categoría</th>
-                          <th>Descripción</th>
-                          <th className="text-right">Importe</th>
-                          <th style={{ width: '40px' }}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {expenses.map((exp) => (
-                          <tr key={exp.id}>
-                            <td>{exp.date}</td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <span className="badge badge-warning">
-                                  {translateExpenseCategory(exp.category)}
-                                </span>
-                                {exp.utility_data && (
-                                  <span
-                                    className="badge badge-neutral"
-                                    style={{
-                                      fontSize: '0.75rem',
-                                      padding: '0.15rem 0.45rem',
-                                      borderRadius: '4px',
-                                    }}
-                                    title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
-                                  >
-                                    {exp.utility_data.provider_name ? exp.utility_data.provider_name.split(' ')[0] : 'Suministro'}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td>{exp.description || "—"}</td>
-                            <td className="text-right text-danger">
-                              -{parseFloat(String(exp.amount || 0)).toFixed(2)} €
-                            </td>
-                            <td className="text-right">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteExpense(exp.id)}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: 'var(--text-muted)',
-                                  cursor: 'pointer',
-                                  padding: '0.25rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  borderRadius: '4px',
-                                  transition: 'color 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
-                                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                                title="Eliminar gasto"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
+                  {/* Expense Subtabs */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      padding: "3px",
+                      backgroundColor: "var(--bg-tertiary)",
+                      borderRadius: "var(--radius-md)",
+                      marginBottom: "1.25rem",
+                      gap: "3px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpensesTab("list")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                        padding: "0.4rem 0.85rem",
+                        borderRadius: "var(--radius-sm)",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        fontWeight: expensesTab === "list" ? 600 : 500,
+                        backgroundColor: expensesTab === "list" ? "var(--bg-secondary)" : "transparent",
+                        color: expensesTab === "list" ? "var(--text-primary)" : "var(--text-secondary)",
+                        cursor: "pointer",
+                        boxShadow: expensesTab === "list" ? "0 1px 2px rgba(15, 23, 42, 0.08)" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <Receipt size={14} />
+                      <span>Listado de Gastos</span>
+                      <span
+                        className="badge badge-neutral"
+                        style={{
+                          fontSize: "0.7rem",
+                          padding: "0.1rem 0.4rem",
+                          backgroundColor: expensesTab === "list" ? "var(--bg-tertiary)" : "rgba(15, 23, 42, 0.05)",
+                        }}
+                      >
+                        {expenses.length}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpensesTab("automate")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                        padding: "0.4rem 0.85rem",
+                        borderRadius: "var(--radius-sm)",
+                        border: "none",
+                        fontSize: "0.82rem",
+                        fontWeight: expensesTab === "automate" ? 600 : 500,
+                        backgroundColor: expensesTab === "automate" ? "var(--bg-secondary)" : "transparent",
+                        color: expensesTab === "automate" ? "var(--text-primary)" : "var(--text-secondary)",
+                        cursor: "pointer",
+                        boxShadow: expensesTab === "automate" ? "0 1px 2px rgba(15, 23, 42, 0.08)" : "none",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <Sparkles size={14} style={{ color: "var(--accent-secondary, #2563eb)" }} />
+                      <span>Automatizar Suministros</span>
+                      {(property.cups_electricity || property.cups_gas || property.cups_water) && (
+                        <span
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "50%",
+                            backgroundColor: "var(--success, #16a34a)",
+                          }}
+                          title="CUPS configurado"
+                        />
+                      )}
+                    </button>
+                  </div>
+
+                  {expensesTab === "list" ? (
+                    expenses.length === 0 ? (
+                      <p className="empty-text">Aún no hay gastos registrados.</p>
+                    ) : (
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                            <th className="text-right">Importe</th>
+                            <th style={{ width: '40px' }}></th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {expenses.map((exp) => (
+                            <tr key={exp.id}>
+                              <td>{exp.date}</td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <span className="badge badge-warning">
+                                    {translateExpenseCategory(exp.category)}
+                                  </span>
+                                  {exp.utility_data && (
+                                    <span
+                                      className="badge badge-neutral"
+                                      style={{
+                                        fontSize: '0.75rem',
+                                        padding: '0.15rem 0.45rem',
+                                        borderRadius: '4px',
+                                      }}
+                                      title={`CUPS: ${exp.utility_data.cups}${exp.utility_data.invoice_number ? ` | Nº ${exp.utility_data.invoice_number}` : ''}`}
+                                    >
+                                      {exp.utility_data.provider_name ? exp.utility_data.provider_name.split(' ')[0] : 'Suministro'}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>{exp.description || "—"}</td>
+                              <td className="text-right text-danger">
+                                -{parseFloat(String(exp.amount || 0)).toFixed(2)} €
+                              </td>
+                              <td className="text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteExpense(exp.id)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: '0.25rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    borderRadius: '4px',
+                                    transition: 'color 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                                  title="Eliminar gasto"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                  ) : (
+                    <SuppliesAutomationPanel
+                      property={property}
+                      onCupsUpdated={() => loadData(false)}
+                      onOpenPdfUpload={() => {
+                        setUploadModalTab("upload");
+                        setIsUploadModalOpen(true);
+                      }}
+                    />
                   )}
                 </div>
               )}
@@ -580,8 +672,10 @@ export default function PropertyDetail() {
       <InvoiceUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+        initialTab={uploadModalTab}
         onSuccess={() => {
           setIsExpensesOpen(true);
+          setExpensesTab("list");
           loadData(false);
         }}
       />
