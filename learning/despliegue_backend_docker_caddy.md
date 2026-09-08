@@ -176,3 +176,54 @@ Cuando estés conectado por SSH a la máquina de Oracle Cloud, estos son los ún
 | `docker-compose -f docker-compose.prod.yml logs -f caddy` | Ver los logs de Caddy y la emisión de certificados SSL. |
 | `docker-compose -f docker-compose.prod.yml down` | Apaga los contenedores de forma ordenada (sin borrar los datos del disco). |
 | `docker-compose -f docker-compose.prod.yml restart backend` | Reinicia únicamente el proceso del backend. |
+
+---
+
+## 🚪 8. Reverse Proxy vs API Gateway: ¿Cuál es la diferencia y cómo encaja en tu arquitectura?
+
+### ¿El Reverse Proxy solo sirve para HTTPS?
+**No**, aunque el cifrado SSL/TLS automático es su superpoder más visible, un Reverse Proxy como **Caddy** (o Nginx) hace mucho más:
+1. **Ocultación de infraestructura interna:** El cliente externo solo conoce `api.arrendis.com:443`. Nadie sabe qué puertos internos (`8000`, `8001`), IPs privadas o tecnologías corren por detrás.
+2. **Compresión al vuelo:** Puede comprimir respuestas JSON pesadas con Gzip o Zstandard automáticamente antes de mandarlas por la red para que viajen más rápido.
+3. **Manejo de terminación SSL eficiente:** Quita la carga criptográfica pesada al proceso de Python, dejándolo libre solo para ejecutar la lógica de negocio.
+4. **Protección básica contra Slowloris y ataques DoS:** Gestiona miles de conexiones TCP simultáneas de forma ultra eficiente en Go sin colapsar el hilo de FastAPI.
+
+---
+
+### Reverse Proxy vs API Gateway: ¿Qué hace cada uno?
+
+| Capacidad | Reverse Proxy (Caddy / Nginx) | API Gateway (Kong, Traefik, o FastAPI Middleware) |
+| :--- | :--- | :--- |
+| **Cifrado HTTPS y Certificados SSL** | Sí (Caddy lo hace nativo y gratis) | Sí (o se delega al proxy) |
+| **Enrutamiento por subdominio / path** | Sí (`api.arrendis.com` -> `backend:8000`) | Sí (`/v1/users` -> `auth_service`, etc.) |
+| **Rate Limiting (Control de peticiones/min)** | Básico (por IP) | Avanzado (por IP, por usuario, por API Key, por Tier) |
+| **Autenticación y RBAC (Roles/Permisos)** | Muy limitado / complejo | Sí (Valida JWT, roles, scopes antes de tocar la app) |
+| **Manipulación y validación de Headers** | Sí | Sí |
+| **Transformación de peticiones / respuestas** | No | Sí (ej. transformar XML antiguo a JSON moderno) |
+
+---
+
+### ¿Encajaría un API Gateway en tu arquitectura o sería muy complejo?
+
+**Encajaría perfectamente y es cero complejo**, porque tienes **dos formas muy elegantes de implementarlo**:
+
+#### Enfoque A: "In-App Gateway" mediante Middlewares y Dependencias de FastAPI (El más recomendado ahora)
+FastAPI ya está diseñado internamente con el patrón Gateway mediante su sistema de **Middlewares y Dependencias (`Depends`)**:
+1. **Rate Limiting:** Se añade con una librería estándar de Python como `slowapi` (basada en Redis o en memoria). Puedes poner:
+   ```python
+   @router.post("/auth/login")
+   @limiter.limit("5/minute")  # Máximo 5 intentos por minuto contra ataques de fuerza bruta
+   async def login(...): ...
+   ```
+2. **RBAC (Control de Acceso Basado en Roles):** Tu sistema actual de autenticación (`backend/adapters/auth_adapter.py`) ya extrae el JWT. Solo requiere añadir una dependencia que compruebe si el usuario tiene rol `admin`, `landlord` o `tenant`.
+3. **Security Headers:** FastAPI tiene middleware directo para inyectar cabeceras CORS, HSTS, X-Content-Type-Options y Content-Security-Policy.
+
+👉 **Ventajas:** Cero infraestructura extra, todo en código Python tipado, testeable con `pytest` y desplegado dentro del mismo contenedor de Docker sin consumir más RAM.
+
+#### Enfoque B: API Gateway Externo dedicado (Kong / Traefik / Cloudflare)
+Si en el futuro tu backend se dividiera en microservicios independientes:
+- Podrías colocar **Cloudflare** como primer API Gateway en el borde (Cloudflare ya tiene Rate Limiting y WAF activables con un clic en su panel).
+- O añadir un contenedor ligero como **Traefik** o **Kong** entre Caddy y los servicios.
+
+### Conclusión
+Caddy se queda en la frontera recibiendo el tráfico HTTPS, y FastAPI actúa de forma nativa como tu API Gateway para Rate Limit, Headers y RBAC con un control total y sin añadir complejidad a tus servidores.

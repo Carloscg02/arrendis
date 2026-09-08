@@ -69,3 +69,4 @@ Con ambos servidores funcionando:
 - **Base de Datos:** El proyecto utiliza SQLite. El archivo de la base de datos se generará y guardará automáticamente en `data/rental.db`. No necesitas instalar ningún motor de base de datos extra.
 - **Imágenes:** Las fotos que subas de las propiedades se guardarán localmente en la carpeta `data/images/`.
 - **Apagar la aplicación:** Para detener cualquiera de los servidores, ve a la terminal correspondiente y presiona `Ctrl + C`.
+- script automatico: carlos@DESKTOP-0TSNVCB:~/rental-handler$ ./start_local.sh
