@@ -1,6 +1,6 @@
 import type { TokenResponse, UserResponse, LoginInput, RegisterInput } from '../types';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Enfoque "Shielded JWT" estricto: el Access Token vive ÚNICAMENTE en memoria JavaScript (closure).
 // Nunca se persiste en localStorage ni sessionStorage, mitigando totalmente el robo por XSS estático.

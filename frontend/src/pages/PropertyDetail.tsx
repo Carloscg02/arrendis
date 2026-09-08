@@ -37,6 +37,7 @@ import {
   deleteProperty,
   uploadPropertyImage,
   updateFiscalData,
+  BACKEND_STATIC_URL,
 } from "../services/api";
 import IncomeForm from "../components/IncomeForm";
 import ExpenseForm from "../components/ExpenseForm";
@@ -274,7 +275,7 @@ export default function PropertyDetail() {
           <div className="detail-hero-layout">
             <div className="detail-hero-image-wrapper">
               <img
-                src={`http://localhost:8000${property.image_url}`}
+                src={`${BACKEND_STATIC_URL}${property.image_url}`}
                 alt={property.name}
                 className="detail-hero-image"
               />

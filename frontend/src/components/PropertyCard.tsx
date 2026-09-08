@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Building2, MapPin, ChevronRight } from "lucide-react";
 import type { Property } from "../types";
+import { BACKEND_STATIC_URL } from "../services/api";
 
 interface Props {
   property: Property;
@@ -49,7 +50,7 @@ export default function PropertyCard({ property }: Props) {
     >
       <div 
         className={`property-card-image ${!property.image_url ? 'property-card-placeholder' : ''}`}
-        style={property.image_url ? { backgroundImage: `url(http://localhost:8000${property.image_url})` } : undefined}
+        style={property.image_url ? { backgroundImage: `url(${BACKEND_STATIC_URL}${property.image_url})` } : undefined}
       >
         {!property.image_url && (
           <Building2 size={32} strokeWidth={1.5} className="property-card-placeholder-icon" />
