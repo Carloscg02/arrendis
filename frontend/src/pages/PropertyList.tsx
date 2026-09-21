@@ -60,13 +60,16 @@ export default function PropertyList() {
             <h1 className="page-title">Cartera de Inmuebles</h1>
           </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus size={15} style={{ marginRight: "0.4rem" }} />
-            <span>Incorporar Inmueble</span>
-          </button>
+          {/* Solo mostramos el botón superior cuando hay 3 o más inmuebles para evitar duplicidad visual */}
+          {!loading && properties.length >= 3 && (
+            <button
+              className="btn btn-primary"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <Plus size={15} style={{ marginRight: "0.4rem" }} />
+              <span>Incorporar Inmueble</span>
+            </button>
+          )}
         </div>
 
         {!loading && properties.length > 0 && (
