@@ -46,6 +46,8 @@ export default function PropertyCard({ property }: Props) {
   // Supplies count
   const cupsCount = [property.cups_electricity, property.cups_gas, property.cups_water].filter(Boolean).length;
 
+  const imageUrl = property.image_url ? `${BACKEND_STATIC_URL}${property.image_url}` : null;
+
   return (
     <article
       className="property-dossier-card"
@@ -54,17 +56,14 @@ export default function PropertyCard({ property }: Props) {
       role="button"
       onKeyDown={(e) => e.key === 'Enter' && navigate(`/properties/${property.id}`)}
     >
-      <div className="property-dossier-image">
-        {property.image_url ? (
-          <img
-            src={`${BACKEND_STATIC_URL}${property.image_url}`}
-            alt={property.name}
-            className="property-dossier-image__img"
-          />
-        ) : (
-          <div className="property-dossier-image__placeholder">
-            <Building size={34} strokeWidth={1.25} />
-            <span className="mono-caption">EXPEDIENTE ARQ · S/FOTO</span>
+      <div
+        className={`property-dossier-image ${!imageUrl ? 'property-dossier-image--placeholder' : ''}`}
+        style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}
+      >
+        {!imageUrl && (
+          <div className="property-dossier-placeholder-content">
+            <Building size={28} strokeWidth={1.25} />
+            <span className="mono-caption">EXPEDIENTE S/FOTO</span>
           </div>
         )}
       </div>
