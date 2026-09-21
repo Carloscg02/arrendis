@@ -857,20 +857,20 @@ td,
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: calc(56px + 2.5rem) 2rem 4rem;
+  padding: calc(56px + 1.65rem) 2rem 3rem;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
   gap: 1.5rem;
   flex-wrap: wrap;
 }
 
 .page-title {
-  font-size: 2.35rem;
+  font-size: 2.15rem;
   font-weight: 400;
   letter-spacing: -0.02em;
   color: var(--text-primary);
@@ -879,41 +879,41 @@ td,
 
 .page-subtitle {
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
+  font-size: 0.88rem;
+  margin-top: 0.2rem;
 }
 
 /* Portfolio Masthead */
 .portfolio-masthead {
-  margin-bottom: 2.75rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--panel-border);
-  padding-bottom: 1.75rem;
+  padding-bottom: 1.15rem;
 }
 
 .portfolio-masthead__top {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 1.5rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .portfolio-masthead__meta {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
 }
 
 .portfolio-meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -929,14 +929,14 @@ td,
 .property-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 1.15rem;
   max-width: 1040px;
   margin: 0 auto;
 }
 
 .property-dossier-card {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 240px 1fr;
   border: 1px solid var(--panel-border);
   background: var(--bg-secondary);
   border-radius: var(--radius-sm);
@@ -956,7 +956,8 @@ td,
 .property-dossier-image {
   position: relative;
   background-color: var(--bg-tertiary);
-  min-height: 240px;
+  min-height: 155px;
+  max-height: 185px;
   overflow: hidden;
   border-right: 1px solid var(--panel-border);
 }
@@ -973,40 +974,40 @@ td,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   height: 100%;
-  min-height: 240px;
+  min-height: 155px;
   background: linear-gradient(135deg, #f7f5f2 0%, #edeae4 100%);
   color: var(--text-muted);
-  padding: 1.5rem;
+  padding: 1rem;
   text-align: center;
 }
 
 .property-dossier-content {
-  padding: 2rem 2.25rem;
+  padding: 1.15rem 1.65rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 1.25rem;
+  gap: 0.65rem;
 }
 
 .property-dossier-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .property-dossier-title-area {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 
 .property-dossier-name {
   font-family: var(--font-serif);
-  font-size: 1.85rem;
+  font-size: 1.42rem;
   font-weight: 400;
   color: var(--text-primary);
   line-height: 1.2;
@@ -1015,16 +1016,16 @@ td,
 .property-dossier-address {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
 }
 
 .property-dossier-indicators {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  padding: 1rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  padding: 0.65rem 0;
   border-top: 1px solid var(--panel-border-subtle);
   border-bottom: 1px solid var(--panel-border-subtle);
 }
@@ -1032,12 +1033,12 @@ td,
 .dossier-indicator {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .dossier-indicator__label {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -1045,7 +1046,7 @@ td,
 
 .dossier-indicator__value {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-primary);
   font-weight: 500;
   display: flex;
@@ -1057,7 +1058,7 @@ td,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 0.25rem;
+  padding-top: 0.15rem;
 }
 
 /* Slot Add Inmueble (Architectural Plate) */
@@ -1065,10 +1066,10 @@ td,
   border: 1px dashed var(--panel-border);
   background: rgba(255, 255, 255, 0.45);
   border-radius: var(--radius-sm);
-  padding: 2.25rem 2.5rem;
+  padding: 1.15rem 1.65rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
   cursor: pointer;
   transition: all 0.2s var(--ease-out);
 }
@@ -1080,8 +1081,8 @@ td,
 }
 
 .property-slot-add__icon {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-pill);
   background: var(--bg-tertiary);
   border: 1px solid var(--panel-border);
@@ -1100,16 +1101,16 @@ td,
 
 .property-slot-add__title {
   font-family: var(--font-serif);
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 400;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .property-slot-add__text {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
   margin: 0;
 }
 

@@ -60,8 +60,8 @@ export default function PropertyList() {
             <h1 className="page-title">Cartera de Inmuebles</h1>
           </div>
 
-          {/* Solo mostramos el botón superior cuando hay 3 o más inmuebles para evitar duplicidad visual */}
-          {!loading && properties.length >= 3 && (
+          {/* Botón superior visible a partir de 2 inmuebles */}
+          {!loading && properties.length >= 2 && (
             <button
               className="btn btn-primary"
               onClick={() => setIsModalOpen(true)}
