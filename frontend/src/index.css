@@ -1022,9 +1022,9 @@ td,
 
 /* Right Column: Ledger Indicators & Action */
 .property-dossier-meta-col {
-  padding: 1.4rem 1.65rem;
+  padding: 1.4rem 1.75rem;
   border-left: 1px solid var(--panel-border-subtle);
-  background: var(--bg-elevated, #faf8f5);
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1119,9 +1119,9 @@ td,
   margin: 0;
 }
 
-@media (max-width: 840px) {
+@media (max-width: 880px) {
   .property-dossier-card {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   .property-dossier-image {
     width: 100%;
@@ -1129,11 +1129,12 @@ td,
     border-right: none;
     border-bottom: 1px solid var(--panel-border);
   }
-  .property-dossier-content {
-    padding: 1.5rem;
+  .property-dossier-meta-col {
+    border-left: none;
+    border-top: 1px solid var(--panel-border-subtle);
   }
   .property-slot-add {
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
     flex-direction: column;
     align-items: flex-start;
   }
