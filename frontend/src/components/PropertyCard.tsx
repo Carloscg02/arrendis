@@ -68,7 +68,8 @@ export default function PropertyCard({ property }: Props) {
         )}
       </div>
 
-      <div className="property-dossier-content">
+      {/* 2. Columna Central: Identidad del Inmueble y Ubicación */}
+      <div className="property-dossier-main">
         <div className="property-dossier-top">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <span className={`badge ${getStatusClass(property.status)}`}>
@@ -78,9 +79,6 @@ export default function PropertyCard({ property }: Props) {
               {translateType(property.property_type)}
             </span>
           </div>
-          <span className="mono-caption">
-            REF: MAD-{property.id.slice(0, 4).toUpperCase()}
-          </span>
         </div>
 
         <div className="property-dossier-title-area">
@@ -91,12 +89,21 @@ export default function PropertyCard({ property }: Props) {
           </p>
         </div>
 
+        <div>
+          <span className="mono-caption text-muted">
+            REF: MAD-{property.id.slice(0, 4).toUpperCase()} · EXPEDIENTE ARRENDIS
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Columna Derecha: Indicadores Técnicos y Acción Directa */}
+      <div className="property-dossier-meta-col">
         <div className="property-dossier-indicators">
           <div className="dossier-indicator">
             <span className="dossier-indicator__label">SUMINISTROS CUPS</span>
             <span className="dossier-indicator__value">
               <Zap size={13} style={{ color: cupsCount > 0 ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
-              <span>{cupsCount > 0 ? `${cupsCount} vinculados` : 'Pendiente CUPS'}</span>
+              <span>{cupsCount > 0 ? `${cupsCount} contadores vinculados` : 'Pendiente vincular'}</span>
             </span>
           </div>
 
@@ -106,7 +113,7 @@ export default function PropertyCard({ property }: Props) {
               {property.has_fiscal_data ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: 'var(--success)' }} />
-                  <span>Modelo 100 Listo</span>
+                  <span>Modelo 100 y 3% listo</span>
                 </>
               ) : (
                 <>
@@ -118,13 +125,10 @@ export default function PropertyCard({ property }: Props) {
           </div>
         </div>
 
-        <div className="property-dossier-footer">
-          <span className="mono-caption text-muted">
-            GESTIÓN PATRIMONIAL ARRENDIS
-          </span>
-          <span className="btn btn-secondary btn-sm" style={{ pointerEvents: 'none' }}>
+        <div className="property-dossier-action">
+          <span className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
             <span>Abrir Expediente</span>
-            <ArrowRight size={13} style={{ marginLeft: '0.35rem' }} />
+            <ArrowRight size={13} style={{ marginLeft: '0.4rem' }} />
           </span>
         </div>
       </div>
