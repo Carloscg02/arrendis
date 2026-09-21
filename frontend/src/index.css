@@ -883,18 +883,256 @@ td,
   margin-top: 0.25rem;
 }
 
+/* Portfolio Masthead */
+.portfolio-masthead {
+  margin-bottom: 2.75rem;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 1.75rem;
+}
+
+.portfolio-masthead__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.portfolio-masthead__meta {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.portfolio-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.portfolio-meta-item strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 /* ==========================================================================
-   PROPERTY CARDS & PORTFOLIO (Catalogue Format)
+   PROPERTY CARDS & PORTFOLIO (Catalogue Dossier Format)
    ========================================================================== */
 
 .property-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  max-width: 960px;
+  gap: 1.75rem;
+  max-width: 1040px;
   margin: 0 auto;
 }
 
+.property-dossier-card {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  border: 1px solid var(--panel-border);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s var(--ease-out);
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.property-dossier-card:hover {
+  border-color: var(--panel-border-hover);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.property-dossier-image {
+  position: relative;
+  background-color: var(--bg-tertiary);
+  min-height: 240px;
+  overflow: hidden;
+  border-right: 1px solid var(--panel-border);
+}
+
+.property-dossier-image__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.property-dossier-image__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 240px;
+  background: linear-gradient(135deg, #f7f5f2 0%, #edeae4 100%);
+  color: var(--text-muted);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.property-dossier-content {
+  padding: 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.property-dossier-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.property-dossier-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.property-dossier-name {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.property-dossier-address {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.property-dossier-indicators {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--panel-border-subtle);
+  border-bottom: 1px solid var(--panel-border-subtle);
+}
+
+.dossier-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dossier-indicator__label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dossier-indicator__value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.property-dossier-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.25rem;
+}
+
+/* Slot Add Inmueble (Architectural Plate) */
+.property-slot-add {
+  border: 1px dashed var(--panel-border);
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: var(--radius-sm);
+  padding: 2.25rem 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.property-slot-add:hover {
+  border-color: var(--brand-burgundy);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-card);
+}
+
+.property-slot-add__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--panel-border);
+  color: var(--brand-burgundy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.property-slot-add:hover .property-slot-add__icon {
+  background: var(--brand-burgundy-subtle);
+  border-color: var(--brand-burgundy-border);
+}
+
+.property-slot-add__title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.property-slot-add__text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 840px) {
+  .property-dossier-card {
+    grid-template-columns: 1fr;
+  }
+  .property-dossier-image {
+    min-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .property-dossier-content {
+    padding: 1.5rem;
+  }
+  .property-slot-add {
+    padding: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Legacy Property Card Fallback */
 .property-card {
   display: flex;
   flex-direction: row;
@@ -1379,7 +1617,138 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-primary);
 }
 
-/* Auth Pages (Clean Paper Composition) */
+/* Auth Pages (Split-Screen Architectural Atelier) */
+.auth-split-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  background-color: var(--bg-primary);
+}
+
+.auth-split-visual {
+  position: relative;
+  overflow: hidden;
+  background-color: #151312;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3.5rem;
+  border-right: 1px solid var(--panel-border);
+}
+
+.auth-split-visual__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: saturate(0.85) contrast(1.05);
+}
+
+.auth-split-visual__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(21, 19, 18, 0.35) 0%,
+    rgba(21, 19, 18, 0.2) 40%,
+    rgba(21, 19, 18, 0.88) 100%
+  );
+}
+
+.auth-split-visual__top {
+  position: relative;
+  z-index: 2;
+}
+
+.auth-split-visual__bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 480px;
+}
+
+.auth-split-visual__quote {
+  font-family: var(--font-serif);
+  font-size: 1.65rem;
+  line-height: 1.25;
+  color: #f9f7f5;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+}
+
+.auth-split-visual__author {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(249, 247, 245, 0.7);
+}
+
+.auth-split-form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem 4rem;
+  background-color: var(--bg-primary);
+  overflow-y: auto;
+}
+
+.auth-split-form-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 2rem;
+}
+
+.auth-split-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.auth-split-back-link:hover {
+  color: var(--brand-burgundy);
+}
+
+.auth-split-form-content {
+  max-width: 390px;
+  width: 100%;
+  margin: auto 0;
+}
+
+.auth-split-title {
+  font-size: 2.15rem;
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 1.5rem 0 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-split-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.auth-split-footer {
+  padding-top: 2rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Auth Classic Card Fallback */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -1411,12 +1780,6 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 1.25rem;
 }
 
-.auth-brand-logo {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
 .auth-subtitle {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -1426,7 +1789,7 @@ input:focus, select:focus, textarea:focus {
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.25rem;
 }
 
 .auth-form .btn {
@@ -1449,6 +1812,22 @@ input:focus, select:focus, textarea:focus {
 
 .auth-link a:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 960px) {
+  .auth-split-layout {
+    grid-template-columns: 1fr;
+  }
+  .auth-split-visual {
+    display: none;
+  }
+  .auth-split-form-panel {
+    padding: 2.5rem 1.5rem;
+    min-height: 100vh;
+  }
+  .auth-split-form-content {
+    margin: 2rem auto;
+  }
 }
 
 /* Empty States */

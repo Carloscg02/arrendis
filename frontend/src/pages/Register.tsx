@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import ArrendisLogo from '../components/ArrendisLogo';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -28,61 +30,120 @@ export default function Register() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-logo-container">
-            <img 
-              src="/arrendis-logo.png" 
-              alt="Arrendis" 
-              className="auth-brand-logo" 
-            />
-          </div>
-          <p className="auth-subtitle">Crear cuenta en la plataforma</p>
+    <div className="auth-split-layout">
+      {/* Left Column: Architectural Interior Plate */}
+      <div className="auth-split-visual">
+        <img
+          src="/images/editorial/interior-comfort.jpg"
+          alt="Espacio interior rehabilitado con luz natural"
+          className="auth-split-visual__bg"
+        />
+        <div className="auth-split-visual__overlay" />
+
+        <div className="auth-split-visual__top">
+          <span className="mono-eyebrow" style={{ color: 'rgba(249, 247, 245, 0.75)' }}>
+            ARRENDIS · ALTA EN EL REGISTRO
+          </span>
         </div>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
-            />
+
+        <div className="auth-split-visual__bottom">
+          <blockquote className="auth-split-visual__quote">
+            “Incorpore su patrimonio a un libro mayor digital concebido para perdurar con calma y rigor.”
+          </blockquote>
+          <span className="auth-split-visual__author">
+            FIG. REG · GESTIÓN PATRIMONIAL CONFORME A LA LEY
+          </span>
+        </div>
+      </div>
+
+      {/* Right Column: Editorial Registration Form */}
+      <div className="auth-split-form-panel">
+        <div className="auth-split-form-header">
+          <Link to="/" className="auth-split-back-link">
+            <ArrowLeft size={13} />
+            <span>Volver a la portada</span>
+          </Link>
+        </div>
+
+        <div className="auth-split-form-content">
+          <div style={{ marginBottom: '1.75rem' }}>
+            <ArrendisLogo size="md" showSubtitle={true} />
           </div>
-          <div className="form-group">
-            <label>Usuario</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)} 
-              required 
-            />
+
+          <h1 className="auth-split-title">Crear Cuenta</h1>
+          <p className="auth-split-subtitle">
+            Comience a gestionar sus inmuebles en alquiler con tranquilidad fiscal y automatización documental.
+          </p>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="reg-email">CORREO ELECTRÓNICO</label>
+              <input
+                id="reg-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="propietario@arrendis.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="reg-user">NOMBRE O TITULAR</label>
+              <input
+                id="reg-user"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Carlos González"
+                required
+                autoComplete="name"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="reg-pass">CONTRASEÑA</label>
+                <input
+                  id="reg-pass"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="reg-confirm">CONFIRMAR</label>
+                <input
+                  id="reg-confirm"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>
+              <span>Registrar Cuaderno Patrimonial</span>
+              <ArrowRight size={14} style={{ marginLeft: '0.4rem' }} />
+            </button>
+          </form>
+
+          <div className="auth-link">
+            ¿Ya tiene una cuenta de propietario?{' '}
+            <Link to="/login">Inicie sesión aquí</Link>
           </div>
-          <div className="form-group">
-            <label>Contraseña</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-            />
-          </div>
-          <div className="form-group">
-            <label>Confirmar Contraseña</label>
-            <input 
-              type="password" 
-              value={confirmPassword} 
-              onChange={e => setConfirmPassword(e.target.value)} 
-              required 
-            />
-          </div>
-          <button type="submit" className="btn btn-primary">
-            Crear Cuenta
-          </button>
-        </form>
-        <div className="auth-link">
-          ¿Ya tienes cuenta? <Link to="/login">Inicia Sesión</Link>
+        </div>
+
+        <div className="auth-split-footer">
+          <span>© {new Date().getFullYear()} ARRENDIS · PROTECCIÓN DE DATOS &amp; PRIVACIDAD PATRIMONIAL</span>
         </div>
       </div>
     </div>

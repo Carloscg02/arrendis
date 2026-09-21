@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, ChevronRight } from "lucide-react";
+import { MapPin, ArrowRight, Building, Zap, FileText, CheckCircle2 } from "lucide-react";
 import type { Property } from "../types";
 import { BACKEND_STATIC_URL } from "../services/api";
 
@@ -34,46 +34,101 @@ export default function PropertyCard({ property }: Props) {
 
   const translateType = (type: string) => {
     switch (type.toLowerCase()) {
-      case "apartment": return "Apartamento";
-      case "house": return "Casa";
+      case "apartment": return "Piso Residencial";
+      case "house": return "Vivienda Unifamiliar";
       case "commercial": return "Local Comercial";
-      case "garage": return "Garaje";
-      case "land": return "Terreno";
+      case "garage": return "Plaza Garaje";
+      case "land": return "Suelo / Finca";
       default: return type;
     }
   };
 
+  // Supplies count
+  const cupsCount = [property.cups_electricity, property.cups_gas, property.cups_water].filter(Boolean).length;
+
   return (
-    <div
-      className="property-card"
+    <article
+      className="property-dossier-card"
       onClick={() => navigate(`/properties/${property.id}`)}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/properties/${property.id}`)}
     >
-      <div 
-        className={`property-card-image ${!property.image_url ? 'property-card-placeholder' : ''}`}
-        style={property.image_url ? { backgroundImage: `url(${BACKEND_STATIC_URL}${property.image_url})` } : undefined}
-      >
-        {!property.image_url && (
-          <Building2 size={32} strokeWidth={1.5} className="property-card-placeholder-icon" />
+      <div className="property-dossier-image">
+        {property.image_url ? (
+          <img
+            src={`${BACKEND_STATIC_URL}${property.image_url}`}
+            alt={property.name}
+            className="property-dossier-image__img"
+          />
+        ) : (
+          <div className="property-dossier-image__placeholder">
+            <Building size={34} strokeWidth={1.25} />
+            <span className="mono-caption">EXPEDIENTE ARQ · S/FOTO</span>
+          </div>
         )}
       </div>
-      <div className="property-card-content">
-        <div className="property-card-header">
-          <h3 className="property-name">{property.name}</h3>
-          <span className={`badge ${getStatusClass(property.status)}`}>
-            {translateStatus(property.status)}
+
+      <div className="property-dossier-content">
+        <div className="property-dossier-top">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <span className={`badge ${getStatusClass(property.status)}`}>
+              {translateStatus(property.status)}
+            </span>
+            <span className="badge badge-outline">
+              {translateType(property.property_type)}
+            </span>
+          </div>
+          <span className="mono-caption">
+            REF: MAD-{property.id.slice(0, 4).toUpperCase()}
           </span>
         </div>
-        <p className="property-address">
-          <MapPin size={13} style={{ marginRight: '0.35rem', verticalAlign: '-1px', flexShrink: 0 }} />
-          <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
-        </p>
-        <div className="property-card-footer">
-          <span className="badge badge-outline">{translateType(property.property_type)}</span>
-          <span className="property-card-cta">
-            Ver detalle <ChevronRight size={14} />
+
+        <div className="property-dossier-title-area">
+          <h2 className="property-dossier-name">{property.name}</h2>
+          <p className="property-dossier-address">
+            <MapPin size={13} style={{ flexShrink: 0 }} />
+            <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
+          </p>
+        </div>
+
+        <div className="property-dossier-indicators">
+          <div className="dossier-indicator">
+            <span className="dossier-indicator__label">SUMINISTROS CUPS</span>
+            <span className="dossier-indicator__value">
+              <Zap size={13} style={{ color: cupsCount > 0 ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
+              <span>{cupsCount > 0 ? `${cupsCount} vinculados` : 'Pendiente CUPS'}</span>
+            </span>
+          </div>
+
+          <div className="dossier-indicator">
+            <span className="dossier-indicator__label">DATOS CATASTRALES (IRPF)</span>
+            <span className="dossier-indicator__value">
+              {property.has_fiscal_data ? (
+                <>
+                  <CheckCircle2 size={13} style={{ color: 'var(--success)' }} />
+                  <span>Modelo 100 Listo</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={13} style={{ color: 'var(--text-muted)' }} />
+                  <span>Sin amortización</span>
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className="property-dossier-footer">
+          <span className="mono-caption text-muted">
+            GESTIÓN PATRIMONIAL ARRENDIS
+          </span>
+          <span className="btn btn-secondary btn-sm" style={{ pointerEvents: 'none' }}>
+            <span>Abrir Expediente</span>
+            <ArrowRight size={13} style={{ marginLeft: '0.35rem' }} />
           </span>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
