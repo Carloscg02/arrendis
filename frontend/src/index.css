@@ -827,18 +827,17 @@ td,
 }
 
 .app-header__avatar {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-pill);
-  background: var(--brand-burgundy-subtle);
-  border: 1px solid var(--brand-burgundy-border);
-  color: var(--brand-burgundy);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
 }
 
 .app-header__username {

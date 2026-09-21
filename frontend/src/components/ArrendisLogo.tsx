@@ -76,6 +76,7 @@ export default function ArrendisLogo({
           flexDirection: 'column',
           alignItems: layout === 'vertical' ? 'center' : 'flex-start',
           gap: size === 'lg' ? '0.3rem' : '0.2rem',
+          transform: layout === 'horizontal' ? (size === 'sm' ? 'translateY(2.5px)' : 'translateY(2px)') : undefined,
         }}
       >
         <span
