@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthProvider";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import ArrendisLogo from "../components/ArrendisLogo";
 
 export default function Landing() {
   const { user } = useAuth();
@@ -12,11 +13,7 @@ export default function Landing() {
       <header className="landing-nav">
         <div className="landing-nav__container">
           <Link to="/" className="landing-nav__brand">
-            <img
-              src="/arrendis-logo.png"
-              alt="Arrendis"
-              className="landing-nav__brand-logo"
-            />
+            <ArrendisLogo size="sm" showSubtitle={false} />
           </Link>
 
           <nav className="landing-nav__links">
@@ -323,11 +320,9 @@ export default function Landing() {
         <div className="landing-container">
           <div className="landing-footer__grid">
             <div className="landing-footer__brand-col">
-              <img
-                src="/arrendis-logo.png"
-                alt="Arrendis"
-                className="landing-footer__logo"
-              />
+              <div style={{ marginBottom: "1.25rem" }}>
+                <ArrendisLogo size="md" showSubtitle={true} />
+              </div>
               <p className="landing-footer__desc">
                 Registro patrimonial y fiscal de inmuebles en alquiler en España. Diseñado con rigor legal y calma arquitectónica.
               </p>
