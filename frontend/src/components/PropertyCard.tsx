@@ -43,8 +43,23 @@ export default function PropertyCard({ property }: Props) {
     }
   };
 
-  // Supplies count
-  const cupsCount = [property.cups_electricity, property.cups_gas, property.cups_water].filter(Boolean).length;
+  // Supplies status helper
+  const getSuppliesStatus = () => {
+    const active: string[] = [];
+    if (property.cups_electricity) active.push("Luz");
+    if (property.cups_gas) active.push("Gas");
+    if (property.cups_water) active.push("Agua");
+
+    if (active.length === 0) return { text: "Pendiente vincular", hasSupplies: false };
+    if (active.length === 1) {
+      const name = active[0];
+      const suffix = name === "Gas" ? "vinculado" : "vinculada";
+      return { text: `${name} ${suffix}`, hasSupplies: true };
+    }
+    return { text: `${active.join(" + ")} vinculados`, hasSupplies: true };
+  };
+
+  const suppliesStatus = getSuppliesStatus();
 
   const imageUrl = property.image_url ? `${BACKEND_STATIC_URL}${property.image_url}` : null;
 
@@ -100,10 +115,10 @@ export default function PropertyCard({ property }: Props) {
       <div className="property-dossier-meta-col">
         <div className="property-dossier-indicators">
           <div className="dossier-indicator">
-            <span className="dossier-indicator__label">SUMINISTROS CUPS</span>
+            <span className="dossier-indicator__label">SUMINISTROS</span>
             <span className="dossier-indicator__value">
-              <Zap size={13} style={{ color: cupsCount > 0 ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
-              <span>{cupsCount > 0 ? `${cupsCount} contadores vinculados` : 'Pendiente vincular'}</span>
+              <Zap size={13} style={{ color: suppliesStatus.hasSupplies ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
+              <span>{suppliesStatus.text}</span>
             </span>
           </div>
 

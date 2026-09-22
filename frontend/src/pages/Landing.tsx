@@ -93,8 +93,8 @@ export default function Landing() {
               />
             </div>
             <div className="landing-image-caption">
-              <span className="mono-caption">FIG. 01 / EDIFICIO RESIDENCIAL · MADRID</span>
-              <span className="mono-caption text-muted">GESTIÓN DE ALQUILERES CON ARRENDIS</span>
+              <span className="mono-caption">GESTIÓN DE ALQUILERES CON ARRENDIS</span>
+              <span className="mono-caption text-muted"></span>
             </div>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function Landing() {
                 />
               </div>
               <div className="landing-image-caption">
-                <span className="mono-caption">FIG. 02 / DETALLE DE INMUEBLE · GESTIÓN CENTRALIZADA</span>
+                <span className="mono-caption"></span>
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function Landing() {
                 />
               </div>
               <div className="landing-image-caption">
-                <span className="mono-caption">FIG. 03 / ASIGNACIÓN POR CONTADOR · CÓDIGO CUPS</span>
+                <span className="mono-caption"></span>
               </div>
             </div>
 
@@ -285,7 +285,7 @@ export default function Landing() {
           <div className="landing-cta__box">
             <span className="mono-eyebrow text-garnet">GESTIÓN CLARA Y DIRECTA</span>
             <h2 className="landing-cta__title">
-              Menos tiempo con papeles, más orden con tus alquileres.
+              Pon orden en tus alquileres.
             </h2>
             <p className="landing-cta__text">
               Añade tus inmuebles, guarda tus contratos y deja que las facturas de suministros se asocien automáticamente.
