@@ -14,6 +14,10 @@ import {
   ChevronRight,
   Sparkles,
   Receipt,
+  MapPin,
+  Building,
+  Camera,
+  Zap,
 } from "lucide-react";
 import SuppliesAutomationPanel from "../components/SuppliesAutomationPanel";
 import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
@@ -243,26 +247,148 @@ export default function PropertyDetail() {
     </>
   );
 
+  const getStatusClass = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "available": return "badge-success";
+      case "rented": return "badge-primary";
+      case "maintenance": return "badge-warning";
+      default: return "badge-neutral";
+    }
+  };
+
+  const translateStatus = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "available": return "Disponible";
+      case "rented": return "Alquilado";
+      case "maintenance": return "Mantenimiento";
+      default: return status;
+    }
+  };
+
+  const translateType = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "apartment": return "Piso Residencial";
+      case "house": return "Vivienda Unifamiliar";
+      case "commercial": return "Local Comercial";
+      case "garage": return "Plaza Garaje";
+      case "land": return "Suelo / Finca";
+      default: return type;
+    }
+  };
+
+  const getSuppliesStatus = () => {
+    const active: string[] = [];
+    if (property.cups_electricity) active.push("Luz");
+    if (property.cups_gas) active.push("Gas");
+    if (property.cups_water) active.push("Agua");
+
+    if (active.length === 0) return { text: "Pendiente vincular", hasSupplies: false };
+    if (active.length === 1) {
+      const name = active[0];
+      const suffix = name === "Gas" ? "vinculado" : "vinculada";
+      return { text: `${name} ${suffix}`, hasSupplies: true };
+    }
+    return { text: `${active.join(" + ")} vinculados`, hasSupplies: true };
+  };
+
+  const suppliesStatus = getSuppliesStatus();
+
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <button className="btn btn-link mb-2" onClick={() => navigate("/")} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <ArrowLeft size={14} /> Volver al Portafolio
-          </button>
-          <h1 className="page-title">{property.name}</h1>
-          <p className="page-subtitle">
-            {property.address.street}, {property.address.city}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary upload-btn" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={14} style={{ marginRight: '0.35rem' }} /> Subir Foto
-          </button>
-          <button className="btn btn-danger" onClick={() => setIsConfirmOpen(true)}>
-            <Trash2 size={14} style={{ marginRight: '0.35rem' }} /> Eliminar Propiedad
+      {/* Dossier Masthead */}
+      <div className="property-detail-masthead">
+        <div className="property-detail-masthead__back">
+          <button
+            className="btn btn-link"
+            onClick={() => navigate("/")}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: 0 }}
+          >
+            <ArrowLeft size={14} /> Volver a mi Cartera
           </button>
         </div>
+
+        <div className="property-detail-masthead__body">
+          {/* Framed Architectural Vignette Photo */}
+          <div
+            className={`property-detail-photo-frame ${!property.image_url ? 'property-detail-photo-frame--empty' : ''}`}
+            onClick={() => fileInputRef.current?.click()}
+            title={property.image_url ? "Haz clic para cambiar la fotografía" : "Haz clic para subir una fotografía"}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+          >
+            {property.image_url ? (
+              <>
+                <img
+                  src={`${BACKEND_STATIC_URL}${property.image_url}`}
+                  alt={property.name}
+                  className="property-detail-photo-img"
+                />
+                <div className="property-detail-photo-overlay">
+                  <Camera size={16} />
+                  <span>Cambiar foto</span>
+                </div>
+              </>
+            ) : (
+              <div className="property-detail-photo-placeholder">
+                <Building size={24} strokeWidth={1.25} />
+                <span>Añadir foto</span>
+              </div>
+            )}
+          </div>
+
+          {/* Identity & Metadata */}
+          <div className="property-detail-masthead__identity">
+            <div className="property-detail-masthead__badges">
+              <span className={`badge ${getStatusClass(property.status)}`}>
+                {translateStatus(property.status)}
+              </span>
+              <span className="badge badge-outline">
+                {translateType(property.property_type)}
+              </span>
+              <span className="mono-caption text-muted">
+                REF: MAD-{property.id.slice(0, 4).toUpperCase()}
+              </span>
+            </div>
+
+            <h1 className="property-detail-masthead__title">{property.name}</h1>
+
+            <p className="property-detail-masthead__address">
+              <MapPin size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
+            </p>
+
+            <div className="property-detail-masthead__meta-row">
+              <span className="property-detail-pill">
+                <Zap size={12} style={{ color: suppliesStatus.hasSupplies ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
+                <span>{suppliesStatus.text}</span>
+              </span>
+              <span className="property-detail-pill">
+                <FileText size={12} style={{ color: property.has_fiscal_data ? 'var(--success)' : 'var(--text-muted)' }} />
+                <span>{property.has_fiscal_data ? 'Fiscalidad registrada' : 'Pendiente registrar'}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="property-detail-masthead__actions">
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={13} style={{ marginRight: '0.35rem' }} />
+              {property.image_url ? 'Cambiar Foto' : 'Subir Foto'}
+            </button>
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => setIsConfirmOpen(true)}
+            >
+              <Trash2 size={13} style={{ marginRight: '0.35rem' }} />
+              Eliminar
+            </button>
+          </div>
+        </div>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -273,24 +399,9 @@ export default function PropertyDetail() {
       </div>
 
       <div className="detail-centered-container">
-        {property.image_url ? (
-          <div className="detail-hero-layout">
-            <div className="detail-hero-image-wrapper">
-              <img
-                src={`${BACKEND_STATIC_URL}${property.image_url}`}
-                alt={property.name}
-                className="detail-hero-image"
-              />
-            </div>
-            <div className="detail-hero-kpis">
-              {kpiCards}
-            </div>
-          </div>
-        ) : (
-          <div className="kpi-grid">
-            {kpiCards}
-          </div>
-        )}
+        <div className="kpi-grid">
+          {kpiCards}
+        </div>
 
         <div className="tabs-container">
           <button 
