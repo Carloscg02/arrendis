@@ -1,4 +1,4 @@
-# Arrendis — Gestión de alquileres y motor fiscal AEAT
+# Arrendis — Plataforma Integral de Gestión Patrimonial y Motor Fiscal AEAT
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?logo=githubactions&logoColor=white)](.github/workflows/deploy.yml)
 [![Tests](https://img.shields.io/badge/Tests-350%2B%20Passing-success?logo=pytest&logoColor=white)](tests/)
@@ -8,9 +8,21 @@
 [![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2B%20DDD-orange)](#arquitectura-hexagonal-y-ddd)
 [![Cloud Infrastructure](https://img.shields.io/badge/Cloud-Oracle%20Cloud%20%7C%20Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://oracle.com)
 
-Arrendis es una aplicación web pensada para propietarios de viviendas en alquiler en España. Resuelve tres problemas habituales: la gestión diaria de contratos e inmuebles, la ingesta automática de facturas de suministros (luz y gas) por email y el cálculo del IRPF para la declaración de la renta (Rendimientos del Capital Inmobiliario - Modelo 100 AEAT).
+> **Arrendis** es una plataforma SaaS desarrollada para propietarios e inversores inmobiliarios particulares en España. Resuelve la gestión de inmuebles y contratos, la ingesta automática de facturas de suministros y la liquidación del **IRPF inmobiliario (Modelo 100 AEAT)** con generación de borradores oficiales.
 
-El objetivo del proyecto no era hacer un CRUD básico, sino resolver lógica de negocio compleja (normativa tributaria real), procesar documentos de forma desatendida y desplegarlo en infraestructura real con coste cero (0 €/mes).
+---
+
+## Aspectos técnicos destacados
+
+Este proyecto no es un CRUD convencional ni un prototipo impulsado por peticiones descontroladas a una IA. Ha sido diseñado y desplegado como un sistema en producción real con foco en **ingeniería de software sólida, rigor fiscal y coste operativo cero**:
+
+* **Arquitectura Hexagonal y DDD estricto**: Dominio en Python puro sin dependencias de frameworks externos, con puertos tipados y adaptadores intercambiables.
+* **Spec-Driven Development (SDD)**: Metodología donde el desarrollador actúa como arquitecto orquestador y la IA como motor de ejecución guiado por especificaciones formales (`specs/`) y puertas de aprobación de diseño antes de escribir código.
+* **Autenticación Shielded JWT**: Sistema híbrido de doble token (Access Token en memoria de React y Refresh Token en cookie HttpOnly) para mitigar vectores XSS y CSRF, con aislamiento multi-tenant estricto.
+* **Procesamiento Inteligente de Facturas (Edge + LLM)**: Ingesta serverless por correo (`facturas@arrendis.com`), anonimización de datos personales con `PrivacyScrubber` (RGPD) y extracción híbrida: Regex de alta velocidad (<2 ms) con fallback a Google Gemini Flash.
+* **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española (amortización del 3% construcción/adquisición, arrastre de excesos de financiación y reparación a 4 años, prorrateo por días de ocupación y reducciones de la Ley de Vivienda).
+* **Infraestructura Cloud Real (0 €/mes)**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en Docker) con SQLite en modo WAL y hot-backups automatizados.
+* **Calidad y Verificación**: Suite de más de **350 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
 
 ---
 
