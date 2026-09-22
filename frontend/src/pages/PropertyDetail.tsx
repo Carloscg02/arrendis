@@ -295,50 +295,50 @@ export default function PropertyDetail() {
 
   return (
     <div className="page-container">
-      {/* Dossier Masthead */}
+      {/* Top back navigation */}
+      <div className="property-detail-back-bar">
+        <button
+          className="btn btn-link"
+          onClick={() => navigate("/")}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: 0 }}
+        >
+          <ArrowLeft size={14} /> Volver a mi Cartera
+        </button>
+      </div>
+
+      {/* Flush Architectural Dossier Masthead */}
       <div className="property-detail-masthead">
-        <div className="property-detail-masthead__back">
-          <button
-            className="btn btn-link"
-            onClick={() => navigate("/")}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: 0 }}
-          >
-            <ArrowLeft size={14} /> Volver a mi Cartera
-          </button>
+        {/* Left Column: Flush Architectural Photo */}
+        <div
+          className={`property-detail-masthead__photo ${!property.image_url ? 'property-detail-masthead__photo--empty' : ''}`}
+          onClick={() => fileInputRef.current?.click()}
+          title={property.image_url ? "Haz clic para cambiar la fotografía" : "Haz clic para subir una fotografía"}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+        >
+          {property.image_url ? (
+            <>
+              <div
+                className="property-detail-masthead__photo-bg"
+                style={{ backgroundImage: `url(${BACKEND_STATIC_URL}${property.image_url})` }}
+              />
+              <div className="property-detail-photo-overlay">
+                <Camera size={16} />
+                <span>Cambiar fotografía</span>
+              </div>
+            </>
+          ) : (
+            <div className="property-detail-photo-placeholder">
+              <Building size={28} strokeWidth={1.25} />
+              <span>Añadir fotografía</span>
+            </div>
+          )}
         </div>
 
-        <div className="property-detail-masthead__body">
-          {/* Framed Architectural Vignette Photo */}
-          <div
-            className={`property-detail-photo-frame ${!property.image_url ? 'property-detail-photo-frame--empty' : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-            title={property.image_url ? "Haz clic para cambiar la fotografía" : "Haz clic para subir una fotografía"}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-          >
-            {property.image_url ? (
-              <>
-                <img
-                  src={`${BACKEND_STATIC_URL}${property.image_url}`}
-                  alt={property.name}
-                  className="property-detail-photo-img"
-                />
-                <div className="property-detail-photo-overlay">
-                  <Camera size={16} />
-                  <span>Cambiar foto</span>
-                </div>
-              </>
-            ) : (
-              <div className="property-detail-photo-placeholder">
-                <Building size={24} strokeWidth={1.25} />
-                <span>Añadir foto</span>
-              </div>
-            )}
-          </div>
-
-          {/* Identity & Metadata */}
-          <div className="property-detail-masthead__identity">
+        {/* Right Column: Identity, Status & Actions */}
+        <div className="property-detail-masthead__content">
+          <div className="property-detail-masthead__top-row">
             <div className="property-detail-masthead__badges">
               <span className={`badge ${getStatusClass(property.status)}`}>
                 {translateStatus(property.status)}
@@ -351,41 +351,41 @@ export default function PropertyDetail() {
               </span>
             </div>
 
-            <h1 className="property-detail-masthead__title">{property.name}</h1>
+            <div className="property-detail-masthead__actions">
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload size={13} style={{ marginRight: '0.35rem' }} />
+                {property.image_url ? 'Cambiar Foto' : 'Subir Foto'}
+              </button>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => setIsConfirmOpen(true)}
+              >
+                <Trash2 size={13} style={{ marginRight: '0.35rem' }} />
+                Eliminar
+              </button>
+            </div>
+          </div>
 
+          <div className="property-detail-masthead__title-group">
+            <h1 className="property-detail-masthead__title">{property.name}</h1>
             <p className="property-detail-masthead__address">
               <MapPin size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
               <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
             </p>
-
-            <div className="property-detail-masthead__meta-row">
-              <span className="property-detail-pill">
-                <Zap size={12} style={{ color: suppliesStatus.hasSupplies ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
-                <span>{suppliesStatus.text}</span>
-              </span>
-              <span className="property-detail-pill">
-                <FileText size={12} style={{ color: property.has_fiscal_data ? 'var(--success)' : 'var(--text-muted)' }} />
-                <span>{property.has_fiscal_data ? 'Fiscalidad registrada' : 'Pendiente registrar'}</span>
-              </span>
-            </div>
           </div>
 
-          {/* Actions */}
-          <div className="property-detail-masthead__actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload size={13} style={{ marginRight: '0.35rem' }} />
-              {property.image_url ? 'Cambiar Foto' : 'Subir Foto'}
-            </button>
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={() => setIsConfirmOpen(true)}
-            >
-              <Trash2 size={13} style={{ marginRight: '0.35rem' }} />
-              Eliminar
-            </button>
+          <div className="property-detail-masthead__footer-row">
+            <span className="property-detail-pill">
+              <Zap size={12} style={{ color: suppliesStatus.hasSupplies ? 'var(--brand-burgundy)' : 'var(--text-muted)' }} />
+              <span>{suppliesStatus.text}</span>
+            </span>
+            <span className="property-detail-pill">
+              <FileText size={12} style={{ color: property.has_fiscal_data ? 'var(--success)' : 'var(--text-muted)' }} />
+              <span>{property.has_fiscal_data ? 'Fiscalidad registrada' : 'Pendiente registrar'}</span>
+            </span>
           </div>
         </div>
 
