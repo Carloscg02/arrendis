@@ -200,7 +200,7 @@ export default function PropertyDetail() {
           {loadError}
         </p>
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
-          <button className="btn btn-secondary" onClick={() => navigate("/")}>
+          <button className="btn btn-secondary" onClick={() => navigate("/portfolio")}>
             Volver al Portafolio
           </button>
           <button className="btn btn-primary" onClick={() => loadData(true)}>
@@ -299,7 +299,7 @@ export default function PropertyDetail() {
       <div className="property-detail-back-bar">
         <button
           className="btn btn-link"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/portfolio")}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: 0 }}
         >
           <ArrowLeft size={14} /> Volver a mi Cartera
