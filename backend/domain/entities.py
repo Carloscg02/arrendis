@@ -294,6 +294,7 @@ class User:
     password_hash: PasswordHash
     username: str
     forwarding_email: str | None = None
+    onboarding_completed: bool = False
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:

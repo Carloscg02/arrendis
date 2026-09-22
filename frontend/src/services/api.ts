@@ -300,3 +300,30 @@ export async function updateForwardingEmail(
   return handleResponse<ForwardingEmailResponse>(res);
 }
 
+import type { QuickEstimateRequest, QuickEstimateResponse, OnboardingBootstrapRequest } from "../types";
+
+export async function getQuickFiscalEstimate(data: QuickEstimateRequest): Promise<QuickEstimateResponse> {
+  const res = await apiFetch(`${API_BASE}/fiscal/quick-estimate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<QuickEstimateResponse>(res);
+}
+
+export async function bootstrapOnboarding(data: OnboardingBootstrapRequest): Promise<Property> {
+  const res = await apiFetch(`${API_BASE}/onboarding/bootstrap`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Property>(res);
+}
+
+export async function skipOnboarding(): Promise<{ status: string; onboarding_completed: boolean }> {
+  const res = await apiFetch(`${API_BASE}/users/me/onboarding/skip`, {
+    method: "POST",
+  });
+  return handleResponse<{ status: string; onboarding_completed: boolean }>(res);
+}
+

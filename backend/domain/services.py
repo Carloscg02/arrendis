@@ -20,7 +20,7 @@ from backend.domain.entities import (
     LeaseContract,
     LeaseType,
 )
-from backend.domain.value_objects import Money, FiscalReport
+from backend.domain.value_objects import Money, FiscalReport, FiscalQuickEstimate
 import calendar
 from datetime import timedelta, date
 
@@ -328,3 +328,20 @@ class FiscalCalculator:
             else:
                 merged.append([start, end])
         return sum((end - start).days + 1 for start, end in merged)
+
+
+class FiscalSimulatorService:
+    """Servicio de dominio para simulaciones fiscales rápidas."""
+
+    @staticmethod
+    def simulate_quick_estimate(
+        purchase_price: Decimal,
+        acquisition_year: int,
+        construction_ratio: Decimal = Decimal("0.70"),
+    ) -> FiscalQuickEstimate:
+        """Genera una estimación fiscal preliminar de amortización y desgravación."""
+        return FiscalQuickEstimate(
+            purchase_price=purchase_price,
+            acquisition_year=acquisition_year,
+            construction_ratio=construction_ratio,
+        )

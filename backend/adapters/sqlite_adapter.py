@@ -89,11 +89,17 @@ class SQLiteConnection:
                 email TEXT NOT NULL UNIQUE,
                 username TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
-                forwarding_email TEXT DEFAULT NULL
+                forwarding_email TEXT DEFAULT NULL,
+                onboarding_completed INTEGER NOT NULL DEFAULT 0
             )
         """)
         try:
             cursor.execute("ALTER TABLE users ADD COLUMN forwarding_email TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass  # La columna ya existe
+
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN onboarding_completed INTEGER NOT NULL DEFAULT 1")
         except sqlite3.OperationalError:
             pass  # La columna ya existe
 
@@ -722,8 +728,8 @@ class SQLiteUserRepository(UserRepository):
         try:
             self._conn.execute(
                 """
-                INSERT INTO users (id, email, username, password_hash, forwarding_email)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, username, password_hash, forwarding_email, onboarding_completed)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     user.id,
@@ -731,6 +737,7 @@ class SQLiteUserRepository(UserRepository):
                     user.username,
                     user.password_hash.hash_value,
                     user.forwarding_email,
+                    1 if user.onboarding_completed else 0,
                 ),
             )
             self._conn.commit()
@@ -782,6 +789,14 @@ class SQLiteUserRepository(UserRepository):
         )
         self._conn.commit()
 
+    def update_onboarding_status(self, user_id: str, completed: bool) -> None:
+        """Actualiza la bandera de onboarding completado de un usuario."""
+        self._conn.execute(
+            "UPDATE users SET onboarding_completed = ? WHERE id = ?",
+            (1 if completed else 0, user_id),
+        )
+        self._conn.commit()
+
     @staticmethod
     def _row_to_entity(row: sqlite3.Row) -> User:
         """Convierte una fila de SQLite a una entidad User."""
@@ -790,12 +805,18 @@ class SQLiteUserRepository(UserRepository):
             forwarding_email = row["forwarding_email"]
         except (IndexError, KeyError):
             pass
+        onboarding_completed = False
+        try:
+            onboarding_completed = bool(row["onboarding_completed"])
+        except (IndexError, KeyError):
+            pass
         return User(
             id=row["id"],
             email=Email(row["email"]),
             username=row["username"],
             password_hash=PasswordHash(row["password_hash"]),
             forwarding_email=forwarding_email,
+            onboarding_completed=onboarding_completed,
         )
 
 

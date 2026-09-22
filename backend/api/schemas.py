@@ -169,6 +169,7 @@ class UserResponse(BaseModel):
     email: str
     username: str
     forwarding_email: str | None = None
+    onboarding_completed: bool = False
 
 class ForwardingEmailUpdate(BaseModel):
     forwarding_email: str | None = None
@@ -384,3 +385,43 @@ class InboundEmailWebhookResponse(BaseModel):
     error_count: int
     items: list[InboundEmailItemResultSchema]
     message: str = ""
+
+
+# ──────────────────────────────────────────────
+# Onboarding & Quick Fiscal Estimate Schemas (F-28)
+# ──────────────────────────────────────────────
+
+class QuickEstimateRequest(BaseModel):
+    purchase_price: Decimal
+    acquisition_year: int
+    construction_ratio: Decimal = Decimal("0.70")
+
+
+class QuickEstimateResponse(BaseModel):
+    purchase_price: str
+    estimated_construction_value: str
+    estimated_land_value: str
+    annual_amortization: str
+    estimated_tax_savings_typical: str
+    legal_reference: str
+    disclaimer: str
+
+
+class OnboardingBootstrapRequest(BaseModel):
+    property_name: str
+    property_type: str = "apartment"
+    street: str = "Dirección pendiente"
+    city: str = "Ciudad"
+    postal_code: str = "00000"
+    country: str = "ES"
+
+    # Fiscal data (opcional)
+    purchase_price: Decimal | None = None
+    acquisition_year: int | None = None
+    construction_ratio: Decimal = Decimal("0.70")
+
+    # Rental & supplies (opcional)
+    monthly_rent: Decimal | None = None
+    cups_electricity: str | None = None
+    cups_gas: str | None = None
+    cups_water: str | None = None

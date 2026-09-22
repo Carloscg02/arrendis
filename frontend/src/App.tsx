@@ -4,6 +4,7 @@ import PropertyDetail from './pages/PropertyDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
+import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import AppHeader from './components/AppHeader';
@@ -11,7 +12,7 @@ import { AuthProvider, useAuth } from './components/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 function HomeRoute() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -22,6 +23,14 @@ function HomeRoute() {
   }
 
   if (isAuthenticated) {
+    if (user && user.onboarding_completed === false) {
+      return (
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      );
+    }
+
     return (
       <ProtectedRoute>
         <AppHeader />
@@ -38,11 +47,18 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <Routes>
-          {/* Inicio inteligente: si autenticado -> Cartera; si no -> Landing */}
+          {/* Inicio inteligente: si autenticado -> Cartera o Onboarding; si no -> Landing */}
           <Route path="/" element={<HomeRoute />} />
           
           {/* Acceso directo a la landing page pública */}
           <Route path="/landing" element={<Landing />} />
+
+          {/* Onboarding guiado */}
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          } />
 
           {/* Cartera de Inmuebles */}
           <Route path="/portfolio" element={

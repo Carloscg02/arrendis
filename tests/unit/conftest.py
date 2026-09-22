@@ -166,6 +166,10 @@ class InMemoryUserRepository(UserRepository):
         u = self.find_by_id(user_id)
         if u:
             u.forwarding_email = forwarding_email.strip().lower() if forwarding_email else None
+    def update_onboarding_status(self, user_id: str, completed: bool) -> None:
+        u = self.find_by_id(user_id)
+        if u:
+            u.onboarding_completed = completed
 
 class FakePasswordHasherAdapter(PasswordHasherPort):
     """Hasher falso para tests: hash = '$2b$fake$' + password, verify = comparación directa."""

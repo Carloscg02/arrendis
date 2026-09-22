@@ -49,8 +49,8 @@ from backend.domain.ports import (
     LLMProviderPort,
     PDFTextExtractorPort,
 )
-from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, UtilityInvoiceData
+from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator, FiscalSimulatorService
+from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, UtilityInvoiceData, FiscalQuickEstimate
 from backend.domain.extraction import ExtractionStrategy, UtilityExtractorRegistry
 
 class CreatePropertyUseCase:
@@ -1094,6 +1094,130 @@ class ProcessInboundEmailUseCase:
             items=items,
             message=msg,
         )
+
+
+class QuickFiscalEstimateUseCase:
+    """Caso de uso: estimación fiscal rápida de amortización y desgravación."""
+
+    def execute(
+        self,
+        purchase_price: Decimal,
+        acquisition_year: int,
+        construction_ratio: Decimal = Decimal("0.70"),
+    ) -> FiscalQuickEstimate:
+        return FiscalSimulatorService.simulate_quick_estimate(
+            purchase_price=purchase_price,
+            acquisition_year=acquisition_year,
+            construction_ratio=construction_ratio,
+        )
+
+
+class BootstrapOnboardingUseCase:
+    """Caso de uso atómico: bootstrap de onboarding (propiedad + fiscalidad + contrato + CUPS)."""
+
+    def __init__(
+        self,
+        property_repo: PropertyRepository,
+        user_repo: UserRepository,
+        contract_repo: LeaseContractRepository | None = None,
+    ) -> None:
+        self._property_repo = property_repo
+        self._user_repo = user_repo
+        self._contract_repo = contract_repo
+
+    def execute(
+        self,
+        user_id: str,
+        property_name: str,
+        property_type: str = "apartment",
+        street: str = "Dirección pendiente",
+        city: str = "Ciudad",
+        postal_code: str = "00000",
+        country: str = "España",
+        purchase_price: Decimal | None = None,
+        acquisition_year: int | None = None,
+        construction_ratio: Decimal = Decimal("0.70"),
+        monthly_rent: Decimal | None = None,
+        cups_electricity: str | None = None,
+        cups_gas: str | None = None,
+        cups_water: str | None = None,
+    ) -> Property:
+        # 1. Crear propiedad
+        address = Address(
+            street=street,
+            city=city,
+            postal_code=postal_code,
+            country=country,
+        )
+        prop = Property(
+            name=property_name,
+            address=address,
+            property_type=PropertyType(property_type),
+            status=PropertyStatus.RENTED if monthly_rent and monthly_rent > 0 else PropertyStatus.AVAILABLE,
+            user_id=user_id,
+            cups_electricity=cups_electricity,
+            cups_gas=cups_gas,
+            cups_water=cups_water,
+        )
+        self._property_repo.save(prop)
+
+        # 2. Configurar fiscalidad estimada inicial si se facilitó precio y año
+        if purchase_price and purchase_price > 0 and acquisition_year:
+            estimate = FiscalSimulatorService.simulate_quick_estimate(
+                purchase_price=purchase_price,
+                acquisition_year=acquisition_year,
+                construction_ratio=construction_ratio,
+            )
+            acq_cost = AcquisitionCost(
+                purchase_price=purchase_price,
+                construction_portion=estimate.estimated_construction_value,
+                land_portion=estimate.estimated_land_value,
+                transfer_tax=Decimal("0.00"),
+                notary_fees=Decimal("0.00"),
+                registry_fees=Decimal("0.00"),
+            )
+            cadastral_breakdown = CadastralBreakdown(
+                land_value=estimate.estimated_land_value,
+                construction_value=estimate.estimated_construction_value,
+            )
+            acq_date = date(acquisition_year, 1, 1)
+            prop.acquisition_cost = acq_cost
+            prop.cadastral_breakdown = cadastral_breakdown
+            prop.acquisition_date = acq_date
+            self._property_repo.update_fiscal_data(
+                prop.id,
+                None,
+                cadastral_breakdown,
+                acq_cost,
+                acq_date,
+            )
+
+        # 3. Crear contrato inicial opcional si se proporcionó renta mensual
+        if monthly_rent and monthly_rent > 0 and self._contract_repo:
+            contract = LeaseContract(
+                property_id=prop.id,
+                tenant_name="Inquilino Principal",
+                tenant_nif="Pendiente",
+                start_date=date.today(),
+                monthly_rent=Money(monthly_rent, "EUR"),
+                lease_type=LeaseType.VIVIENDA_HABITUAL,
+            )
+            self._contract_repo.save(contract)
+
+        # 4. Marcar usuario como onboarding completado
+        self._user_repo.update_onboarding_status(user_id=user_id, completed=True)
+
+        return prop
+
+
+class SkipOnboardingUseCase:
+    """Caso de uso: omitir onboarding guiado y marcar como completado."""
+
+    def __init__(self, user_repo: UserRepository) -> None:
+        self._user_repo = user_repo
+
+    def execute(self, user_id: str) -> None:
+        self._user_repo.update_onboarding_status(user_id=user_id, completed=True)
 
 
 

@@ -12,6 +12,7 @@ from backend.adapters.sqlite_adapter import (
     SQLiteIncomeRepository,
     SQLitePropertyRepository,
     SQLiteLeaseContractRepository,
+    SQLiteUserRepository,
 )
 from backend.domain.entities import (
     Expense,
@@ -25,8 +26,9 @@ from backend.domain.entities import (
     PropertyType,
     LeaseContract,
     LeaseType,
+    User,
 )
-from backend.domain.value_objects import Address, Money
+from backend.domain.value_objects import Address, Money, Email, PasswordHash
 
 
 def test_save_and_find_property(sqlite_connection):
@@ -444,4 +446,27 @@ def test_sqlite_income_retrocompat(sqlite_connection):
     
     found = income_repo.find_by_property_id("p-inc-retro")[0]
     assert found.fiscal_category is None
+
+
+def test_sqlite_user_onboarding_status(sqlite_connection):
+    """IT-F28-01: SQLiteUserRepository persiste y actualiza onboarding_completed."""
+    user_repo = SQLiteUserRepository(sqlite_connection)
+    user = User(
+        email=Email("onboard@example.com"),
+        password_hash=PasswordHash("$2b$12$e8Y7z7rXgG9vV8wW8xX8ye8Y7z7rXgG9vV8wW8xX8ye8Y7z7rXgG9"),
+        username="onboard_user",
+        onboarding_completed=False,
+        id="user-onb-1",
+    )
+    user_repo.save(user)
+
+    loaded = user_repo.find_by_id("user-onb-1")
+    assert loaded is not None
+    assert loaded.onboarding_completed is False
+
+    user_repo.update_onboarding_status("user-onb-1", True)
+
+    updated = user_repo.find_by_id("user-onb-1")
+    assert updated is not None
+    assert updated.onboarding_completed is True
 
