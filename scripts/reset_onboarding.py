@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = os.getenv("DATABASE_PATH", str(PROJECT_ROOT / "data" / "rental.db"))
 
 
-def reset_onboarding(identifier: str, completed: bool = False, clean_properties: bool = False) -> None:
+def reset_onboarding(identifier: str, completed: bool = False) -> None:
     if not os.path.exists(DB_PATH):
         print(f"❌ Error: No se encontró la base de datos en {DB_PATH}")
         sys.exit(1)
@@ -68,22 +68,6 @@ def reset_onboarding(identifier: str, completed: bool = False, clean_properties:
     print(f"  • ID:         {user['id']}")
     print(f"  • Onboarding: {'0 (False - Verá el asistente)' if not completed else '1 (True - Acceso directo)'}")
 
-    # Si se pide limpiar propiedades de prueba
-    if clean_properties:
-        cursor.execute("SELECT id, name FROM properties WHERE user_id = ?", (user_id,))
-        props = cursor.fetchall()
-        if props:
-            print(f"\n  🗑️  Eliminando {len(props)} propiedades de prueba creadas:")
-            for p in props:
-                pid = p["id"]
-                cursor.execute("DELETE FROM incomes WHERE property_id = ?", (pid,))
-                cursor.execute("DELETE FROM expenses WHERE property_id = ?", (pid,))
-                cursor.execute("DELETE FROM lease_contracts WHERE property_id = ?", (pid,))
-                cursor.execute("DELETE FROM properties WHERE id = ?", (pid,))
-                print(f"    - Eliminada propiedad: '{p['name']}' ({pid})")
-            conn.commit()
-            print("  ✨ Cartera limpia y reseteada a 0 inmuebles.")
-
     conn.close()
 
     print("\n💡 Próximos pasos:")
@@ -111,17 +95,11 @@ def main():
         action="store_true",
         help="Marcar como completado (1) en vez de reiniciar a pendiente (0)",
     )
-    parser.add_argument(
-        "--clean-properties",
-        action="store_true",
-        help="Eliminar también las propiedades asociadas para dejar la cartera totalmente vacía",
-    )
 
     args = parser.parse_args()
     reset_onboarding(
         identifier=args.identifier,
         completed=args.completed,
-        clean_properties=args.clean_properties,
     )
 
 
