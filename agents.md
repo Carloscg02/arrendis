@@ -96,3 +96,13 @@ Cada `specs/<feature>/design.md` **DEBE** incluir una sección final titulada **
 - F-01: Entidad vs Value Object, qué es un Puerto, qué es un Adaptador.
 - F-02: ¿Qué es un DTO? ¿Por qué separar Schemas de Entidades?
 - Futuras: ¿Qué es CORS? ¿Cómo funciona la autenticación JWT?
+
+---
+
+## 6. Desarrollo Concurrente con Git Worktrees
+
+El repositorio soporta desarrollo concurrente de características independientes mediante **Git Worktrees**:
+- **Worktree secundario activo**: `/home/carlos/rental-handler-worktree` (rama `feature/parallel-work` o ramas de feature dedicadas).
+- **Aislamiento**: Permite ejecutar sesiones independientes de Antigravity (`agy`) en paralelo sin interferir con la rama de trabajo principal (`develop`/`main`).
+- **Entorno enlazado**: Los worktrees deben enlazar `venv/` y `frontend/node_modules/` para no duplicar dependencias en disco.
+- **Ciclo SDD**: Cualquier trabajo en un worktree sigue el mismo pipeline (especificación en `specs/`, planes de implementación y suite de `pytest`). Al finalizar, la rama se integra en `develop` y el worktree se elimina de forma segura con `git worktree remove`.
