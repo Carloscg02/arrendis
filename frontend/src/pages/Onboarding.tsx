@@ -908,7 +908,7 @@ export default function Onboarding() {
                     color: 'var(--text-secondary)',
                   }}>
                     <Check size={16} color="var(--success, #2b5329)" style={{ flexShrink: 0 }} />
-                    <span>Compatible con facturas en PDF de cualquier compañía de luz, gas, agua o telecomunicaciones.</span>
+                    <span>Compatible con facturas en PDF de cualquier compañía de luz, gas o agua.</span>
                   </div>
                 </div>
               </div>
