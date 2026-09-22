@@ -128,12 +128,12 @@ export default function PropertyCard({ property }: Props) {
               {property.has_fiscal_data ? (
                 <>
                   <CheckCircle2 size={13} style={{ color: 'var(--success)' }} />
-                  <span>Modelo 100 y 3% listo</span>
+                  <span>Fiscalidad registrada</span>
                 </>
               ) : (
                 <>
                   <FileText size={13} style={{ color: 'var(--text-muted)' }} />
-                  <span>Sin amortización</span>
+                  <span>Pendiente registrar</span>
                 </>
               )}
             </span>
