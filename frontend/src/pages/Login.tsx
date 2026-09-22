@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import ArrendisLogo from '../components/ArrendisLogo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -22,43 +24,93 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-logo-container">
-            <img 
-              src="/arrendis-logo.png" 
-              alt="Arrendis" 
-              className="auth-brand-logo" 
-            />
-          </div>
-          <p className="auth-subtitle">Acceso a la plataforma de gestión inmobiliaria</p>
+    <div className="auth-split-layout">
+      {/* Left Column: Architectural Visual Monograph */}
+      <div className="auth-split-visual">
+        <img
+          src="/images/editorial/hero-facade.jpg"
+          alt="Arquitectura residencial histórica en Madrid"
+          className="auth-split-visual__bg"
+        />
+        <div className="auth-split-visual__overlay" />
+
+        <div className="auth-split-visual__top">
+          <span className="mono-eyebrow" style={{ color: 'rgba(249, 247, 245, 0.75)' }}>
+            ARRENDIS · ATELIER PATRIMONIAL
+          </span>
         </div>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
-            />
+
+        <div className="auth-split-visual__bottom">
+          <blockquote className="auth-split-visual__quote">
+            “La calma de saber que cada contrato, suministro y deducción fiscal está en su lugar exacto.”
+          </blockquote>
+          <span className="auth-split-visual__author">
+          </span>
+        </div>
+      </div>
+
+      {/* Right Column: Editorial Atelier Form */}
+      <div className="auth-split-form-panel">
+        <div className="auth-split-form-header">
+          <Link to="/" className="auth-split-back-link">
+            <ArrowLeft size={13} />
+            <span>Volver a la portada</span>
+          </Link>
+        </div>
+
+        <div className="auth-split-form-content">
+          <div style={{ marginBottom: '1.75rem' }}>
+            <ArrendisLogo size="md" showSubtitle={true} />
           </div>
-          <div className="form-group">
-            <label>Contraseña</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-            />
+
+          <h1 className="auth-split-title">Acceso a Propietarios</h1>
+          <p className="auth-split-subtitle">
+            Introduzca sus credenciales para consultar y operar su cartera inmobiliaria.
+          </p>
+
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="login-email">CORREO ELECTRÓNICO</label>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="propietario@arrendis.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <label htmlFor="login-password" style={{ margin: 0 }}>CONTRASEÑA</label>
+              </div>
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.75rem' }}>
+              <span>Entrar a mi Cartera</span>
+              <ArrowRight size={14} style={{ marginLeft: '0.4rem' }} />
+            </button>
+          </form>
+
+          <div className="auth-link">
+            ¿Aún no tiene cuenta registrada?{' '}
+            <Link to="/register">Cree su cuenta aquí</Link>
           </div>
-          <button type="submit" className="btn btn-primary">
-            Iniciar Sesión
-          </button>
-        </form>
-        <div className="auth-link">
-          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+        </div>
+
+        <div className="auth-split-footer">
+          <span>© {new Date().getFullYear()} ARRENDIS · CIFRADO &amp; RIGOR FISCAL ESPAÑOL</span>
         </div>
       </div>
     </div>
