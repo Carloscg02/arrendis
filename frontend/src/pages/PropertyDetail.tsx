@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   ArrowLeft, 
   Upload, 
@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import SuppliesAutomationPanel from "../components/SuppliesAutomationPanel";
+import { WelcomeOnboardingBanner } from "../components/WelcomeOnboardingBanner";
 import { translateIncomeCategory, translateExpenseCategory } from "../utils/translations";
 import type {
   Property,
@@ -80,6 +81,8 @@ export default function PropertyDetail() {
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
   const [expensesTab, setExpensesTab] = useState<"list" | "automate">("list");
   const [uploadModalTab, setUploadModalTab] = useState<"upload" | "email">("upload");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(() => searchParams.get("welcome") === "true");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async (isInitial = false) => {
@@ -305,6 +308,20 @@ export default function PropertyDetail() {
           <ArrowLeft size={14} /> Volver a mi Cartera
         </button>
       </div>
+
+      {/* Welcome Onboarding Banner */}
+      {showWelcomeBanner && property && (
+        <WelcomeOnboardingBanner
+          propertyName={property.name}
+          onUploadPdf={() => setIsUploadModalOpen(true)}
+          onViewFiscal={() => setActiveTab("fiscal")}
+          onDismiss={() => {
+            setShowWelcomeBanner(false);
+            searchParams.delete("welcome");
+            setSearchParams(searchParams, { replace: true });
+          }}
+        />
+      )}
 
       {/* Flush Architectural Dossier Masthead */}
       <div className="property-detail-masthead">

@@ -1,315 +1,242 @@
-# Arrendis — Plataforma Integral de Gestión Patrimonial y Motor Fiscal AEAT
+# Arrendis — Gestión de alquileres y motor fiscal AEAT
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?logo=githubactions&logoColor=white)](.github/workflows/deploy.yml)
 [![Tests](https://img.shields.io/badge/Tests-350%2B%20Passing-success?logo=pytest&logoColor=white)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](requirements.txt)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](backend/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-61DAFB?logo=react&logoColor=black)](frontend/)
-[![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2B%20DDD-orange)](#arquitectura-de-software-hexagonal-y-domain-driven-design)
-[![Cloud Infrastructure](https://img.shields.io/badge/Cloud-Oracle%20Cloud%20%7C%20Cloudflare-F38020?logo=cloudflare&logoColor=white)](#infraestructura-en-produccion-y-operaciones)
+[![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2B%20DDD-orange)](#arquitectura-hexagonal-y-ddd)
+[![Cloud Infrastructure](https://img.shields.io/badge/Cloud-Oracle%20Cloud%20%7C%20Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://oracle.com)
 
-> **Arrendis** es una plataforma SaaS desarrollada para propietarios e inversores inmobiliarios particulares en España. Centraliza la administración de inmuebles, el seguimiento de contratos de arrendamiento, la ingesta automatizada de facturas de suministros y la liquidación del **IRPF inmobiliario (Modelo 100 AEAT)** mediante la generación de borradores fiscales oficiales.
+Arrendis es una aplicación web pensada para propietarios de viviendas en alquiler en España. Resuelve tres problemas habituales: la gestión diaria de contratos e inmuebles, la ingesta automática de facturas de suministros (luz y gas) por email y el cálculo del IRPF para la declaración de la renta (Rendimientos del Capital Inmobiliario - Modelo 100 AEAT).
 
----
-
-## Resumen Ejecutivo
-
-El proyecto está diseñado como un sistema en producción con foco en arquitectura desacoplada, modelado riguroso de normativas fiscales y optimización de costes operativos:
-
-* **Arquitectura Hexagonal y DDD**: Dominio en Python puro sin dependencias de frameworks externos, con puertos tipados y adaptadores intercambiables.
-* **Spec-Driven Development (SDD)**: Desarrollo orquestado mediante especificaciones formales (`specs/`), contratos arquitectónicos (`agents.md`) y puertas de control de diseño técnico antes de la implementación.
-* **Procesamiento de Facturas con Cumplimiento RGPD**: Ingesta serverless por correo electrónico (`facturas@arrendis.com`), anonimización de datos personales mediante `PrivacyScrubber` y extracción híbrida (Regex determinista de menos de 2 ms con fallback a Google Gemini Flash para esquemas no estándar).
-* **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española: cálculo de amortizaciones (3% sobre el mayor valor entre adquisición y catastro, 10% en enseres), prorrateo por días de ocupación, límite de gastos de financiación y conservación con arrastre de excesos a 4 años, y reducciones de la Ley de Vivienda.
-* **Infraestructura Cloud de Coste Cero**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en contenedores Docker) con SQLite en modo WAL y copias de seguridad en caliente.
-* **Calidad y Verificación**: Suite de más de **350 pruebas automatizadas** (unitarias, integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue automático por SSH.
+El objetivo del proyecto no era hacer un CRUD básico, sino resolver lógica de negocio compleja (normativa tributaria real), procesar documentos de forma desatendida y desplegarlo en infraestructura real con coste cero (0 €/mes).
 
 ---
 
-## Arquitectura de Sistemas y Topología de Red
-
-El siguiente diagrama detalla la interacción entre los clientes, la red perimetral de Cloudflare, la infraestructura de cómputo en Oracle Cloud y los servicios externos:
+## Arquitectura del sistema
 
 ```mermaid
 flowchart TD
-    subgraph Clientes ["Canales de Entrada"]
-        User["Usuario (Navegador Web)"]
-        MailClient["Proveedor o Usuario (Email)"]
+    subgraph Entrada ["Canales de Entrada"]
+        User["Navegador Web"]
+        MailClient["Reenvío de Facturas (Email)"]
     end
 
-    subgraph Edge ["Cloudflare Edge Network"]
-        CF_Pages["Cloudflare Pages (React 19 SPA)\nDominio: app.arrendis.com"]
-        CF_Routing["Cloudflare Email Routing\nfacturas@arrendis.com"]
-        CF_Worker["Cloudflare Email Worker (Serverless)\nParsea MIME multipart y extrae PDF"]
+    subgraph Edge ["Cloudflare Edge"]
+        CF_Pages["Cloudflare Pages (React 19 + Vite)\napp.arrendis.com"]
+        CF_Routing["Email Routing\nfacturas@arrendis.com"]
+        CF_Worker["Email Worker (Serverless)\nExtrae PDF adjunto"]
     end
 
-    subgraph Host ["Oracle Cloud Infrastructure (Ampere A1)"]
-        subgraph Proxy ["Seguridad y TLS"]
-            Caddy["Caddy 2 Reverse Proxy\n(Let's Encrypt TLS automático + HTTP/2)\nDominio: api.arrendis.com"]
-        end
-
-        subgraph DockerNet ["Red Interna Docker"]
-            FastAPI["FastAPI Backend (Python 3.12)\n• Auth JWT Shielded + Multi-tenant\n• Webhook Inbound Parse\n• Casos de Uso de Negocio"]
+    subgraph Host ["Oracle Cloud (VM Ampere ARM)"]
+        Caddy["Caddy 2 (Reverse Proxy)\nTLS automático Let's Encrypt\napi.arrendis.com"]
+        
+        subgraph Docker ["Contenedor Backend"]
+            FastAPI["FastAPI (Python 3.12)\nCasos de uso y API REST"]
             
-            subgraph ExtractionPipeline ["Pipeline de Extracción"]
-                PyMuPDF["PyMuPDF (fitz)\nExtracción de texto vectorial en memoria"]
-                Scrubber["Privacy Scrubber (RGPD)\nRedacción de DNI, NIE, CIF e IBAN"]
-                Router{"Estrategia"}
-                RegexExtractor["Regex Matcher\n(Repsol, Iberdrola... < 2ms)"]
-                LLMExtractor["Gemini Flash Adapter\n(Structured Output JSON)"]
+            subgraph Extraccion ["Pipeline de Extracción"]
+                PyMuPDF["PyMuPDF\nTexto en memoria"]
+                Scrubber["Privacy Scrubber\nAnonimiza DNI, IBAN, nombres"]
+                RegexExtractor["Regex Matcher\nRepsol, Iberdrola (< 2ms)"]
+                LLMExtractor["Gemini Flash Adapter\nStructured Output JSON"]
             end
 
-            FiscalEngine["Motor Fiscal AEAT\n• Amortizaciones (3% inmueble / 10% muebles)\n• Límite reparación + arrastre 4 años\n• ReportLab (PDF Borrador AEAT)"]
+            FiscalEngine["Motor Fiscal AEAT\nAmortizaciones, topes y arrastres\nGenerador PDF ReportLab"]
         end
 
-        subgraph Storage ["Almacenamiento Persistente NVMe"]
-            SQLite["SQLite 3 (PRAGMA journal_mode=WAL)\n• Transacciones ACID y timeout de concurrencia\n• Decimal guardado como TEXT (Precisión exacta)"]
-            CronBackup["Cron Hot Backup\n(.backup diario a las 03:00 AM)"]
+        subgraph Storage ["Persistencia NVMe"]
+            SQLite["SQLite (WAL Mode)\nDecimal como TEXT"]
+            CronBackup["Backup caliente diario (.backup)"]
         end
-    end
-
-    subgraph ExternalAI ["Servicios Externos"]
-        GeminiAPI["Google Gemini API\n(Fallback con Exponential Backoff)"]
     end
 
     User -->|HTTPS| CF_Pages
-    CF_Pages -->|Peticiones REST / Bearer JWT| Caddy
-    MailClient -->|Envío de factura PDF| CF_Routing
-    CF_Routing -->|Evento de correo entrante| CF_Worker
-    CF_Worker -->|POST Webhook + Shared Secret| Caddy
-    Caddy -->|Proxy HTTP interno| FastAPI
+    CF_Pages -->|API REST + JWT| Caddy
+    MailClient -->|Factura PDF| CF_Routing
+    CF_Routing --> CF_Worker
+    CF_Worker -->|POST Webhook + HMAC| Caddy
+    Caddy --> FastAPI
 
-    FastAPI --> PyMuPDF
-    PyMuPDF --> Scrubber
-    Scrubber --> Router
-    Router -->|Patrón reconocido| RegexExtractor
-    Router -->|Factura compleja / no estándar| LLMExtractor
-    LLMExtractor -->|Texto anonimizado| GeminiAPI
+    FastAPI --> PyMuPDF --> Scrubber
+    Scrubber --> RegexExtractor
+    Scrubber -.->|Fallback si no encaja regex| LLMExtractor
+    LLMExtractor -.-> GoogleAI["Google Gemini API"]
 
     FastAPI --> FiscalEngine
-    FastAPI -->|Lectura / Escritura| SQLite
-    CronBackup -.->|Backup en caliente sin bloqueos| SQLite
+    FastAPI --> SQLite
+    CronBackup -.-> SQLite
 ```
 
 ---
 
-## Arquitectura de Software: Hexagonal y Domain-Driven Design
+## Autenticación: Sistema de doble token (Shielded JWT)
 
-El backend implementa **Arquitectura Hexagonal (Ports and Adapters)** combinada con conceptos de **Domain-Driven Design (DDD)** para aislar la lógica de negocio de los mecanismos de entrega, almacenamiento y APIs externas.
+Para proteger la aplicación sin degradar la experiencia de usuario ni depender de servicios externos de pago, implementé un esquema híbrido de doble token que previene tanto ataques XSS como CSRF:
+
+* **Access Token (corta duración, 60 min)**:
+  * Se entrega en el cuerpo de la respuesta JSON tras el login.
+  * Se guarda **únicamente en la memoria de React** (nunca en `localStorage` ni `sessionStorage`). Si alguien consigue inyectar un script malicioso (XSS), no puede extraer tokens persistentes del almacenamiento local.
+  * Se envía en la cabecera estándar `Authorization: Bearer <token>` en cada llamada a la API, lo que protege contra peticiones cruzadas (CSRF).
+* **Refresh Token (larga duración, 7 días)**:
+  * Se envía al navegador dentro de una cookie marcada como `HttpOnly`, `Secure` y `SameSite=Lax`.
+  * El motor de JavaScript del navegador tiene vetado el acceso a esta cookie, impidiendo su lectura por cualquier script del frontend.
+  * Se utiliza de forma transparente mediante el endpoint `/api/auth/refresh` para regenerar el Access Token cuando caduca o cuando el usuario recarga la página.
+* **Aislamiento Multi-Tenancy**:
+  * El dominio define los puertos `PasswordHasherPort` (implementado con `bcrypt`) y `TokenServicePort` (con `PyJWT`).
+  * En cada petición protegida, FastAPI extrae el `user_id` criptográficamente verificado del token e inyecta el contexto en los casos de uso. Ningún repositorio permite consultar o modificar propiedades, gastos o ingresos sin filtrar explícitamente por el `user_id` del usuario autenticado.
+
+---
+
+## Arquitectura: Hexagonal y DDD
+
+El backend utiliza Arquitectura Hexagonal y Domain-Driven Design para mantener la lógica de negocio aislada de librerías, bases de datos y frameworks web:
 
 ```
 backend/
-├── domain/                  # Núcleo puro (sin dependencias de frameworks)
+├── domain/                  # Lógica pura en Python (0 dependencias externas)
 │   ├── entities.py          # Property, Expense, Income, LeaseContract, User
 │   ├── value_objects.py     # Money, CadastralBreakdown, AcquisitionCost, FiscalReport
 │   ├── services.py          # FiscalCalculator, ProfitCalculator, FiscalCategoryMapper
 │   ├── extraction.py        # PrivacyScrubber, UtilityRegistry, RepsolStrategy
-│   └── ports.py             # Interfaces abstractas: Repositorios, LLM, PDF, Renderers
-├── application/             # Casos de uso (orquestación de flujos de negocio)
-│   └── use_cases.py         # ProcessUtilityInvoice, CalculateFiscalReport, CreateExpense
-├── adapters/                # Adaptadores de salida (infraestructura concreta)
-│   ├── sqlite_adapter.py    # Conexión SQLite WAL, mapeo relacional parametrizado
-│   ├── gemini_adapter.py    # Cliente Gemini con salida estructurada y reintentos
-│   ├── pdf_extractor_adapter.py # Extracción vectorial en memoria con PyMuPDF
-│   ├── aeat_pdf_renderer_adapter.py # Generación de informes tributarios con ReportLab
-│   └── auth_adapter.py      # Cifrado Bcrypt y emisión de tokens JWT
-└── api/                     # Adaptadores de entrada (capa de transporte web)
-    ├── routes/              # Routers FastAPI (auth, properties, expenses, webhooks)
-    ├── schemas.py           # Esquemas Pydantic v2 para validación de DTOs I/O
-    └── dependencies.py      # Inyección de dependencias por ciclo de vida de petición
+│   └── ports.py             # Interfaces abstractas (Repositorios, LLM, PDF)
+├── application/             # Casos de uso (orquestación)
+│   └── use_cases.py         # ProcessUtilityInvoice, CalculateFiscalReport...
+├── adapters/                # Implementaciones técnicas concretas
+│   ├── sqlite_adapter.py    # Persistencia SQLite con modo WAL y transacciones
+│   ├── gemini_adapter.py    # Cliente Gemini con retry exponencial y JSON schema
+│   ├── pdf_extractor_adapter.py # Extracción de texto con PyMuPDF
+│   ├── aeat_pdf_renderer_adapter.py # Renderizado del borrador en PDF con ReportLab
+│   └── auth_adapter.py      # Bcrypt y JWT
+└── api/                     # Capa web FastAPI
+    ├── routes/              # Endpoints HTTP
+    ├── schemas.py           # Validación de DTOs con Pydantic v2
+    └── dependencies.py      # Inyección de dependencias
 ```
 
-### Principios de diseño implementados:
-
-1. **Inversión de Dependencias**: El módulo `domain/` define puertos como contratos abstractos (`ABC` de Python). Las capas externas (`adapters/` y `api/`) dependen del dominio, pero el dominio nunca depende de librerías de infraestructura, frameworks web o drivers de bases de datos.
-2. **Value Objects Inmutables**: Modelos como `Money`, `Address`, `CadastralBreakdown` y `AcquisitionCost` utilizan `@dataclass(frozen=True)` con validaciones en constructor. Los cálculos monetarios emplean `Decimal` para evitar errores de coma flotante binaria.
-3. **Multi-Tenancy y Aislamiento de Datos**: Cada consulta y mutación en los adaptadores de persistencia recibe y valida el `user_id` extraído del token JWT firmado, asegurando aislamiento total entre usuarios.
-
-<details>
-<summary><b>Definición de Puertos de Dominio (Python puro, sin dependencias externas)</b></summary>
-
-```python
-# backend/domain/ports.py
-from abc import ABC, abstractmethod
-from backend.domain.value_objects import LLMRequest, LLMResponse, FiscalReport
-
-class LLMProviderPort(ABC):
-    """Puerto genérico para interacción con Modelos de Lenguaje.
-    El dominio abstrae el proveedor subyacente (Gemini, OpenAI o Mocks de test).
-    """
-    @abstractmethod
-    def generate(self, request: LLMRequest) -> LLMResponse:
-        """Genera una respuesta garantizando schema estructurado y reintentos exponenciales."""
-        ...
-
-class PDFTextExtractorPort(ABC):
-    """Puerto para extracción de texto en documentos digitales."""
-    @abstractmethod
-    def extract_text(self, pdf_bytes: bytes) -> str:
-        ...
-
-class AEATReportRendererPort(ABC):
-    """Puerto para rendering del informe oficial de la declaración."""
-    @abstractmethod
-    def render(self, report: FiscalReport, property_name: str, property_address: str) -> bytes:
-        ...
-```
-</details>
+* **Dominio sin frameworks**: No hay imports de FastAPI, SQLAlchemy ni librerías de terceros en `domain/`. Todo son clases de Python, dataclasses inmutables y puertos (`ABC`).
+* **Precisión monetaria**: El dinero y los porcentajes fiscales se calculan con el tipo `Decimal` y se guardan como `TEXT` en SQLite para evitar los errores de redondeo que provocan los tipos `float`.
+* **Value Objects inmutables**: Conceptos como `Money` o `CadastralBreakdown` son inmutables (`frozen=True`) y se validan en el momento de creación, garantizando que el sistema nunca maneje estados inconsistentes.
 
 ---
 
-## Metodología: Spec-Driven Development (SDD)
+## Cómo he usado la IA: Spec-Driven Development (SDD)
 
-El desarrollo del proyecto se ejecutó mediante **Spec-Driven Development (SDD)** con **Antigravity CLI (`agy`)**.
+El código no se ha generado con prompts improvisados ni copiando fragmentos de un chat. He seguido la metodología **Spec-Driven Development (SDD)** apoyándome en **Antigravity CLI (`agy`)**:
 
-Esta metodología sustituye la generación no controlada de código por un flujo de ingeniería estructurado donde el desarrollador actúa como arquitecto y validador del diseño técnico:
-
-```mermaid
-flowchart LR
-    A["1. Backlog y Alcance\n(feature_list.json)"] --> B["2. Reglas Técnicas\n(agents.md y docs/)"]
-    B --> C["3. Especificación Formal\n(specs/E-XX/design.md)"]
-    C --> D["4. Aprobación de Diseño\n(Revisión de artefactos)"]
-    D --> E["5. Implementación Paralela\n(TDD + Subagentes)"]
-    E --> F["6. Verificación Automática\n(Pytest + CI Pipeline)"]
-```
-
-1. **Contrato Arquitectónico (`agents.md`)**: Reglas explícitas que prohíben dependencias de infraestructura en el dominio, fuerzan la separación de casos de uso y exigen pruebas unitarias antes de confirmar cambios.
-2. **Especificación Previa (`specs/`)**: Cada funcionalidad cuenta con un documento de diseño técnico (diagramas de secuencia, invariantes y casos borde) redactado y revisado antes de escribir código ejecutable.
-3. **Control de Aprobación**: Los planes de implementación generados por las herramientas de IA son inspeccionados y ajustados antes de su ejecución.
-4. **Subagentes Especializados**: Tareas desacopladas (backend, frontend y testing) ejecutadas en paralelo respetando las firmas de los puertos tipados.
+1. **Yo defino la arquitectura**: En `agents.md` dejo establecidas las reglas estrictas del proyecto (cero frameworks en el dominio, uso de puertos y adaptadores, convenciones de nombres y TDD obligatorio).
+2. **Especificación antes de programar**: Antes de implementar cualquier funcionalidad, se redacta el diseño técnico en la carpeta `specs/` (diagramas de flujo, invariantes y casos borde).
+3. **Punto de control y aprobación**: La IA propone un plan de implementación estructurado en un artefacto. Como desarrollador, reviso el diseño propuesto, corrijo decisiones arquitectónicas si hace falta y apruebo formalmente el plan.
+4. **Implementación con subagentes en paralelo**: Con el plan validado, se lanzan subagentes especializados (backend, frontend, testing) que escriben el código respetando los contratos de los puertos definidos.
 
 ---
 
-## Ingesta de Facturas y Extracción de Datos (RGPD)
+## Extracción de facturas y privacidad (RGPD)
 
-La contabilización de facturas de suministros (electricidad y gas) opera mediante un pipeline optimizado para latencia mínima, coste reducido y estricto cumplimiento normativo:
+Procesar facturas de luz y gas suele ser tedioso para el usuario. El sistema automatiza este flujo resolviendo dos problemas técnicos: el coste de los modelos de lenguaje y la privacidad de los datos personales.
 
-1. **Ingesta Serverless en el Edge**:
-   Un buzón de correo (`facturas@arrendis.com`) gestionado mediante Cloudflare Email Routing dispara un **Cloudflare Worker** que analiza el stream MIME, extrae el archivo PDF adjunto y lo transmite mediante un POST HTTPS con firma HMAC al endpoint de webhook de la API.
-2. **Capa de Anonimización de Datos Personales (`PrivacyScrubber`)**:
-   Antes de cualquier interacción con modelos de lenguaje externos, el servicio de dominio analiza el texto extraído por PyMuPDF y **redacta nombres, DNI, NIE, CIF y números de cuenta (IBAN)**:
-   ```text
-   Titular: [REDACTED_NIF] — IBAN: [REDACTED_IBAN]
-   CUPS: ES0021000000000000AB — Total Factura: 142.35 EUR — Fecha: 12/04/2026
-   ```
-   Se preservan los metadatos técnicos y fiscales necesarios (identificador **CUPS**, importes y fechas) asegurando el principio de minimización de datos del RGPD.
-3. **Estrategia Híbrida de Extracción**:
-   * **Nivel 1 (Regex Determinista)**: Para comercializadoras con estructuras estables (ej. Repsol), un parser local procesa el texto en menos de **2 milisegundos**, con coste **0,00 $** y fiabilidad determinista.
-   * **Nivel 2 (LLM Fallback con Gemini Flash)**: Para formatos no tabulados o distribuidores desconocidos, se delega en el adaptador de Gemini Flash solicitando salida JSON estructurada (*Structured Outputs* con validación Pydantic) y reintentos con retroceso exponencial (`tenacity`).
+1. **Ingesta automática por email**:
+   * El usuario reenvía sus facturas a `facturas@arrendis.com`.
+   * Un **Cloudflare Worker** serverless intercepta el correo entrante, extrae el archivo PDF adjunto y hace un POST al webhook de la API validando una clave secreta.
+2. **Anonimizador previo (Privacy Scrubber)**:
+   * Antes de pasar el texto de la factura a cualquier API externa, un servicio de dominio elimina datos personales mediante expresiones regulares:
+     `DNI/NIE/CIF -> [REDACTED_NIF]`, `IBAN -> [REDACTED_IBAN]`, nombres y direcciones postales.
+   * Se conservan intactos los datos necesarios para la gestión contable: el código **CUPS** (con el que se asocia la factura a la vivienda automáticamente), fechas e importes.
+3. **Estrategia de extracción híbrida**:
+   * **Paso 1 (Regex determinista)**: Para comercializadoras conocidas (Repsol, etc.), un parser propio extrae los campos en **menos de 2 ms** con **coste 0**.
+   * **Paso 2 (Fallback con Gemini Flash)**: Si la factura es de una compañía no reconocida o el layout cambia, se envía el texto ya anonimizado a Gemini Flash pidiendo salida JSON estructurada y aplicando reintentos exponenciales con `tenacity`.
 
 ---
 
-## Motor Fiscal: Liquidación del IRPF (Modelo 100 AEAT)
+## Motor de cálculo fiscal (Modelo 100 AEAT)
 
-El servicio de dominio `FiscalCalculator` modela las reglas de cálculo aplicables a los Rendimientos del Capital Inmobiliario según la normativa de la Agencia Tributaria:
+El motor `FiscalCalculator` traduce a código las reglas de la Agencia Tributaria para el cálculo del IRPF en alquileres de vivienda:
 
-* **Amortización de Inmuebles (Art. 23.1.b LIRPF)**: Aplica el 3% anual sobre el mayor valor entre el coste de adquisición satisfecho (descontando el valor del suelo según el porcentaje catastral) y el valor catastral de la construcción, integrando de forma proporcional los gastos de compra (notaría, registro, ITP/IVA).
-* **Amortización de Muebles y Enseres**: Computa el 10% anual para gastos de mobiliario e instalaciones de los últimos 10 ejercicios fiscales.
-* **Límite de Gastos de Financiación y Reparación**: Los intereses hipotecarios y los gastos de conservación están limitados a los ingresos íntegros generados. El motor calcula el tope y **gestiona los excesos pendientes (carryforward) para su compensación en los 4 ejercicios posteriores**.
-* **Prorrateo por Días de Ocupación**: Ajusta los gastos deducibles al número efectivo de días arrendados, con soporte para años bisiestos (366 días) y resolución de contratos solapados.
-* **Reducciones de Rendimiento Neto**: Aplica el porcentaje de reducción general por arrendamiento de vivienda habitual (60%) o los tramos específicos de la Ley de Vivienda.
-* **Generación de Borrador Oficial**: Adaptador con `ReportLab` que produce un documento PDF con la estructura de casillas del Modelo 100 de la AEAT.
+* **Amortización de inmuebles (Art. 23.1.b LIRPF)**: Aplica el 3% anual sobre el mayor entre el coste de compra (restando la parte del suelo según el porcentaje del catastro) y el valor catastral de la construcción, sumando proporcionalmente los gastos de adquisición (notaría, ITP, registro).
+* **Amortización de muebles**: Aplica el 10% anual para enseres comprados en los últimos 10 años.
+* **Tope de gastos de reparación y financiación**: Los intereses de hipoteca y los gastos de conservación no pueden generar rendimientos negativos por sí mismos. El motor calcula el límite y **gestiona el arrastre de saldos pendientes (carryforward) para compensarlos durante los 4 años siguientes**.
+* **Prorrateo por días arrendados**: Pondera los gastos deducibles según los días que el inmueble ha estado alquilado en el año, gestionando años bisiestos (366 días) y contratos solapados.
+* **Reducciones de vivienda habitual**: Aplica la reducción general del 60% o los porcentajes adaptados a la Ley de Vivienda.
+* **Generación de borrador oficial**: Con `ReportLab` se genera un PDF con la estructura de casillas del Modelo 100 listo para contrastar con el borrador de Hacienda.
 
 ---
 
 ## Estrategia de Testing
 
-La suite de pruebas automatizadas con **pytest** cubre los diferentes niveles de la aplicación:
+El proyecto cuenta con más de **350 tests automatizados** con `pytest`:
 
-```
-tests/
-├── unit/
-│   ├── backend/domain/       # Pruebas de entidades, VOs y servicios puros
-│   │   ├── test_fiscal_calculator.py       # Casos límite de cálculo fiscal
-│   │   ├── test_fiscal_value_objects.py    # Inmutabilidad y validaciones
-│   │   ├── test_privacy_scrubber.py        # Anonimización RGPD
-│   │   └── test_repsol_strategy.py         # Parsing determinista de facturas
-│   ├── backend/application/  # Orquestación de casos de uso con mocks de puertos
-│   └── backend/adapters/     # Pruebas de adaptadores concretos
-└── integration/
-    ├── backend/
-    │   ├── test_process_utility_invoice_sqlite.py # Ingesta y persistencia
-    │   └── test_repsol_pdf_extraction_empirical.py# Extracción sobre PDFs reales
-    ├── test_e2e_fiscal_lifecycle.py          # Ciclo completo de cálculo anual
-    └── test_e2e_carryforward_lifecycle.py    # Arrastre de excesos multianual
-```
+* **Unitarios de dominio**: Pruebas de valor fiscal (23 casos borde de amortizaciones, topes y arrastres), inmutabilidad de Value Objects, anonimización con `PrivacyScrubber` y parsers regex.
+* **Integración**: Repositorios SQLite comprobando transacciones y modo WAL, extracción sobre PDFs reales y endpoints de FastAPI con autenticación.
+* **Ciclo de vida E2E**: Pruebas que simulan años fiscales completos y la compensación de excesos a lo largo de 4 ejercicios consecutivos.
+* **Tests sin coste ni red**: Las llamadas al LLM están mockeadas a nivel de puerto en la suite de CI. Toda la batería de pruebas corre en local o en GitHub Actions en unos 2 segundos.
 
 ```bash
 ========================= 350 passed in 2.14s =========================
 ```
 
-> **Aislamiento en Entornos de Integración Continua**: Las dependencias externas (Gemini API, servicios de terceros) están aisladas mediante puertos. Las 350 pruebas se ejecutan de forma local y en GitHub Actions sin necesidad de red externa ni consumo de cuotas de API.
-
 ---
 
-## Infraestructura en Producción y Operaciones
+## Infraestructura en producción (0 €/mes)
 
-El sistema opera bajo una arquitectura distribuida de **coste operativo mensual nulo (0,00 €/mes)**:
+El proyecto está desplegado en internet utilizando capas gratuitas de proveedores cloud consolidados:
 
-| Componente | Servicio / Tecnología | Función | Justificación Técnica |
-| :--- | :--- | :--- | :--- |
-| **Frontend SPA** | **Cloudflare Pages** | Hosting estático React 19 en CDN edge | Distribución global, latencia reducida y ancho de banda sin coste. |
-| **Ingesta de Correo**| **Cloudflare Workers** | Ingesta serverless activada por evento SMTP | Procesamiento en el edge sin requerir un servidor de correo dedicado (Postfix). |
-| **Reverse Proxy** | **Caddy 2 (Docker)** | Enrutamiento perimetral (`api.arrendis.com`) | Gestión y renovación automática de certificados TLS vía ACME/Let's Encrypt y HTTP/2. |
-| **Cómputo Backend** | **Oracle Cloud Infrastructure** | VM Ampere ARM (Ubuntu 24.04, Docker) | Recursos dedicados de cómputo en capa gratuita permanente (*Always Free*). |
-| **Base de Datos** | **SQLite 3 en NVMe** | Motor relacional con `WAL Mode` | Sin sobrecarga de red cliente-servidor; soporte para lecturas concurrentes y transacciones ACID. |
-| **Recuperación ante Desastres** | **Cron Hot-Backup** | Script de respaldo nocturno con retención de 30 días | Copia atómica en caliente mediante el comando `.backup` de SQLite sin bloquear escrituras. |
-
-### Pipeline de CI/CD (GitHub Actions)
-
-El workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automatiza el ciclo de entrega ante cambios en la rama `main`:
-
-1. **Fase de Integración Continua (CI)**:
-   * **Backend**: Ejecución de la suite `pytest` en Python 3.12 con análisis de cobertura.
-   * **Frontend**: Validación de tipos con TypeScript (`tsc -b`) y verificación de compilación de la SPA con Vite sobre Node.js 22.
-2. **Fase de Despliegue Continuo (CD)**:
-   * Conexión por SSH a la instancia de Oracle Cloud.
-   * Actualización del repositorio (`git pull origin main`).
-   * Reconstrucción y despliegue del contenedor backend (`docker compose -f cicd/docker-compose.prod.yml up -d --build backend`).
-
----
-
-## Matriz de Decisiones Técnicas y Trade-Offs
-
-| Decisión de Diseño | Alternativa Considerada | Justificación Técnica |
+| Capa | Servicio | Función |
 | :--- | :--- | :--- |
-| **SQLite (WAL) en NVMe** | PostgreSQL Gestionado | Para el perfil de carga de gestión de carteras de alquiler individuales, una base de datos cliente-servidor introduce latencia de red y costes mensuales. SQLite en modo WAL ofrece cientos de lecturas concurrentes simultáneas y simplifica los respaldos a un único archivo atómico. |
-| **Caddy 2** | Nginx + Certbot | Caddy automatiza la obtención y renovación de certificados TLS sin requerir cronjobs externos ni reinicios periódicos de configuración. |
-| **Extractor Híbrido (Regex + LLM)** | Extracción exclusiva con LLM | Enviar todas las facturas a un LLM incrementa el consumo de tokens, introduce latencias de varios segundos y expone a alucinaciones. El parser regex procesa la mayoría de facturas en menos de 2 ms con fiabilidad absoluta. |
-| **Dominio en Python Puro** | Modelos acoplados a ORMs (SQLAlchemy/Django) | Evitar el acoplamiento a ORMs previene la dispersión de lógica de negocio en callbacks y facilita pruebas unitarias inmediatas en milisegundos sin levantar bases de datos de prueba. |
+| **Frontend** | Cloudflare Pages | Despliegue estático de la SPA en React 19 con CDN global. |
+| **Email Worker** | Cloudflare Workers | Ingesta serverless del correo en el edge sin mantener servidores de correo. |
+| **Reverse Proxy** | Caddy 2 (Docker) | Gestión y renovación automática de certificados SSL/TLS con Let's Encrypt y HTTP/2. |
+| **Backend** | Oracle Cloud (Always Free) | Máquina virtual Ampere ARM (Ubuntu 24.04) corriendo el contenedor Docker. |
+| **Persistencia** | SQLite 3 en NVMe | Configurado en modo WAL (`PRAGMA journal_mode=WAL`) para soportar lecturas concurrentes sin bloqueos. |
+| **Backups** | Cron script | Copia de seguridad diaria a las 03:00 AM mediante el comando `.backup` de SQLite (sin parar el servidor) con rotación a 30 días. |
+
+### CI/CD con GitHub Actions
+
+El pipeline en [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automatiza las fases de verificación y despliegue ante cada push a `main`:
+
+1. **CI**: Ejecuta los 350 tests del backend con `pytest` en Python 3.12 y valida el chequeo de tipos (`tsc`) y build de Vite en Node 22.
+2. **CD**: Si los tests pasan, se conecta por SSH a la máquina de Oracle Cloud, actualiza el código (`git pull`) y relanza el contenedor de backend (`docker compose up -d --build backend`) sin caída de servicio.
 
 ---
 
-## Entorno de Desarrollo Local
+## Decisiones técnicas (Trade-offs)
+
+| Decisión | Alternativa descartada | Motivo |
+| :--- | :--- | :--- |
+| **SQLite (WAL) en NVMe** | PostgreSQL gestionado | Para este volumen de uso, un servidor Postgres gestionado añade coste mensual, latencia de red y mantenimiento. SQLite con WAL soporta cientos de lecturas por segundo, no consume recursos extra y simplifica las copias de seguridad a un único archivo. |
+| **Caddy 2** | Nginx + Certbot | Caddy renueva y gestiona los certificados HTTPS de Let's Encrypt de forma nativa sin necesidad de configurar tareas cron externas ni scripts de recarga. |
+| **Extractor híbrido (Regex + LLM)** | Usar solo LLM | Mandar cada factura al LLM añade latencia (2-4 s), coste económico y riesgo de respuestas erróneas. El parser regex resuelve la gran mayoría de facturas en menos de 2 ms con 100% de precisión. |
+| **Dominio en Python puro** | Modelos acoplados a ORMs | Evita el problema del modelo anémico y que la lógica fiscal dependa de la base de datos. Permite ejecutar cientos de pruebas unitarias en milisegundos sin levantar bases de datos de prueba. |
+
+---
+
+## Cómo arrancarlo en local
 
 ### Requisitos
-* **Python 3.12+**
-* **Node.js 22+**
-* Clave de API de Google Gemini (opcional, requerida únicamente para facturas con formatos no estándar)
+* Python 3.12+
+* Node.js 22+
 
-### 1. Clonación y preparación del entorno
+### 1. Clonar el repositorio y dependencias
 ```bash
 git clone https://github.com/Carloscg02/arrendis.git
 cd arrendis
 
-# Configuración del entorno virtual Python
+# Entorno virtual y dependencias backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Dependencias del frontend
+# Dependencias frontend
 cd frontend
 npm install
 cd ..
 ```
 
-### 2. Variables de entorno
+### 2. Configurar variables de entorno
 ```bash
 cp cicd/.env.example .env
 ```
 
-### 3. Ejecución de servicios (Backend y Frontend)
-El script [`start_local.sh`](start_local.sh) inicializa simultáneamente el backend en FastAPI y el servidor de desarrollo de Vite:
-
+### 3. Levantar frontend y backend
 ```bash
 chmod +x start_local.sh
 ./start_local.sh
@@ -317,9 +244,9 @@ chmod +x start_local.sh
 
 * **Frontend**: [http://localhost:5173](http://localhost:5173)
 * **Backend API**: [http://localhost:8000/api](http://localhost:8000/api)
-* **Documentación OpenAPI / Swagger**: [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Documentación interactiva (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 4. Ejecución de la suite de pruebas
+### 4. Lanzar los tests
 ```bash
 pytest -v
 ```

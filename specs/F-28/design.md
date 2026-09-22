@@ -229,7 +229,7 @@ class UserResponse(BaseModel):
 
 ## 6. Diseño de la Experiencia de Usuario (Web & Preparación Móvil)
 
-### 6.1 Estructura del Wizard en Web (`/onboarding`)
+### 6.1 Estructura del Wizard en Web (`/onboarding`) y Visualización de Valor Real
 
 El wizard vive en una ruta protegida limpia (`/onboarding`) sin la cabecera completa del dashboard, para garantizar enfoque absoluto y cero distracciones:
 
@@ -246,27 +246,31 @@ El wizard vive en una ruta protegida limpia (`/onboarding`) sin la cabecera comp
 │                                                   [ Siguiente: Fiscal] │
 │  ────────────────────────────────────────────────────────────────────  │
 │                                                                        │
-│   PASO 2: La Ventaja Fiscal (Momento 'Aha!')                           │
-│   - ¿Cuánto te costó aproximadamente? [ 210.000 € ]                    │
-│   - ¿Año de adquisición?              [ 2021 ]                         │
-│                                                                        │
-│   ┌── Tarjeta de Cálculo en Vivo (Debounce 250ms) ──────────────────┐  │
-│   │  🏛️ DEDUCCIÓN ANUAL POR AMORTIZACIÓN (3% AEAT)                  │  │
-│   │  ~ 4.410,00 € / año                                             │  │
-│   │  Ahorro estimado en IRPF: ~ 1.323,00 € / año                    │  │
-│   │                                                                 │  │
-│   │  ℹ️ "Cada factura de luz, seguro o IBI que registres se suma a   │  │
-│   │  este importe para reducir lo que pagas a Hacienda."             │  │
-│   └─────────────────────────────────────────────────────────────────┘  │
-│                                                  [ Siguiente: Renta ]  │
+│   PASO 2: Fiscalidad Oficial · Modelo 100 AEAT                         │
+│   ┌── Columna Izq: Parámetros & Cálculo ───┐ ┌── Columna Der: Borrador Oficial ──┐
+│   │ Precio adquisición: [ 210.000 € ]      │ │ [Icon: FileText] Modelo 100 AEAT   │
+│   │ Año de compra:      [ 2021 ]           │ │                                    │
+│   │                                        │ │ [Miniatura 200 DPI Borrador Real]  │
+│   │ Amortización anual (3%): ~ 4.410 €/año │ │ - Casilla 0102: Rendimientos       │
+│   │ Ahorro estimado IRPF:    ~ 1.323 €/año │ │ - Casilla 0115: Amortización (3%)  │
+│   │ Asignado en IRPF:        [Casilla 0131]│ │ - Casilla 0154: Rendimiento Neto   │
+│   │                                        │ │ [ Ver Borrador a Pantalla Completa]│
+│   └────────────────────────────────────────┘ └────────────────────────────────────┘
+│                                                  [ Siguiente: Suministros ]  │
 │  ────────────────────────────────────────────────────────────────────  │
 │                                                                        │
-│   PASO 3: Alquiler y Automatización                                    │
-│   - Renta mensual que percibes: [ 950 € / mes ]                        │
-│   - Automatizar facturas de suministros:                               │
-│     CUPS Luz (opcional) / "Lo haré más tarde"                          │
-│                                                                        │
-│                          [ Atrás ]   [ Finalizar y ver mi Patrimonio ] │
+│   PASO 3: Automatización de Suministros y Facturas                     │
+│   ┌── Pilar 1: Buzón Inteligente ──────────┐ ┌── Pilar 2: Drag & Drop PDFs ───────┐
+│   │ [Icon: Mail] Reenvío Automático        │ │ [Icon: UploadCloud] Carga Inmediata│
+│   │ facturas-carlos@inbound.arrendis.com   │ │ OCR + IA lee fechas, importes y    │
+│   │ Se leen y asignan solas con IA.        │ │ CUPS en < 2 segundos.              │
+│   └────────────────────────────────────────┘ └────────────────────────────────────┘
+│   - Renta mensual que percibes: [ 1.250 € / mes ] (Contrato y Casilla 0102)│
+│   - Código CUPS (Opcional): [ ES0031... ]                                  │
+│     Pedagogía: "Es el DNI de tu contador para vincular facturas solas."    │
+│     [ Botón: "Omitir CUPS por ahora · Se detectará en mi primera factura" ]│
+│                                                                            │
+│                          [ Atrás ]   [ Finalizar y ver mi Patrimonio ]     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
