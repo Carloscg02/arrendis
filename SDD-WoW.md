@@ -74,4 +74,29 @@ Al finalizar, Antigravity marcará sus tareas internas como completadas y te ent
 | `/permissions` | Abre el panel de reglas (Allow/Deny/Ask) por si quieres revisar las autorizaciones o darle más autonomía. |
 | `Ctrl + V` | Pega una imagen directamente en la terminal (si tu terminal lo soporta) como contexto visual para la IA. |
 | `/rewind` | Revierte la conversación a un punto anterior de la sesión si necesitas volver hacia atrás en el proceso. |
-```
+
+---
+
+## 4. Desarrollo Concurrente con Git Worktrees
+
+Si necesitas avanzar en dos características independientes en paralelo sin bloquear tu terminal ni cambiar de rama en el directorio principal:
+
+1. **Worktree configurado y listo**:
+   ```bash
+   cd /home/carlos/rental-handler-worktree
+   agy
+   ```
+2. **Crear worktrees adicionales según necesidad**:
+   ```bash
+   git worktree add ../rental-<feature> -b feature/<nombre> develop
+   ln -s $(pwd)/venv ../rental-<feature>/venv
+   ln -s $(pwd)/frontend/node_modules ../rental-<feature>/frontend/node_modules
+   cp .env ../rental-<feature>/.env
+   ```
+3. **Integración y limpieza**:
+   Una vez completada la feature mediante SDD y validada con `pytest`, intégrala en `develop` y elimina el worktree:
+   ```bash
+   cd /home/carlos/rental-handler
+   git merge feature/<nombre>
+   git worktree remove ../rental-<feature>
+   ```
