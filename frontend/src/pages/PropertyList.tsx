@@ -82,7 +82,7 @@ export default function PropertyList() {
               </strong>
             </div>
             <div className="portfolio-meta-item">
-              <span>Ocupación LAU:</span>
+              <span>Ocupación:</span>
               <strong className="text-garnet">
                 {rentedCount} en alquiler (
                 {Math.round((rentedCount / properties.length) * 100)}%)
