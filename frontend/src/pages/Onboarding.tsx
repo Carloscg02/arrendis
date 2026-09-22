@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, ArrowRight, ArrowLeft, Check, ShieldCheck } from 'lucide-react';
+import { 
+  Building, 
+  ArrowRight, 
+  ArrowLeft, 
+  Check, 
+  ShieldCheck, 
+  FileText, 
+  Mail, 
+  UploadCloud, 
+  Eye, 
+  X, 
+  Zap,
+} from 'lucide-react';
 import ArrendisLogo from '../components/ArrendisLogo';
 import { useAuth } from '../components/AuthProvider';
 import { getQuickFiscalEstimate, bootstrapOnboarding, skipOnboarding } from '../services/api';
@@ -28,10 +40,12 @@ export default function Onboarding() {
   const [acquisitionYear, setAcquisitionYear] = useState<number | ''>(currentYear - 3);
   const [estimate, setEstimate] = useState<QuickEstimateResponse | null>(null);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Paso 3: Alquiler y Suministros
   const [monthlyRent, setMonthlyRent] = useState<number | ''>(950);
   const [cupsElectricity, setCupsElectricity] = useState('');
+  const [skipCupsNotice, setSkipCupsNotice] = useState(false);
 
   // Simulación en tiempo real (debounced)
   useEffect(() => {
@@ -106,7 +120,8 @@ export default function Onboarding() {
 
       markOnboardingCompleted();
       toast.success('¡Patrimonio registrado con éxito! Tu estimación fiscal está activa.');
-      navigate(`/properties/${res.id}`);
+      // Enviar con query param ?welcome=true para activar el banner de bienvenida guiado
+      navigate(`/properties/${res.id}?welcome=true`);
     } catch (err: any) {
       toast.error(err.message || 'Error al registrar tu propiedad.');
     } finally {
@@ -190,12 +205,13 @@ export default function Onboarding() {
       }}>
         <div style={{
           width: '100%',
-          maxWidth: '680px',
+          maxWidth: step === 1 ? '680px' : '960px',
           backgroundColor: '#ffffff',
           border: '1px solid var(--panel-border, #e5e2dd)',
           borderRadius: '8px',
           boxShadow: 'var(--shadow-card)',
           padding: '2.5rem',
+          transition: 'max-width 0.2s ease',
         }}>
           {/* PASO 1: Inmueble */}
           {step === 1 && (
@@ -240,7 +256,7 @@ export default function Onboarding() {
                   <input
                     type="text"
                     required
-                    placeholder="Ej. Ático en Fuencarral, Piso en Valencia..."
+                    placeholder="Ej. Ático en Fuencarral, Piso en Gran Vía..."
                     value={propertyName}
                     onChange={(e) => setPropertyName(e.target.value)}
                     style={{
@@ -255,7 +271,7 @@ export default function Onboarding() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
                       Tipo de inmueble
@@ -286,7 +302,7 @@ export default function Onboarding() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ej. Madrid, Barcelona..."
+                      placeholder="Ej. Madrid, Barcelona, Valencia..."
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       style={{
@@ -307,7 +323,7 @@ export default function Onboarding() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej. Calle Mayor 14, 3º B"
+                    placeholder="Ej. Calle Gran Vía 42, 3º B"
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     style={{
@@ -345,7 +361,7 @@ export default function Onboarding() {
             </form>
           )}
 
-          {/* PASO 2: La Ventaja Fiscal (Momento 'Aha!') */}
+          {/* PASO 2: Fiscalidad Oficial · Modelo 100 AEAT */}
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               <div>
@@ -358,7 +374,7 @@ export default function Onboarding() {
                   display: 'block',
                   marginBottom: '0.4rem',
                 }}>
-                  Paso 2 · El superpoder de Arrendis
+                  Paso 2 · Fiscalidad Oficial (Modelo 100 AEAT)
                 </span>
                 <h1 style={{
                   fontSize: '1.75rem',
@@ -368,7 +384,7 @@ export default function Onboarding() {
                   color: 'var(--text-primary)',
                   letterSpacing: '-0.02em',
                 }}>
-                  Tu deducción legal en la Renta (IRPF)
+                  Tu borrador tributario generado al vuelo
                 </h1>
                 <p style={{
                   fontSize: '0.92rem',
@@ -376,130 +392,298 @@ export default function Onboarding() {
                   margin: 0,
                   lineHeight: 1.5,
                 }}>
-                  Hacienda te permite amortizar el <strong>3% anual</strong> del valor de construcción de tus inmuebles arrendados. Introduzcamos el coste aproximado para estimar tu ventaja fiscal:
+                  Hacienda permite deducir el <strong>3% anual</strong> del valor de construcción de tus inmuebles arrendados (Art. 23.1.b LIRPF). Arrendis traslada esta amortización y todos tus gastos directamente a las casillas oficiales de la Renta.
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
-                    Precio de adquisición aproximado (€)
-                  </label>
-                  <input
-                    type="number"
-                    min="1000"
-                    step="1000"
-                    placeholder="210000"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      border: '1px solid var(--panel-border)',
-                      borderRadius: '6px',
-                      fontSize: '0.95rem',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
-                    Año de compra
-                  </label>
-                  <input
-                    type="number"
-                    min="1950"
-                    max={currentYear}
-                    placeholder="2021"
-                    value={acquisitionYear}
-                    onChange={(e) => setAcquisitionYear(e.target.value === '' ? '' : Number(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      border: '1px solid var(--panel-border)',
-                      borderRadius: '6px',
-                      fontSize: '0.95rem',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Tarjeta de cálculo en vivo (El 'Aha! moment') */}
+              {/* Grid de 2 Columnas: Izquierda Inputs/Cálculo - Derecha Visualizador Documental */}
               <div style={{
-                backgroundColor: 'var(--bg-primary, #f9f7f5)',
-                border: '1px solid var(--panel-border, #e5e2dd)',
-                borderRadius: '8px',
-                padding: '1.5rem',
-                position: 'relative',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: '1.75rem',
+                alignItems: 'start',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <Building size={18} color="var(--brand-burgundy, #6b0008)" />
-                  <span style={{
-                    fontSize: '0.78rem',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--brand-burgundy, #6b0008)',
+                {/* Columna Izquierda: Parámetros y Simulación */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+                        Precio de compra aprox. (€)
+                      </label>
+                      <input
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        placeholder="210000"
+                        value={purchasePrice}
+                        onChange={(e) => setPurchasePrice(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid var(--panel-border)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+                        Año de compra
+                      </label>
+                      <input
+                        type="number"
+                        min="1950"
+                        max={currentYear}
+                        placeholder="2021"
+                        value={acquisitionYear}
+                        onChange={(e) => setAcquisitionYear(e.target.value === '' ? '' : Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid var(--panel-border)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tarjeta de cálculo en vivo */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-primary, #f9f7f5)',
+                    border: '1px solid var(--panel-border, #e5e2dd)',
+                    borderRadius: '8px',
+                    padding: '1.25rem',
                   }}>
-                    Amortización Inmueble (Art. 23.1.b LIRPF)
-                  </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Building size={16} color="var(--brand-burgundy, #6b0008)" />
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: 'var(--brand-burgundy, #6b0008)',
+                        }}>
+                          Deducción Anual (Art. 23.1.b)
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.7rem',
+                        fontFamily: 'var(--font-mono)',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        backgroundColor: 'rgba(107, 0, 8, 0.08)',
+                        color: 'var(--brand-burgundy, #6b0008)',
+                        fontWeight: 600,
+                      }}>
+                        Casilla 0131 AEAT
+                      </span>
+                    </div>
+
+                    {loadingEstimate ? (
+                      <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        Calculando según tablas de la AEAT...
+                      </div>
+                    ) : estimate ? (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                          <span style={{
+                            fontSize: '2rem',
+                            fontFamily: 'var(--font-serif)',
+                            fontWeight: 500,
+                            color: 'var(--text-primary)',
+                          }}>
+                            ~ {estimate.annual_amortization} €
+                          </span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>/ año deducibles</span>
+                        </div>
+
+                        <p style={{
+                          fontSize: '0.85rem',
+                          color: 'var(--text-secondary)',
+                          margin: '0 0 0.85rem 0',
+                          lineHeight: 1.4,
+                        }}>
+                          Ahorro estimado en IRPF: <strong style={{ color: 'var(--success, #2b5329)' }}>~ {estimate.estimated_tax_savings_typical} € / año</strong> (tipo marginal medio ~30%).
+                        </p>
+
+                        {/* Desglose de parámetros legales */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.35rem',
+                          padding: '0.75rem',
+                          backgroundColor: '#ffffff',
+                          borderRadius: '6px',
+                          border: '1px solid var(--panel-border-subtle, #eeeae4)',
+                          fontSize: '0.78rem',
+                          color: 'var(--text-secondary)',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Valor estimado de construcción (70%):</span>
+                            <strong style={{ fontFamily: 'var(--font-mono)' }}>~ {estimate.estimated_construction_value} €</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Suelo no amortizable (30%):</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>~ {estimate.estimated_land_value} €</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1eee9', paddingTop: '0.35rem', marginTop: '0.2rem' }}>
+                            <span>Tipo de amortización anual:</span>
+                            <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--brand-burgundy)' }}>3,00%</strong>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        Introduce un precio de compra para ver el cálculo.
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-muted)',
+                    lineHeight: 1.4,
+                  }}>
+                    <ShieldCheck size={16} color="var(--brand-burgundy)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>
+                      Sin hojas de cálculo ni errores manuales. Arrendis calcula la depreciación acumulada y genera tu liquidación oficial al final del año.
+                    </span>
+                  </div>
                 </div>
 
-                {loadingEstimate ? (
-                  <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    Calculando según tablas de la AEAT...
-                  </div>
-                ) : estimate ? (
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <span style={{
-                        fontSize: '2.25rem',
-                        fontFamily: 'var(--font-serif)',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                      }}>
-                        ~ {estimate.annual_amortization} €
+                {/* Columna Derecha: El Borrador Oficial Modelo 100 */}
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--panel-border, #e5e2dd)',
+                  borderRadius: '8px',
+                  padding: '1.25rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                }}>
+                  {/* Encabezado del documento */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--panel-border)', paddingBottom: '0.65rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FileText size={16} color="var(--brand-burgundy, #6b0008)" />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        Borrador Oficial Modelo 100
                       </span>
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>/ año deducibles</span>
                     </div>
-
-                    <p style={{
-                      fontSize: '0.88rem',
-                      color: 'var(--text-secondary)',
-                      margin: '0 0 1rem 0',
-                      lineHeight: 1.45,
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '4px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
                     }}>
-                      Ahorro estimado en IRPF: <strong style={{ color: 'var(--success, #2b5329)' }}>~ {estimate.estimated_tax_savings_typical} € / año</strong> (tipo medio ~30%).
-                    </p>
+                      AEAT · PDF Oficial
+                    </span>
+                  </div>
 
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.5rem',
-                      padding: '0.75rem',
-                      backgroundColor: '#ffffff',
+                  {/* Previsualización del documento con alta definición */}
+                  <div 
+                    onClick={() => setIsPdfModalOpen(true)}
+                    style={{
+                      position: 'relative',
                       borderRadius: '6px',
-                      border: '1px solid var(--panel-border-subtle, #eeeae4)',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      lineHeight: 1.4,
-                    }}>
-                      <ShieldCheck size={16} color="var(--brand-burgundy)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <span>
-                        {estimate.disclaimer} Más adelante podrás afinar los decimales exactos con tu recibo del IBI.
-                      </span>
+                      overflow: 'hidden',
+                      border: '1px solid var(--panel-border)',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      maxHeight: '220px',
+                      backgroundColor: '#f8fafc',
+                    }}
+                    title="Haz clic para ver el borrador a tamaño completo"
+                  >
+                    <img 
+                      src="/onboarding/borrador-modelo-100.png" 
+                      alt="Borrador Fiscal Oficial Modelo 100 AEAT"
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        display: 'block',
+                        objectFit: 'cover',
+                        objectPosition: 'top',
+                      }}
+                      onError={(e) => {
+                        // Fallback si la imagen aún no está cargada
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    {/* Overlay botón para zoom */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundColor: 'rgba(15, 23, 42, 0.4)',
+                      opacity: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                      transition: 'opacity 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                    >
+                      <Eye size={18} /> Ver borrador completo
                     </div>
                   </div>
-                ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    Introduce un precio de compra para ver el cálculo.
+
+                  {/* Lista de Casillas Oficiales Deducibles que gestiona Arrendis */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>[0102] Rendimientos Íntegros</span>
+                      <span>Alquileres computados</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>[0105-0117] Gastos Deducibles</span>
+                      <span>IBI, seguros, comunidad, suministros</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--brand-burgundy)' }}>[0131] Amortización Inmueble</span>
+                      <strong style={{ color: 'var(--brand-burgundy)' }}>3% s/construcción</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>[0154] Rendimiento Neto</span>
+                      <span>Listo para trasladar a Renta Web</span>
+                    </div>
                   </div>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPdfModalOpen(true)}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      width: '100%',
+                      fontSize: '0.8rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      padding: '0.5rem',
+                    }}
+                  >
+                    <Eye size={14} /> Ampliar Borrador Oficial (PDF)
+                  </button>
+                </div>
               </div>
 
+              {/* Botones de navegación del Paso 2 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                 <button
                   type="button"
@@ -542,7 +726,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* PASO 3: Alquiler y Automatización */}
+          {/* PASO 3: Automatización de Suministros y Facturas */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               <div>
@@ -555,7 +739,7 @@ export default function Onboarding() {
                   display: 'block',
                   marginBottom: '0.4rem',
                 }}>
-                  Paso 3 · Renta & Automatización
+                  Paso 3 · Automatización de Suministros
                 </span>
                 <h1 style={{
                   fontSize: '1.75rem',
@@ -565,7 +749,7 @@ export default function Onboarding() {
                   color: 'var(--text-primary)',
                   letterSpacing: '-0.02em',
                 }}>
-                  Renta y lectura automática de facturas
+                  Olvídate de contabilizar facturas a mano
                 </h1>
                 <p style={{
                   fontSize: '0.92rem',
@@ -573,14 +757,109 @@ export default function Onboarding() {
                   margin: 0,
                   lineHeight: 1.5,
                 }}>
-                  Los suministros (luz, gas, agua) que pagues tú son <strong>gastos deducibles al 100%</strong>. Arrendis puede registrarlos automáticamente desde tus facturas.
+                  Las facturas de luz, gas y agua que pagues tú son <strong>gastos 100% deducibles en tu Renta</strong> (Casilla 0113). Arrendis las ingesta, extrae y clasifica automáticamente.
                 </p>
               </div>
 
+              {/* Los 2 Pilares Visuales de Automatización */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1.25rem',
+              }}>
+                {/* Pilar 1: Buzón Inbound por Email */}
+                <div style={{
+                  backgroundColor: 'var(--bg-primary, #f9f7f5)',
+                  border: '1px solid var(--panel-border, #e5e2dd)',
+                  borderRadius: '8px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Mail size={18} color="var(--brand-burgundy, #6b0008)" />
+                      <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        1. Reenvío Automático por Email
+                      </strong>
+                    </div>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(107, 0, 8, 0.08)',
+                      color: 'var(--brand-burgundy, #6b0008)',
+                    }}>
+                      Cero intervención
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                    Tendrás un buzón exclusivo de Arrendis. Configura una regla en tu correo o facilita esa dirección a Endesa, Iberdrola o Repsol: las facturas que lleguen se registrarán solas en segundo plano con IA.
+                  </p>
+                </div>
+
+                {/* Pilar 2: Drag & Drop de PDFs */}
+                <div style={{
+                  backgroundColor: 'var(--bg-primary, #f9f7f5)',
+                  border: '1px solid var(--panel-border, #e5e2dd)',
+                  borderRadius: '8px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <UploadCloud size={18} color="var(--success, #2b5329)" />
+                      <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        2. Carga directa de PDFs
+                      </strong>
+                    </div>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(43, 83, 41, 0.08)',
+                      color: 'var(--success, #2b5329)',
+                    }}>
+                      Lectura en 2 segundos
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                    ¿Tienes facturas guardadas en tu ordenador? Arrástralas por lotes a tu panel. Nuestro motor OCR lee el periodo, los importes con desglose de IVA y las imputa a la casilla de suministros.
+                  </p>
+                </div>
+              </div>
+
+              {/* Explicación Pedagógica del CUPS */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                padding: '1rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid var(--panel-border)',
+                borderRadius: '6px',
+              }}>
+                <Zap size={18} color="var(--brand-burgundy, #6b0008)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '0.2rem' }}>
+                    ¿Por qué utilizamos el código CUPS?
+                  </strong>
+                  El CUPS es el «DNI» de 20-22 caracteres de tu contador eléctrico (aparece arriba a la derecha en cualquier factura). Arrendis lee el CUPS de la factura para saber a qué piso corresponde y asignarla sin errores.
+                </div>
+              </div>
+
+              {/* Formulario de Inputs: Renta y CUPS */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
-                    Renta mensual del alquiler (€ / mes)
+                    Renta mensual percibida o estimada (€ / mes)
                   </label>
                   <input
                     type="number"
@@ -599,35 +878,95 @@ export default function Onboarding() {
                     }}
                   />
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
-                    Si el inmueble está alquilado, crearemos tu contrato inicial para computar los ingresos.
+                    Si el inmueble está alquilado, crearemos tu contrato inicial para computar los ingresos en la Casilla 0102.
                   </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
-                    Código CUPS de Electricidad (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="ES0031..."
-                    value={cupsElectricity}
-                    onChange={(e) => setCupsElectricity(e.target.value)}
-                    style={{
-                      width: '100%',
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                      Código CUPS de Electricidad (Opcional)
+                    </label>
+                    {!skipCupsNotice && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCupsElectricity('');
+                          setSkipCupsNotice(true);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--brand-burgundy, #6b0008)',
+                          fontSize: '0.78rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0,
+                        }}
+                      >
+                        No tengo el CUPS a mano ahora
+                      </button>
+                    )}
+                  </div>
+
+                  {!skipCupsNotice ? (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="ES0031..."
+                        value={cupsElectricity}
+                        onChange={(e) => setCupsElectricity(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid var(--panel-border)',
+                          borderRadius: '6px',
+                          fontSize: '0.95rem',
+                          fontFamily: 'var(--font-mono)',
+                          letterSpacing: '0.04em',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
+                        Puedes añadirlo ahora o dejar que Arrendis lo detecte automáticamente al subir tu primera factura.
+                      </span>
+                    </>
+                  ) : (
+                    <div style={{
                       padding: '0.75rem 1rem',
+                      backgroundColor: 'var(--bg-primary, #f9f7f5)',
                       border: '1px solid var(--panel-border)',
                       borderRadius: '6px',
-                      fontSize: '0.95rem',
-                      fontFamily: 'var(--font-mono)',
-                      letterSpacing: '0.04em',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'block' }}>
-                    Encontrarás el CUPS en cualquier factura de Endesa, Iberdrola, Naturgy, etc. Puedes añadirlo ahora o más tarde.
-                  </span>
+                      fontSize: '0.82rem',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Check size={16} color="var(--success, #2b5329)" />
+                        <span>Sin problema. Arrendis detectará el CUPS al subir tu primera factura PDF o podrás configurarlo en los ajustes.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSkipCupsNotice(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--brand-burgundy)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          marginLeft: '1rem',
+                        }}
+                      >
+                        Introducir
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Botones de navegación del Paso 3 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                 <button
                   type="button"
@@ -679,6 +1018,108 @@ export default function Onboarding() {
           )}
         </div>
       </main>
+
+      {/* Modal Zoom Borrador Fiscal Oficial AEAT */}
+      {isPdfModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+          }}
+          onClick={() => setIsPdfModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera del modal */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid var(--panel-border)',
+              backgroundColor: '#f8fafc',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={18} color="var(--brand-burgundy, #6b0008)" />
+                <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
+                  Borrador Fiscal Oficial — Rendimientos del Capital Inmobiliario (Modelo 100)
+                </strong>
+              </div>
+              <button
+                onClick={() => setIsPdfModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  padding: '0.25rem',
+                  display: 'flex',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Contenido scrolleable con la imagen en alta definición */}
+            <div style={{
+              overflowY: 'auto',
+              padding: '1.5rem',
+              display: 'flex',
+              justifyContent: 'center',
+              backgroundColor: '#f1f5f9',
+            }}>
+              <img
+                src="/onboarding/borrador-modelo-100.png"
+                alt="Borrador Oficial Completo"
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  borderRadius: '4px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                }}
+              />
+            </div>
+
+            {/* Pie del modal */}
+            <div style={{
+              padding: '0.85rem 1.5rem',
+              borderTop: '1px solid var(--panel-border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#ffffff',
+            }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Arrendis genera automáticamente este PDF descargable para cada ejercicio fiscal.
+              </span>
+              <button
+                onClick={() => setIsPdfModalOpen(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                Cerrar vista previa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
