@@ -315,3 +315,48 @@ class LLMResponse:
     @property
     def total_tokens(self) -> int:
         return self.input_tokens + self.output_tokens
+
+
+@dataclass(frozen=True)
+class FiscalQuickEstimate:
+    """Estimación fiscal rápida de amortización según normativa de la AEAT.
+    
+    Aplica el Art. 23.1.b de la Ley 35/2006 del IRPF:
+    Amortización anual = 3% sobre el mayor entre el coste de adquisición 
+    satisfecho o el valor catastral (atribuible a la construcción).
+    
+    En ausencia de desglose catastral exacto, aplica un ratio de construcción
+    estándar (default 70% construcción / 30% suelo).
+    """
+    purchase_price: Decimal
+    acquisition_year: int
+    construction_ratio: Decimal = Decimal("0.70")
+    amortization_rate: Decimal = Decimal("0.03")
+
+    def __post_init__(self) -> None:
+        if self.purchase_price <= Decimal("0"):
+            raise ValueError("El precio de adquisición debe ser un importe positivo.")
+        if self.acquisition_year < 1900 or self.acquisition_year > 2100:
+            raise ValueError(f"Año de adquisición fuera de rango válido: {self.acquisition_year}")
+        if not (Decimal("0.10") <= self.construction_ratio <= Decimal("0.95")):
+            raise ValueError("El ratio de construcción debe situarse entre el 10% y el 95%.")
+
+    @property
+    def estimated_construction_value(self) -> Decimal:
+        """Valor estimado de la construcción sujeto a amortización."""
+        return (self.purchase_price * self.construction_ratio).quantize(Decimal("0.01"))
+
+    @property
+    def estimated_land_value(self) -> Decimal:
+        """Valor estimado del suelo (no amortizable por ley)."""
+        return (self.purchase_price * (Decimal("1.00") - self.construction_ratio)).quantize(Decimal("0.01"))
+
+    @property
+    def annual_amortization(self) -> Decimal:
+        """Deducción anual por amortización aplicable en el Modelo 100 de IRPF (3%)."""
+        return (self.estimated_construction_value * self.amortization_rate).quantize(Decimal("0.01"))
+
+    @property
+    def estimated_tax_savings_typical(self) -> Decimal:
+        """Ahorro fiscal anual estimado al tipo marginal medio habitual (~30%)."""
+        return (self.annual_amortization * Decimal("0.30")).quantize(Decimal("0.01"))

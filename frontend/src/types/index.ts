@@ -110,6 +110,7 @@ export interface UserResponse {
   email: string;
   username: string;
   forwarding_email?: string | null;
+  onboarding_completed?: boolean;
 }
 
 export interface ForwardingEmailResponse {
@@ -266,4 +267,36 @@ export interface FiscalReport {
   unclassified_income_count: number;
   unclassified_expense_count: number;
   has_warnings: boolean;
+}
+
+export interface QuickEstimateRequest {
+  purchase_price: number;
+  acquisition_year: number;
+  construction_ratio?: number;
+}
+
+export interface QuickEstimateResponse {
+  purchase_price: string;
+  estimated_construction_value: string;
+  estimated_land_value: string;
+  annual_amortization: string;
+  estimated_tax_savings_typical: string;
+  legal_reference: string;
+  disclaimer: string;
+}
+
+export interface OnboardingBootstrapRequest {
+  property_name: string;
+  property_type?: string;
+  street?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  purchase_price?: number | null;
+  acquisition_year?: number | null;
+  construction_ratio?: number;
+  monthly_rent?: number | null;
+  cups_electricity?: string | null;
+  cups_gas?: string | null;
+  cups_water?: string | null;
 }

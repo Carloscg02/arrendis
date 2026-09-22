@@ -40,6 +40,7 @@ def _user_response(user: User) -> UserResponse:
         email=user.email.value,
         username=user.username,
         forwarding_email=user.forwarding_email,
+        onboarding_completed=user.onboarding_completed,
     )
 
 

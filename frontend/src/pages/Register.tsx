@@ -23,7 +23,7 @@ export default function Register() {
     try {
       await register({ email, username, password });
       success('Cuenta creada exitosamente');
-      navigate('/');
+      navigate('/onboarding');
     } catch (err: any) {
       error(err.message || 'Error al registrar');
     }

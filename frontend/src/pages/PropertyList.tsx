@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Plus, Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Building2, Sparkles } from "lucide-react";
 import type { Property, PropertyCreateInput } from "../types";
 import { getProperties, createProperty } from "../services/api";
 import PropertyCard from "../components/PropertyCard";
@@ -104,14 +105,25 @@ export default function PropertyList() {
         <div className="empty-state">
           <Building2 size={38} strokeWidth={1.25} className="empty-icon" />
           <h3>No hay inmuebles en su cartera</h3>
-          <p>Comience incorporando la primera vivienda para gestionar contratos y suministros.</p>
-          <button
-            className="btn btn-primary mt-4"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus size={15} style={{ marginRight: "0.4rem" }} />
-            <span>Añadir Primer Inmueble</span>
-          </button>
+          <p>Configure su primer inmueble con el asistente guiado para descubrir su ahorro fiscal inmediato.</p>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Link
+              to="/onboarding"
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}
+            >
+              <Sparkles size={15} />
+              <span>Iniciar Asistente & Estimación Fiscal (2 min)</span>
+            </Link>
+            <button
+              className="btn btn-outline"
+              onClick={() => setIsModalOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Plus size={15} />
+              <span>Añadir Manualmente</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="property-grid">
