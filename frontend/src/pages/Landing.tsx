@@ -54,11 +54,11 @@ export default function Landing() {
           </div>
 
           <h1 className="landing-hero__title">
-            Gestiona tus alquileres con claridad y ten su fiscalidad al día.
+            Gestiona tus alquileres con claridad.
           </h1>
 
           <p className="landing-hero__subtitle">
-            Una aplicación práctica pensada para propietarios. Centraliza tus contratos e inquilinos, asigna automáticamente las facturas de suministros por CUPS y obtén el cálculo de gastos y amortización para tu declaración de la renta.
+            Una aplicación práctica pensada para propietarios. Centraliza tus contratos e inquilinos, automatiza el registro de las facturas de suministros por propiedad y obtén el cálculo de tu fiscalidad organizado según el Modelo 100 oficial de la Agencia Tributaria (AEAT).
           </p>
 
           <div className="landing-hero__cta">
