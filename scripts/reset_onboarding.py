@@ -78,7 +78,7 @@ def reset_onboarding(identifier: str, completed: bool = False, clean_properties:
                 pid = p["id"]
                 cursor.execute("DELETE FROM incomes WHERE property_id = ?", (pid,))
                 cursor.execute("DELETE FROM expenses WHERE property_id = ?", (pid,))
-                cursor.execute("DELETE FROM contracts WHERE property_id = ?", (pid,))
+                cursor.execute("DELETE FROM lease_contracts WHERE property_id = ?", (pid,))
                 cursor.execute("DELETE FROM properties WHERE id = ?", (pid,))
                 print(f"    - Eliminada propiedad: '{p['name']}' ({pid})")
             conn.commit()

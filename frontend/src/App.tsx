@@ -68,6 +68,13 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/properties" element={
+            <ProtectedRoute>
+              <AppHeader />
+              <PropertyList />
+            </ProtectedRoute>
+          } />
+
           <Route path="/properties/:id" element={
             <ProtectedRoute>
               <AppHeader />

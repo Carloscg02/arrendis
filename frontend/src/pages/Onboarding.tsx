@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building, ArrowRight, ArrowLeft, Check, ShieldCheck } from 'lucide-react';
 import ArrendisLogo from '../components/ArrendisLogo';
+import { useAuth } from '../components/AuthProvider';
 import { getQuickFiscalEstimate, bootstrapOnboarding, skipOnboarding } from '../services/api';
 import type { QuickEstimateResponse } from '../types';
 import { useToast } from '../components/Toast';
@@ -9,6 +10,7 @@ import { useToast } from '../components/Toast';
 export default function Onboarding() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { markOnboardingCompleted } = useAuth();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitting, setSubmitting] = useState(false);
@@ -61,10 +63,12 @@ export default function Onboarding() {
     try {
       setSkipping(true);
       await skipOnboarding();
-      navigate('/properties');
+      markOnboardingCompleted();
+      navigate('/portfolio');
     } catch (err: any) {
       toast.error(err.message || 'Error al omitir la guía.');
-      navigate('/properties');
+      markOnboardingCompleted();
+      navigate('/portfolio');
     } finally {
       setSkipping(false);
     }
@@ -100,6 +104,7 @@ export default function Onboarding() {
         cups_electricity: cupsElectricity.trim() || null,
       });
 
+      markOnboardingCompleted();
       toast.success('¡Patrimonio registrado con éxito! Tu estimación fiscal está activa.');
       navigate(`/properties/${res.id}`);
     } catch (err: any) {
