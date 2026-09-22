@@ -42,16 +42,16 @@ export default function Register() {
 
         <div className="auth-split-visual__top">
           <span className="mono-eyebrow" style={{ color: 'rgba(249, 247, 245, 0.75)' }}>
-            ARRENDIS · ALTA EN EL REGISTRO
+            ARRENDIS · CREAR CUENTA
           </span>
         </div>
 
         <div className="auth-split-visual__bottom">
           <blockquote className="auth-split-visual__quote">
-            “Incorpore su patrimonio a un libro mayor digital concebido para perdurar con calma y rigor.”
+            “Gestiona tus inmuebles en alquiler con orden, claridad y control de gastos.”
           </blockquote>
           <span className="auth-split-visual__author">
-            FIG. REG · GESTIÓN PATRIMONIAL CONFORME A LA LEY
+            FIG. REG · GESTIÓN DE ALQUILERES
           </span>
         </div>
       </div>

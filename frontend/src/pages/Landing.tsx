@@ -50,15 +50,15 @@ export default function Landing() {
       <section className="landing-hero">
         <div className="landing-container">
           <div className="landing-hero__meta">
-            <span className="mono-eyebrow">REGISTRO EDITORIAL &amp; GESTIÓN FISCAL ESPAÑOLA</span>
+            <span className="mono-eyebrow">GESTIÓN DE INMUEBLES &amp; CÁLCULO FISCAL</span>
           </div>
 
           <h1 className="landing-hero__title">
-            El arte de gestionar tu patrimonio inmobiliario con calma y rigor.
+            Gestiona tus alquileres con claridad y ten su fiscalidad al día.
           </h1>
 
           <p className="landing-hero__subtitle">
-            Una plataforma de alta precisión concebida para propietarios e inversores que entienden sus viviendas como arquitectura y patrimonio vivo. Automatización de suministros por CUPS, optimización fiscal en el IRPF y control sereno de contratos según la LAU.
+            Una aplicación práctica pensada para propietarios. Centraliza tus contratos e inquilinos, asigna automáticamente las facturas de suministros por CUPS y obtén el cálculo de gastos y amortización para tu declaración de la renta.
           </p>
 
           <div className="landing-hero__cta">
@@ -77,7 +77,7 @@ export default function Landing() {
                   <ArrowRight size={15} style={{ marginLeft: "0.45rem" }} />
                 </Link>
                 <Link to="/login" className="btn btn-secondary">
-                  Acceso a Propietarios
+                  Iniciar Sesión
                 </Link>
               </>
             )}
@@ -88,13 +88,13 @@ export default function Landing() {
             <div className="landing-image-wrapper">
               <img
                 src="/images/editorial/hero-facade.jpg"
-                alt="Arquitectura residencial histórica en Madrid Chamberí"
+                alt="Arquitectura residencial en Madrid"
                 className="landing-hero__img"
               />
             </div>
             <div className="landing-image-caption">
-              <span className="mono-caption">FIG. 01 / FACHADA RESIDENCIAL HISTÓRICA · MADRID SEÑORIAL</span>
-              <span className="mono-caption text-muted">PORTAFOLIO PATRIMONIAL ARRENDIS</span>
+              <span className="mono-caption">FIG. 01 / EDIFICIO RESIDENCIAL · MADRID</span>
+              <span className="mono-caption text-muted">GESTIÓN DE ALQUILERES CON ARRENDIS</span>
             </div>
           </div>
         </div>
@@ -106,23 +106,23 @@ export default function Landing() {
           <div className="landing-strip__grid">
             <div className="landing-strip__item">
               <span className="landing-strip__num">01</span>
-              <h3 className="landing-strip__title">Rigor Fiscal Inquebrantable</h3>
+              <h3 className="landing-strip__title">Cálculo para el IRPF</h3>
               <p className="landing-strip__text">
-                Cálculo automático de la amortización del 3% sobre el mayor valor y deducción de gastos conforme al Modelo 100 del IRPF.
+                Calcula la amortización deducible del 3% y organiza los gastos de cada vivienda listos para consultar en tu declaración.
               </p>
             </div>
             <div className="landing-strip__item">
               <span className="landing-strip__num">02</span>
-              <h3 className="landing-strip__title">Automatización Silenciosa</h3>
+              <h3 className="landing-strip__title">Facturas por CUPS</h3>
               <p className="landing-strip__text">
-                Vincula el código CUPS de luz, agua y gas. Las facturas recibidas por correo se asignan y computan sin intervención manual.
+                Vincula el código de contador de cada piso. Reenvía las facturas de luz, gas o agua y se asociarán a su inmueble automáticamente.
               </p>
             </div>
             <div className="landing-strip__item">
               <span className="landing-strip__num">03</span>
-              <h3 className="landing-strip__title">Protección Legal LAU</h3>
+              <h3 className="landing-strip__title">Control de Inquilinos y Rentas</h3>
               <p className="landing-strip__text">
-                Seguimiento exhaustivo de fechas de vigencia, prórrogas obligatorias, fianzas y rentabilidades netas por inmueble.
+                Ten a mano las fechas de contrato, el importe de la renta, las fianzas y los ingresos netos de cada propiedad sin perder papeles.
               </p>
             </div>
           </div>
@@ -134,25 +134,25 @@ export default function Landing() {
         <div className="landing-container">
           <div className="landing-feature__grid">
             <div className="landing-feature__content">
-              <span className="mono-eyebrow">CURADURÍA DEL INMUEBLE</span>
+              <span className="mono-eyebrow">FICHA DE LA VIVIENDA</span>
               <h2 className="landing-feature__title">
-                Cada propiedad es un activo vivo, no una simple celda de cálculo.
+                Toda la información de cada piso en un único lugar.
               </h2>
               <p className="landing-feature__text">
-                Arrendis organiza tu patrimonio con la sobriedad y el espacio que merece. Guarda fotografías de alta resolución, contratos firmados, datos catastrales e inventarios en un libro mayor digital sin ruido publicitario ni paneles innecesarios.
+                Olvídate de buscar contratos y números en carpetas dispersas. Arrendis reúne los datos catastrales, contratos, fotos y notas de cada vivienda en una ficha ordenada y fácil de consultar.
               </p>
               <div className="landing-feature__bullets">
                 <div className="landing-bullet">
                   <CheckCircle2 size={16} className="text-garnet" />
-                  <span>Ficha arquitectónica con dirección catastral y año de adquisición.</span>
+                  <span>Datos catastrales y valor de compra para el cálculo de amortización.</span>
                 </div>
                 <div className="landing-bullet">
                   <CheckCircle2 size={16} className="text-garnet" />
-                  <span>Control de ocupación en tiempo real y rentabilidades anuales consolidadas.</span>
+                  <span>Control de rentas mensuales y rendimiento estimado.</span>
                 </div>
                 <div className="landing-bullet">
                   <CheckCircle2 size={16} className="text-garnet" />
-                  <span>Historial unificado de incidencias y mantenimiento.</span>
+                  <span>Documentos y notas del inmueble siempre localizados.</span>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function Landing() {
                 />
               </div>
               <div className="landing-image-caption">
-                <span className="mono-caption">FIG. 02 / REHABILITACIÓN INTERIOR · SUELOS DE ROBLE Y LUZ CENITAL</span>
+                <span className="mono-caption">FIG. 02 / DETALLE DE INMUEBLE · GESTIÓN CENTRALIZADA</span>
               </div>
             </div>
           </div>
@@ -181,22 +181,22 @@ export default function Landing() {
               <div className="landing-image-wrapper">
                 <img
                   src="/images/editorial/atelier-supplies.jpg"
-                  alt="Mesa de trabajo de taller arquitectónico con plano y llaves"
+                  alt="Facturas de suministros y llaves de inmueble"
                   className="landing-feature__img"
                 />
               </div>
               <div className="landing-image-caption">
-                <span className="mono-caption">FIG. 03 / TALLER DE GESTIÓN · ASIGNACIÓN DIRECTA POR CONTADOR</span>
+                <span className="mono-caption">FIG. 03 / ASIGNACIÓN POR CONTADOR · CÓDIGO CUPS</span>
               </div>
             </div>
 
             <div className="landing-feature__content">
-              <span className="mono-eyebrow">TECNOLOGÍA DE PRECISIÓN</span>
+              <span className="mono-eyebrow">AUTOMATIZACIÓN DE SUMINISTROS</span>
               <h2 className="landing-feature__title">
                 Facturas de suministros que se contabilizan solas.
               </h2>
               <p className="landing-feature__text">
-                Olvida descargar PDFs mes a mes y transcribir consumos. Arrendis empareja cada factura eléctrica, de gas o de agua directamente con el CUPS de la vivienda correspondiente mediante extracción documental con inteligencia artificial.
+                Olvida descargar PDFs mes a mes y copiar números a mano. Arrendis lee tus facturas de luz, gas o agua, extrae los importes y las vincula directamente con el inmueble correspondiente mediante su código CUPS.
               </p>
               <div className="landing-feature__steps">
                 <div className="landing-step">
@@ -209,15 +209,15 @@ export default function Landing() {
                 <div className="landing-step">
                   <span className="landing-step__num">02</span>
                   <div>
-                    <strong>Buzón de Reenvío Privado</strong>
-                    <p>Reenvía las facturas de Iberdrola, Endesa o Naturgy a tu correo privado de Arrendis.</p>
+                    <strong>Buzón de Reenvío</strong>
+                    <p>Reenvía las facturas de Iberdrola, Endesa o Naturgy a tu buzón de Arrendis.</p>
                   </div>
                 </div>
                 <div className="landing-step">
                   <span className="landing-step__num">03</span>
                   <div>
-                    <strong>Cálculo Inmediato de Gasto</strong>
-                    <p>El importe, IVA y fecha quedan vinculados al informe fiscal del inmueble.</p>
+                    <strong>Cómputo Automático</strong>
+                    <p>El importe y fecha se asignan a la vivienda y se suman al cálculo fiscal.</p>
                   </div>
                 </div>
               </div>
@@ -230,10 +230,10 @@ export default function Landing() {
       <section className="landing-showcase" id="catalogo">
         <div className="landing-container">
           <div className="landing-showcase__header">
-            <span className="mono-eyebrow">FICHA DE CARTERA MODELO</span>
-            <h2 className="landing-showcase__title">Una visión serena de tus activos.</h2>
+            <span className="mono-eyebrow">VISTA DE INMUEBLE</span>
+            <h2 className="landing-showcase__title">Una visión clara de cada alquiler.</h2>
             <p className="landing-showcase__subtitle">
-              Así luce un inmueble gestionado con la disciplina de Arrendis: fotografía serena, métricas tabulares exactas y estado contractual al instante.
+              Así luce un inmueble gestionado con Arrendis: fotografía de la vivienda, datos clave del contrato y cálculo deducible en un solo vistazo.
             </p>
           </div>
 
@@ -283,12 +283,12 @@ export default function Landing() {
       <section className="landing-cta" id="fiscalidad">
         <div className="landing-container">
           <div className="landing-cta__box">
-            <span className="mono-eyebrow text-garnet">ARRENDIS ATELIER PATRIMONIAL</span>
+            <span className="mono-eyebrow text-garnet">GESTIÓN CLARA Y DIRECTA</span>
             <h2 className="landing-cta__title">
-              Paz mental para tu patrimonio inmobiliario en España.
+              Menos tiempo con papeles, más orden con tus alquileres.
             </h2>
             <p className="landing-cta__text">
-              Comienza hoy mismo a registrar tus inmuebles, adjuntar contratos y automatizar tus facturas de suministros.
+              Añade tus inmuebles, guarda tus contratos y deja que las facturas de suministros se asocien automáticamente.
             </p>
             <div className="landing-cta__buttons">
               {user ? (
@@ -324,37 +324,37 @@ export default function Landing() {
                 <ArrendisLogo size="md" showSubtitle={true} />
               </div>
               <p className="landing-footer__desc">
-                Registro patrimonial y fiscal de inmuebles en alquiler en España. Diseñado con rigor legal y calma arquitectónica.
+                Gestión práctica de inmuebles en alquiler y cálculo estimativo para el IRPF. Creado para propietarios que buscan sencillez y orden.
               </p>
             </div>
 
             <div className="landing-footer__col">
               <span className="mono-eyebrow">SISTEMA</span>
               <ul className="landing-footer__links">
-                <li><a href="#filosofia">Filosofía</a></li>
-                <li><a href="#suministros">Automatización CUPS</a></li>
+                <li><a href="#filosofia">Características</a></li>
+                <li><a href="#suministros">Suministros por CUPS</a></li>
                 <li><a href="#fiscalidad">Cálculo IRPF</a></li>
-                <li><Link to="/portfolio">Cartera Digital</Link></li>
+                <li><Link to="/portfolio">Mi Cartera</Link></li>
               </ul>
             </div>
 
             <div className="landing-footer__col">
-              <span className="mono-eyebrow">LEGAL &amp; FISCAL</span>
+              <span className="mono-eyebrow">FISCALIDAD &amp; AVISOS</span>
               <ul className="landing-footer__links">
-                <li><span>Ley de Arrendamientos Urbanos (LAU)</span></li>
-                <li><span>Normativa IRPF Agencia Tributaria</span></li>
-                <li><span>Modelo 100 AEAT</span></li>
-                <li><span>Privacidad y Cifrado</span></li>
+                <li><span>Cálculo estimativo Modelo 100</span></li>
+                <li><span>Amortización del 3% (Construcción)</span></li>
+                <li><span>Gastos deducibles del alquiler</span></li>
+                <li><span>Aviso: Herramienta de estimación</span></li>
               </ul>
             </div>
           </div>
 
           <div className="landing-footer__bottom">
             <span className="mono-caption">
-              © {new Date().getFullYear()} ARRENDIS PATRIMONIAL S.L. · TODOS LOS DERECHOS RESERVADOS.
+              © {new Date().getFullYear()} ARRENDIS · GESTIÓN DE ALQUILERES Y CÁLCULO FISCAL.
             </span>
             <span className="mono-caption text-muted">
-              DISEÑADO CON RIGOR EDITORIAL Y CALMA ARQUITECTÓNICA.
+              HERRAMIENTA ESTIMATIVA DE APOYO AL PROPIETARIO.
             </span>
           </div>
         </div>
