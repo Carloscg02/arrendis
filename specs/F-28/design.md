@@ -240,37 +240,42 @@ El wizard vive en una ruta protegida limpia (`/onboarding`) sin la cabecera comp
 │  ────────────────────────────────────────────────────────────────────  │
 │                                                                        │
 │   PASO 1: Tu Primer Inmueble                                           │
-│   - ¿Cómo llamas a este inmueble? (ej. "Ático en Malasaña")           │
+│   - Nombre o Alias (ej. "Ático en Fuencarral")                         │
 │   - Tipo: [ Piso / Casa / Local / Garaje ]                             │
-│   - Ciudad / Ubicación                                                 │
+│   - Ciudad / Dirección básica                                          │
 │                                                   [ Siguiente: Fiscal] │
 │  ────────────────────────────────────────────────────────────────────  │
 │                                                                        │
-│   PASO 2: Fiscalidad Oficial · Modelo 100 AEAT                         │
-│   ┌── Columna Izq: Parámetros & Cálculo ───┐ ┌── Columna Der: Borrador Oficial ──┐
-│   │ Precio adquisición: [ 210.000 € ]      │ │ [Icon: FileText] Modelo 100 AEAT   │
-│   │ Año de compra:      [ 2021 ]           │ │                                    │
-│   │                                        │ │ [Miniatura 200 DPI Borrador Real]  │
-│   │ Amortización anual (3%): ~ 4.410 €/año │ │ - Casilla 0102: Rendimientos       │
-│   │ Ahorro estimado IRPF:    ~ 1.323 €/año │ │ - Casilla 0115: Amortización (3%)  │
-│   │ Asignado en IRPF:        [Casilla 0131]│ │ - Casilla 0154: Rendimiento Neto   │
-│   │                                        │ │ [ Ver Borrador a Pantalla Completa]│
-│   └────────────────────────────────────────┘ └────────────────────────────────────┘
-│                                                  [ Siguiente: Suministros ]  │
+│   PASO 2: Traslado al Borrador Real de Hacienda (Modelo 100 AEAT)      │
+│   "Arrendis traslada automáticamente todos tus ingresos y gastos a     │
+│   las casillas oficiales de la declaración de la Renta."               │
+│                                                                        │
+│   ┌── Simulación Nativa del Borrador Oficial (Ejemplo Visual) ───────┐ │
+│   │ [Badge: Ejemplo ilustrativo · Se generará al completar fiscalidad]│ │
+│   │ • [0102] Rendimientos íntegros (Ingresos alquiler):    15.000,00€│ │
+│   │ • [0105-0117] Gastos deducibles (IBI, comunidad, luz): -6.445,46€│ │
+│   │ • [0131] Amortización inmueble (3% s/construcción):    -3.204,00€│ │
+│   │ • [0150] Reducción vivienda habitual (-60%):           -3.210,32€│ │
+│   │ • [0154] Rendimiento Neto Reducido Final:               2.140,22€│ │
+│   │                                                                  │ │
+│   │ ℹ️ Parámetros de compra opcionales para personalizar la cuota     │ │
+│   │ [ Precio adquisición aprox. ]   [ Año de adquisición ]           │ │
+│   └──────────────────────────────────────────────────────────────────┘ │
+│                                             [ Siguiente: Suministros ] │
 │  ────────────────────────────────────────────────────────────────────  │
 │                                                                        │
 │   PASO 3: Automatización de Suministros y Facturas                     │
-│   ┌── Pilar 1: Buzón Inteligente ──────────┐ ┌── Pilar 2: Drag & Drop PDFs ───────┐
-│   │ [Icon: Mail] Reenvío Automático        │ │ [Icon: UploadCloud] Carga Inmediata│
-│   │ facturas-carlos@inbound.arrendis.com   │ │ OCR + IA lee fechas, importes y    │
-│   │ Se leen y asignan solas con IA.        │ │ CUPS en < 2 segundos.              │
-│   └────────────────────────────────────────┘ └────────────────────────────────────┘
-│   - Renta mensual que percibes: [ 1.250 € / mes ] (Contrato y Casilla 0102)│
-│   - Código CUPS (Opcional): [ ES0031... ]                                  │
-│     Pedagogía: "Es el DNI de tu contador para vincular facturas solas."    │
-│     [ Botón: "Omitir CUPS por ahora · Se detectará en mi primera factura" ]│
-│                                                                            │
-│                          [ Atrás ]   [ Finalizar y ver mi Patrimonio ]     │
+│   ┌── Opción 1: Reenvío por Email ─────────┐ ┌── Opción 2: Arrastrar PDFs ───┐
+│   │ [Icon: Mail] Cero trabajo manual       │ │ [Icon: UploadCloud] Inmediato │
+│   │ Ingesta automática con IA              │ │ OCR lee importes y fechas     │
+│   │ 📘 Tutorial paso a paso incluido para  │ │ en menos de 2 segundos.       │
+│   │ crear la regla en Gmail/Outlook (2 min)│                                 │
+│   └────────────────────────────────────────┘ └───────────────────────────────┘
+│   - Renta mensual: [ 1.250 € / mes ] (Contrato inicial y Casilla 0102) │
+│   - Código CUPS (Opcional): [ ES0031... ]                              │
+│     [ Botón: "No tengo el CUPS ahora · Se detectará en mi 1ª factura" ]│
+│                                                                        │
+│                          [ Atrás ]   [ Finalizar y ver mi Patrimonio ] │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
