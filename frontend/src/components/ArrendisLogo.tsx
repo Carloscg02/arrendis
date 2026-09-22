@@ -14,9 +14,14 @@ export default function ArrendisLogo({
   color,
   className = '',
 }: ArrendisLogoProps) {
-  // Determine sizes
-  const markSize = size === 'lg' ? 38 : size === 'md' ? 30 : 22;
   const shouldShowSubtitle = showSubtitle !== undefined ? showSubtitle : size !== 'sm';
+
+  // Determine sizes: when subtitle is displayed, scale mark to align top and bottom with 2-line text lockup
+  const markSize = size === 'lg'
+    ? (shouldShowSubtitle ? 50 : 38)
+    : size === 'md'
+    ? (shouldShowSubtitle ? 42 : 30)
+    : (shouldShowSubtitle ? 28 : 22);
 
   const markColor = color || 'var(--brand-burgundy, #6b0008)';
   const textColor = 'var(--text-primary, #1c1917)';
@@ -28,7 +33,7 @@ export default function ArrendisLogo({
         display: 'inline-flex',
         alignItems: layout === 'vertical' ? 'center' : 'center',
         flexDirection: layout === 'vertical' ? 'column' : 'row',
-        gap: size === 'lg' ? '0.85rem' : size === 'md' ? '0.65rem' : '0.55rem',
+        gap: size === 'lg' ? '0.85rem' : size === 'md' ? (shouldShowSubtitle ? '0.75rem' : '0.65rem') : '0.55rem',
         textDecoration: 'none',
         lineHeight: 1,
       }}
@@ -76,7 +81,7 @@ export default function ArrendisLogo({
           flexDirection: 'column',
           alignItems: layout === 'vertical' ? 'center' : 'flex-start',
           gap: size === 'lg' ? '0.3rem' : '0.2rem',
-          transform: layout === 'horizontal' ? (size === 'sm' ? 'translateY(2.5px)' : 'translateY(2px)') : undefined,
+          transform: layout === 'horizontal' && !shouldShowSubtitle ? (size === 'sm' ? 'translateY(2.5px)' : 'translateY(2px)') : undefined,
         }}
       >
         <span
