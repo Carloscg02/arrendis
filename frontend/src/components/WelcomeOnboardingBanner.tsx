@@ -107,7 +107,7 @@ export const WelcomeOnboardingBanner: React.FC<WelcomeOnboardingBannerProps> = (
               </strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              Arrastra un PDF de luz o gas (Endesa, Iberdrola, Repsol...) para ver cómo la IA extrae importes y fechas al instante.
+              Arrastra una factura en PDF (luz, agua, gas...) para ver cómo la IA extrae importes y fechas al instante.
             </p>
           </div>
           <button

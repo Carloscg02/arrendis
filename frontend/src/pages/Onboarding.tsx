@@ -838,7 +838,7 @@ export default function Onboarding() {
                     </span>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                    Dispones de una dirección de correo exclusiva en Arrendis. Puedes darla directamente a Endesa o Iberdrola, o configurar una regla de reenvío automático en tu correo personal.
+                    Dispones de una dirección de correo exclusiva en Arrendis. Puedes darla directamente a tus compañías suministradoras o configurar una regla de reenvío automático en tu correo personal.
                   </p>
 
                   {/* Destacado del tutorial paso a paso */}
@@ -908,7 +908,7 @@ export default function Onboarding() {
                     color: 'var(--text-secondary)',
                   }}>
                     <Check size={16} color="var(--success, #2b5329)" style={{ flexShrink: 0 }} />
-                    <span>Compatible con Repsol, Iberdrola, Endesa, Naturgy, TotalEnergies y facturas municipales de agua.</span>
+                    <span>Compatible con facturas en PDF de cualquier compañía de luz, gas, agua o telecomunicaciones.</span>
                   </div>
                 </div>
               </div>
