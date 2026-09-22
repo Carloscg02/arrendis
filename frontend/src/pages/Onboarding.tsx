@@ -407,7 +407,7 @@ export default function Onboarding() {
               }}>
                 <Info size={16} color="var(--brand-burgundy, #6b0008)" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>
-                  <strong>Ejemplo ilustrativo:</strong> El siguiente extracto muestra cómo se estructura el borrador oficial. Al completar los datos fiscales de tu propiedad y registrar facturas, Arrendis generará automáticamente la versión completa y definitiva de cada ejercicio para que traslades los importes a Renta Web con 1 solo clic o descargues tu PDF oficial.
+                  <strong>Ejemplo ilustrativo:</strong> El siguiente extracto muestra cómo se estructura el borrador oficial. Al completar los datos fiscales de tu propiedad y registrar gastos, Arrendis generará automáticamente tu borrador oficial en PDF con el desglose exacto casilla por casilla para que puedas trasladar los importes a Renta Web manualmente sin complicaciones ni cálculos.
                 </span>
               </div>
 
@@ -647,7 +647,7 @@ export default function Onboarding() {
                   fontSize: '0.75rem',
                   color: 'var(--text-secondary)',
                 }}>
-                  <span>Al completar tu inmueble, podrás <strong>descargar el PDF oficial</strong> o trasladar las casillas a Renta Web con 1 clic.</span>
+                  <span>Al completar tu inmueble, podrás <strong>descargar el PDF oficial</strong> con todas las casillas preparadas para trasladarlas a Renta Web.</span>
                 </div>
               </div>
 
