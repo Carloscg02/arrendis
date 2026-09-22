@@ -45,7 +45,6 @@ export default function Login() {
             “La calma de saber que cada contrato, suministro y deducción fiscal está en su lugar exacto.”
           </blockquote>
           <span className="auth-split-visual__author">
-            FIG. AUTH · CUADERNO DE BITÁCORA RESIDENCIAL · MADRID
           </span>
         </div>
       </div>
