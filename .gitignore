@@ -13,13 +13,10 @@ __pycache__/
 data/images/
 .env
 
-# Agent & Impeccable binaries
+# Agent directories & skills
 .agent/*
 !.agent/skills/
-.agent/skills/*
-!.agent/skills/anti-slop-ui/
 .gemini/
-.impeccable/*.db-shm
 *.db-wal
 data/*.db*
 *.key

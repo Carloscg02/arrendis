@@ -6,7 +6,7 @@
 > **Estado:** Paso 1 — Especificación Técnica  
 > **Fecha:** 2026-09-05  
 > **Dependencias:** F-16 (Modelo de Dominio: CUPS) ✅, F-17 (Puerto LLM) ✅, F-18 (Motor de Extracción PyMuPDF + Strategy) ✅, F-20 (Deduplicación y Contabilización Directa) ✅  
-> **Normativa de diseño:** Directrices de alta artesanía de [`.agent/skills/anti-slop-ui/SKILL.md`](file:///home/carlos/rental-handler/.agent/skills/anti-slop-ui/SKILL.md)  
+> **Normativa de diseño:** Directrices del sistema de diseño y leyes anti-slop en [`DESIGN.md`](file:///home/carlos/rental-handler/DESIGN.md)  
 
 ---
 
