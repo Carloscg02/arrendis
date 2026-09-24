@@ -1,172 +1,237 @@
 ---
-name: Rental Handler
-description: Modern, professional rental property and Spanish fiscal management platform with editorial craft, crisp light porcelain aesthetic, and de-slopped UI.
+name: Arrendis
+description: Atelier Editorial Design System for Spanish real estate and fiscal management platform. Warm chalk paper canvas, literary serif typography, Swiss monospace financial precision, and Arrendis Garnet brand accent.
 colors:
-  bg-primary: "#f8fafc"
+  bg-primary: "#f9f7f5"
   bg-secondary: "#ffffff"
-  bg-tertiary: "#f1f5f9"
-  surface: "#ffffff"
-  surface-subtle: "#f8fafc"
-  border-subtle: "#e2e8f0"
-  border-hover: "#cbd5e1"
-  border-active: "#94a3b8"
-  accent-primary: "#0f172a"
-  accent-primary-hover: "#1e293b"
-  accent-primary-fg: "#ffffff"
-  accent-muted: "#0284c7"
-  text-primary: "#0f172a"
-  text-secondary: "#475569"
-  text-muted: "#94a3b8"
-  danger: "#dc2626"
-  danger-subtle: "rgba(220, 38, 38, 0.08)"
-  warning: "#d97706"
-  warning-subtle: "rgba(217, 119, 6, 0.08)"
-  success: "#059669"
-  success-subtle: "rgba(5, 150, 105, 0.08)"
+  bg-tertiary: "#f2efe9"
+  panel-bg: "#ffffff"
+  panel-border: "#e5e2dd"
+  panel-border-hover: "#c8c2b9"
+  panel-border-subtle: "#eeeae4"
+  text-primary: "#1c1917"
+  text-secondary: "#57534e"
+  text-muted: "#8c827a"
+  text-disabled: "#c7c2bc"
+  brand-burgundy: "#6b0008"
+  brand-burgundy-hover: "#520006"
+  brand-burgundy-subtle: "#fbf2f2"
+  accent-primary: "#1c1917"
+  accent-primary-hover: "#292524"
+  accent-primary-fg: "#f9f7f5"
+  accent-garnet: "#6b0008"
+  accent-garnet-hover: "#520006"
+  accent-garnet-fg: "#ffffff"
+  success: "#2b5329"
+  success-subtle: "#f2f6f1"
+  success-border: "#c8dec4"
+  warning: "#8f4d0a"
+  warning-subtle: "#fdf6ed"
+  warning-border: "#f8dfbf"
+  danger: "#8c1d18"
+  danger-subtle: "#fbf1f0"
+  danger-border: "#f3cecc"
 typography:
-  display:
-    fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "2.75rem"
-    fontWeight: 600
-    lineHeight: 1.15
-    letterSpacing: "-0.035em"
-  h1:
-    fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "2rem"
-    fontWeight: 600
-    lineHeight: 1.2
-    letterSpacing: "-0.025em"
-  h2:
-    fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "1.35rem"
-    fontWeight: 500
-    lineHeight: 1.3
-    letterSpacing: "-0.015em"
-  body:
-    fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "0.9375rem"
-    fontWeight: 400
-    lineHeight: 1.55
-    letterSpacing: "-0.005em"
-  body-sm:
-    fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    fontSize: "0.8125rem"
-    fontWeight: 400
-    lineHeight: 1.5
-    letterSpacing: "0"
-  mono:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: "-0.01em"
+  serif: "'Newsreader', Georgia, 'Times New Roman', serif"
+  mono: "'Space Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+  sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
 rounded:
+  none: "0px"
+  xs: "2px"
   sm: "4px"
-  md: "8px"
-  lg: "12px"
-  xl: "16px"
+  md: "6px"
   pill: "9999px"
-spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "16px"
-  lg: "24px"
-  xl: "32px"
-  2xl: "48px"
-  3xl: "64px"
-components:
-  button-primary:
-    backgroundColor: "{colors.accent-primary}"
-    textColor: "{colors.accent-primary-fg}"
-    rounded: "{rounded.md}"
-    padding: "10px 20px"
-  button-primary-hover:
-    backgroundColor: "{colors.accent-primary-hover}"
-  button-secondary:
-    backgroundColor: "{colors.bg-secondary}"
-    textColor: "{colors.text-primary}"
-    rounded: "{rounded.md}"
-    padding: "10px 20px"
 ---
 
-# Design System & Guidelines: Rental Handler (Light Theme)
+# Design System & Guidelines: Arrendis (Atelier Editorial)
 
-## Overview
+## 1. Overview & Aesthetic Philosophy
 
-Rental Handler is a high-precision real estate and Spanish fiscal calculation platform. Its visual design language rejects generic AI-generated aesthetics ("AI Slop"—unnecessary nested cards, heavy borders, neon gradients, and redundant microcopy) in favor of an understated, confident, high-craft light interface inspired by Stripe, Vercel, and Linear.
+**Arrendis** is a high-precision real estate portfolio and Spanish fiscal calculation platform (AEAT Modelo 100). Its visual identity rejects generic SaaS aesthetics and AI slop (nested card borders, neon gradients, emojis in UI, and conversational filler text) in favor of the **Atelier Editorial** design philosophy:
 
-Key visual attributes:
-- **Quiet Authority**: Crisp porcelain/snow surfaces (`#f8fafc`, `#ffffff`) with deep slate typography (`#0f172a`) and restrained contrast.
-- **De-carded Structure**: Flat layouts and natural white space separate distinct functional zones instead of stacking borders and nested cards.
-- **Data Density with Breathability**: Monospace values for financial precision, cleanly aligned metadata tables, and compact contextual actions.
-- **Smooth, Organic Transitions**: High-performance exponential easing (`cubic-bezier(0.16, 1, 0.3, 1)`); strict ban on bounce or spring wobbles and layout property animation.
+- **Tactile Paper Canvas**: Rooted in warm chalk paper (`#f9f7f5`) and crisp white panels (`#ffffff`), bound by warm linen hairline dividers (`#e5e2dd`).
+- **Architectural Typography**: Literary serif (`Newsreader`) for titles and section presence; Swiss monospace (`Space Mono`) for fiscal figures, cadastral codes, and dates; and clean sans-serif (`Inter`) for UI controls and body text.
+- **Brand Authority**: Arrendis Garnet (`#6b0008`) used intentionally for primary brand identity, active tabs, and high-impact calls to action.
+- **Quiet Data Density**: Financial information is presented with breathability, aligned monospace numbers, and zero visual clutter.
 
-## Colors
+---
 
-- **Backgrounds**: Rooted in crisp, clean whites and porcelain slates (`#f8fafc`, `#ffffff`, `#f1f5f9`), providing an airy, premium canvas.
-- **Surfaces**: Pure white (`#ffffff`) for elevated panels, tables, and modals.
-- **Borders**: Highly restrained hairline borders (`#e2e8f0` / `rgba(0, 0, 0, 0.08)`) only when separation is functionally critical. No double borders or borders within cards.
-- **Accents**: Monochromatic primary accent (`#0f172a` deep obsidian button on white canvas), paired with restrained semantic accents (Emerald `#059669` for positive yield, Amber `#d97706` for deductions, Crimson `#dc2626` for liabilities or deletions).
-- **No Neon Gradients**: Pure, solid or subtle tonal contrast only.
+## 2. The 6 Non-Negotiable "Anti-Slop" Laws
 
-## Typography
+Every screen, modal, component, and spec in Arrendis MUST adhere to these 6 laws:
 
-- **Font Family**: `Outfit`, backed by system fallbacks (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif).
-- **Scale**:
-  - `Display` (2.75rem / 44px, weight 600, line-height 1.15, tracking -0.035em): For key fiscal summary numbers and page hero titles.
-  - `H1` (2.0rem / 32px, weight 600, line-height 1.2, tracking -0.025em): Main page titles.
-  - `H2` (1.35rem / 21px, weight 500, line-height 1.3, tracking -0.015em): Section headings.
-  - `Body` (0.9375rem / 15px, weight 400, line-height 1.55): Content text and table values.
-  - `Body Small / Label` (0.8125rem / 13px, weight 500, line-height 1.5, uppercase tracking 0.04em): Form labels and status badges.
-- **Anti-Slop Rule**: Delete redundant explanatory subtitles beneath self-evident titles.
+1. **Strictly Zero Emojis in Product UI**:
+   - **Never**: Use emojis (`🏠`, `📊`, `⚠️`, `🟢`, `🔴`, `📋`, `✨`) as interface icons, button graphics, or status bullets.
+   - **Always**: Use SVG icons from `lucide-react` (14px–18px) with optical alignment and deliberate semantic color.
 
-## Layout
+2. **De-Carding Over Nested Containers**:
+   - **Never**: Nest cards inside cards (`border` inside `border` with generic drop-shadows).
+   - **Always**: Use flat tabular rows, subtle background wells (`var(--bg-tertiary)`), hairline dividers (`1px solid var(--panel-border)`), or generous whitespace.
 
-- **Maximum Width**: 1280px centered (`margin: 0 auto; padding: 0 1.5rem;`).
-- **De-carding Protocol**: Lists of items (properties, contracts, expenses) are rendered as clean tabular rows or minimalist flat panels separated by vertical whitespace and hairline dividers, not floating boxes with heavy shadows.
-- **Spacing Rhythm**: Consistent 8px grid (`8px`, `16px`, `24px`, `32px`, `48px`, `64px`).
+3. **No Neon / Cliché Dark Gradients**:
+   - **Never**: Cyan-to-purple, dark obsidian neon, or generic glassmorphism gradients.
+   - **Always**: High-contrast, warm physical materials: warm chalk paper (`#f9f7f5`), pure white surfaces, and deep espresso text (`#1c1917`).
 
-## Elevation & Depth
+4. **Zero Layout Shifts in Motion & Transitions**:
+   - **Never**: Animate layout properties (`width`, `height`, `margin`, `padding`). Never use bouncy spring easings.
+   - **Always**: Animate only `transform` and `opacity` with exponential deceleration (`cubic-bezier(0.16, 1, 0.3, 1)`) between 150ms and 250ms.
 
-- **Flat Tonal Hierarchy**: Depth is achieved through crisp hairline borders (`#e2e8f0`) and subtle canvas contrast (`#f8fafc` canvas vs `#ffffff` surface), not heavy blurred drop-shadows.
-- **Shadows**:
-  - Flyout / Dropdown / Modal: `0 16px 36px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)`.
-  - No shadows on flat cards or inline lists.
+5. **Direct, Terse Copy (No Conversational Slop)**:
+   - **Never**: Add redundant explanatory filler under titles like *"Aquí podrás gestionar tus contratos de manera rápida y sencilla"*.
+   - **Always**: Keep headers terse, confident, and self-evident. Let the data and controls speak for themselves.
 
-## Shapes
+6. **Tabular Numerals & Monospace Precision**:
+   - **Always**: Render monetary amounts (€), percentages (%), official AEAT casillas (`[0102]`), dates, and cadastral references with `font-family: var(--font-mono)` and `font-variant-numeric: tabular-nums`.
 
-- **Radius Scale**:
-  - Inputs & Buttons: `8px` (`var(--radius-md)`)
-  - Panels & Modals: `12px` to `16px` (`var(--radius-lg)` to `var(--radius-xl)`)
-  - Badges & Pills: `9999px` (`var(--radius-pill)`) or `4px` (`var(--radius-sm)`)
-- Avoid exaggerated, toy-like pill corners on full-width panels.
+---
 
-## Components
+## 3. Design Tokens (CSS Variables Reference)
 
-- **Buttons**:
-  - Primary: Deep slate background (`#0f172a`), pure white text, slight brightness bump on hover (`background: #1e293b`).
-  - Secondary / Outline: Pure white background with hairline border (`#e2e8f0`), text `#0f172a`, hover background `#f8fafc`.
-  - Ghost / Link: No border, text-secondary shifting to text-primary.
-- **Inputs & Selects**:
-  - Crisp white background (`#ffffff`), 1px border (`#e2e8f0`), soft focus ring (`rgba(15, 23, 42, 0.08)`).
-- **Modals & Overlays**:
-  - Darkened backdrop with blur (`rgba(15, 23, 42, 0.35)` + `backdrop-filter: blur(4px)`).
-  - Modal window uses `#ffffff`, crisp 1px border (`#e2e8f0`), smooth enter transition via opacity + translateY(6px), no bounce springs.
-- **Tables & Lists**:
-  - Clean edge-to-edge layout, header labels muted and uppercase, hover states subtle (`rgba(0, 0, 0, 0.02)`).
-  - Secondary actions concealed behind an overflow button or aligned quietly at the end of the row.
+All styling in `frontend/src/` must consume CSS variables from `frontend/src/index.css`:
 
-## Do's and Don'ts
+```css
+:root {
+  /* Surfaces & Paper Canvas */
+  --bg-primary: #f9f7f5;               /* Warm chalk paper */
+  --bg-secondary: #ffffff;             /* Pure white surface */
+  --bg-tertiary: #f2efe9;              /* Warm stone control well */
+  --bg-elevated: #faf8f5;
 
-### Do
-- Use generous vertical padding (`3rem` to `4rem`) between major sections.
-- Format all euro amounts and fiscal numbers consistently with tabular numbers and clean currency symbols.
-- Keep primary navigation clean and minimal with crisp underline indicators or quiet pill highlights.
-- Rely on negative space as the primary divider between information blocks.
+  /* Borders & Dividers */
+  --panel-border: #e5e2dd;             /* Linen hairline divider */
+  --panel-border-hover: #c8c2b9;
+  --panel-border-subtle: #eeeae4;
 
-### Don't
-- DO NOT wrap every piece of information in an isolated `glass-panel` or card with its own border and shadow.
-- DO NOT use bouncy spring cubic-bezier easing.
-- DO NOT animate layout properties (`width`, `height`, `margin`, `padding`).
-- DO NOT place obvious subtitle text under headings explaining the purpose of a button or page.
-- DO NOT crowd rows with 4+ visible action buttons; tuck secondary actions into context menus or detail views.
+  /* Typography */
+  --text-primary: #1c1917;             /* Deep espresso charcoal */
+  --text-secondary: #57534e;           /* Warm stone body */
+  --text-muted: #8c827a;               /* Muted taupe metadata */
+  --text-disabled: #c7c2bc;            /* Inactive / placeholder */
+
+  /* Fonts */
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-mono: 'Space Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Arrendis Garnet Brand Accent */
+  --brand-burgundy: #6b0008;
+  --brand-burgundy-hover: #520006;
+  --brand-burgundy-subtle: #fbf2f2;
+  --brand-burgundy-border: #f5d0d3;
+  --brand-burgundy-ring: rgba(107, 0, 8, 0.16);
+
+  /* Primary Interactive Elements */
+  --accent-primary: #1c1917;           /* Espresso black */
+  --accent-primary-hover: #292524;
+  --accent-primary-fg: #f9f7f5;
+
+  --accent-garnet: #6b0008;            /* Brand Garnet */
+  --accent-garnet-hover: #520006;
+  --accent-garnet-fg: #ffffff;
+
+  /* Semantic Statuses (Muted Editorial) */
+  --success: #2b5329;
+  --success-subtle: #f2f6f1;
+  --success-border: #c8dec4;
+
+  --warning: #8f4d0a;
+  --warning-subtle: #fdf6ed;
+  --warning-border: #f8dfbf;
+
+  --danger: #8c1d18;
+  --danger-subtle: #fbf1f0;
+  --danger-border: #f3cecc;
+
+  /* Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 9999px;
+
+  /* Shadows (Restrained Hairline Depth) */
+  --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.04);
+  --shadow-card-hover: 0 4px 16px -2px rgba(28, 25, 23, 0.06);
+  --shadow-modal: 0 20px 40px -10px rgba(28, 25, 23, 0.12), 0 0 0 1px rgba(28, 25, 23, 0.05);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+```
+
+---
+
+## 4. Component Patterns & Usage
+
+### A. Buttons
+
+```html
+<!-- Primary (Espresso Dark) -->
+<button class="btn btn-primary">Guardar cambios</button>
+
+<!-- Brand Garnet (Hero Action) -->
+<button class="btn btn-garnet">Crear primer inmueble</button>
+
+<!-- Secondary (White Surface with Linen Border) -->
+<button class="btn btn-secondary">Cancelar</button>
+
+<!-- Compact Action (Inside tables/lists) -->
+<button class="btn btn-secondary btn-sm">
+  <FileText size={14} /> Ver borrador
+</button>
+```
+
+### B. Typography & Headers
+
+```html
+<!-- Page Title: Editorial Serif -->
+<h1 style="font-family: var(--font-serif); font-weight: 400; font-size: 2rem; color: var(--text-primary); letter-spacing: -0.02em;">
+  Cartera de Inmuebles
+</h1>
+
+<!-- Kicker / Overline: Monospace uppercase label -->
+<span style="font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand-burgundy);">
+  Modelo 100 AEAT · Ejercicio 2026
+</span>
+```
+
+### C. Financial Amounts & Metrics (Mono tabular)
+
+```html
+<!-- Always use monospace for currency and calculations -->
+<span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-primary);">
+  1.250,00 €
+</span>
+```
+
+### D. Status Badges
+
+```html
+<!-- Green / Active / Reconciled -->
+<span class="badge badge-success">Arrendado</span>
+
+<!-- Garnet / Brand / Primary highlight -->
+<span class="badge badge-garnet">Deducible IRPF</span>
+
+<!-- Neutral / Inactive -->
+<span class="badge badge-neutral">Borrador</span>
+
+<!-- Warning / Pending -->
+<span class="badge badge-warning">Pendiente revisión</span>
+```
+
+### E. Tables & Lists (Flat, De-carded)
+
+- Use edge-to-edge tabular structure with `border-bottom: 1px solid var(--panel-border)`.
+- Table headers: `font-size: 0.75rem`, `font-family: var(--font-mono)`, uppercase, color `var(--text-muted)`.
+- Numeric columns: right-aligned with `tabular-nums`.
+- Actions: tucked quietly at the end of the row.
+
+---
+
+## 5. Specification Authoring Protocol (For AI Spec Authors)
+
+When writing `specs/<feature>/design.md`, the UI design section must:
+
+1. **Provide an ASCII Wireframe**: Depict the structural hierarchy, panels, and navigation clearly.
+2. **Explicit Token Mapping**: Specify which CSS variables govern backgrounds, text, and borders.
+3. **List Required Icons**: Explicitly name icons from `lucide-react` (e.g. `Plus`, `FileText`, `Building2`, `Calendar`). Never include emojis in the specification.
+4. **Define UI States**: Document Empty State, Loading/Skeleton State, Data-Populated State, and Error State.

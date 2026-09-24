@@ -1,6 +1,4 @@
-# Product
-
-<!-- impeccable:product-schema 1 -->
+# Product: Arrendis
 
 ## Platform
 
@@ -8,7 +6,7 @@ web
 
 ## Stack
 
-React 19, TypeScript, Vite, Motion, Lucide React (Frontend); Python, FastAPI, SQLite, Hexagonal Architecture (Backend).
+React 19, TypeScript, Vite, Lucide React (Frontend); Python, FastAPI, SQLite, Hexagonal Architecture (Backend).
 
 ## Users
 
@@ -43,8 +41,8 @@ Landlords reviewing property status, managing active tenant contracts, classifyi
 
 ## Brand Commitments
 
-- **Name**: Rental Property Web Platform ("Rental Handler")
-- **Visual Identity**: Modern, high-craft UI aesthetic with rich data presentation, fluid micro-interactions, dark/light theme support, and clear data visualization.
+- **Name**: Arrendis
+- **Visual Identity**: Atelier Editorial Design System (`DESIGN.md`). Warm chalk paper canvas (`#f9f7f5`), literary serif (`Newsreader`), Swiss monospace (`Space Mono`), Arrendis Garnet accent (`#6b0008`), and strict anti-slop craft.
 
 ## Evidence on Hand
 
@@ -58,4 +56,4 @@ Landlords reviewing property status, managing active tenant contracts, classifyi
 1. **Fiscal Precision**: Strict adherence to Spanish AEAT tax calculation rules and guidelines.
 2. **Data Isolation & Security**: Uncompromising multi-tenant security ensuring complete user data isolation.
 3. **Task Efficiency**: Streamlined workflows for logging expenses, updating contracts, and extracting tax reports.
-4. **Impeccable Craft**: High visual excellence, responsive dynamic layouts, clear typography, and tactile motion feedback.
+4. **Editorial Craft**: High visual excellence, de-carded layouts, clear typography, and tactile physical paper aesthetic.

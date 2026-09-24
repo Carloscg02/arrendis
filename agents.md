@@ -16,6 +16,7 @@ El ciclo de cada feature sigue **exactamente** estos pasos en orden.
   - Lenguaje Ubicuo (términos nuevos que introduce la feature).
   - Definición de Entidades, Value Objects, Schemas o contratos nuevos.
   - Casos de Uso / Endpoints / Contratos de API.
+  - Diseño de Interfaz / UI (si afecta a frontend): wireframe ASCII estructurado siguiendo `DESIGN.md` (tokens Atelier Editorial y leyes anti-slop).
   - Especificación de Tests (IDs, qué verifica cada uno).
   - **📚 El Rincón del Estudiante** (ver §5).
 - **🚫 GATE:** Requiere aprobación humana explícita ("Aprobado"). No avanzar sin ella.

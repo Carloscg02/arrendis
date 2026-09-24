@@ -16,7 +16,6 @@ frontend/
 .github/
 .agent/
 .gemini/
-.impeccable/
 docs/
 tests/
 specs/
