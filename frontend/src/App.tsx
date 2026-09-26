@@ -8,6 +8,7 @@ import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import AppHeader from './components/AppHeader';
+import PWAInstallBanner from './components/PWAInstallBanner';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -94,6 +95,7 @@ function App() {
             </PublicOnlyRoute>
           } />
         </Routes>
+        <PWAInstallBanner />
       </AuthProvider>
     </ErrorBoundary>
   );
