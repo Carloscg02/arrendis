@@ -18,6 +18,18 @@
       "title": "Estimación de Mercado y Orientación de Renta por IA",
       "status": "in_discovery",
       "spec": "specs/epics/E-03-valoracion-mercado/vision_y_dominio.md"
+    },
+    {
+      "id": "E-04",
+      "title": "Preparación para Lanzamiento, Seguridad y Observabilidad Web (GA Readiness)",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-04-preparacion-lanzamiento/vision_y_dominio.md"
+    },
+    {
+      "id": "E-05",
+      "title": "Experiencia Móvil y Distribución Multiplataforma (PWA y Capacitor)",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-05-version-movil/vision_y_dominio.md"
     }
   ],
   "features": [
@@ -53,6 +65,10 @@
     { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "backlog" },
     { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "backlog" },
     { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "backlog" },
-    { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" }
+    { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" },
+    { "id": "F-34", "epic": "E-05", "title": "Optimización Táctil Mobile-First y Viewport Seguro (CSS anti-clunkiness, safe areas y touch targets)", "status": "backlog" },
+    { "id": "F-35", "epic": "E-05", "title": "Manifiesto PWA, Service Worker con Vite y Pantalla de Carga (Standalone + Splash Screen)", "status": "backlog" },
+    { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "backlog" },
+    { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "backlog" }
   ]
 }
