@@ -281,3 +281,32 @@ class FakeLLMProviderAdapter(LLMProviderPort):
 def fake_llm():
     return FakeLLMProviderAdapter()
 
+
+class InMemoryPropertyValuationRepository(PropertyValuationRepository):
+    def __init__(self) -> None:
+        self._store: dict[str, PropertyValuation] = {}
+
+    def save(self, valuation: PropertyValuation) -> None:
+        self._store[valuation.id] = valuation
+
+    def find_by_id(self, valuation_id: str) -> PropertyValuation | None:
+        return self._store.get(valuation_id)
+
+    def find_latest_by_property_id(self, property_id: str) -> PropertyValuation | None:
+        props = [v for v in self._store.values() if v.property_id == property_id]
+        if not props:
+            return None
+        return sorted(props, key=lambda v: v.valuation_date, reverse=True)[0]
+
+    def list_by_property_id(self, property_id: str) -> list[PropertyValuation]:
+        return sorted(
+            [v for v in self._store.values() if v.property_id == property_id],
+            key=lambda v: v.valuation_date,
+            reverse=True,
+        )
+
+
+@pytest.fixture
+def valuation_repo() -> InMemoryPropertyValuationRepository:
+    return InMemoryPropertyValuationRepository()
+

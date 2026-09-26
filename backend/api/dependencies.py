@@ -155,3 +155,18 @@ def get_market_valuation_port() -> MarketValuationPort:
         return GeminiMarketValuationAdapter(api_key=api_key)
     return MockMarketValuationAdapter()
 
+
+def get_request_property_valuation_use_case(
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    valuation_repo: SQLitePropertyValuationRepository = Depends(get_valuation_repo),
+    valuation_port: MarketValuationPort = Depends(get_market_valuation_port),
+) -> RequestPropertyValuationUseCase:
+    from backend.application.valuation_use_cases import RequestPropertyValuationUseCase
+    cooldown_days = int(os.getenv("VALUATION_COOLDOWN_DAYS", "30"))
+    return RequestPropertyValuationUseCase(
+        property_repo=property_repo,
+        valuation_repo=valuation_repo,
+        valuation_port=valuation_port,
+        cooldown_days=cooldown_days,
+    )
+

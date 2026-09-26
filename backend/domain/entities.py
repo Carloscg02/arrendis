@@ -559,5 +559,10 @@ class ValuationRateLimitError(MarketValuationError):
         super().__init__(msg, provider=provider)
 
 
+class MissingPhysicalAttributesError(MarketValuationError):
+    """La propiedad carece de los atributos físicos mínimos (superficie construida m2 > 0) para ser valorada."""
+    pass
+
+
 
 

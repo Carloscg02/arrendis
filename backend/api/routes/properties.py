@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Query
 
 from backend.adapters.sqlite_adapter import (
     SQLiteConnection,
@@ -51,7 +51,15 @@ from backend.application.use_cases import (
     UpdatePropertyPhysicalAttributesUseCase,
     GetPropertyValuationUseCase,
 )
-from backend.domain.entities import Property, User, PropertyValuation
+from backend.application.valuation_use_cases import RequestPropertyValuationUseCase
+from backend.domain.entities import (
+    Property,
+    User,
+    PropertyValuation,
+    MissingPhysicalAttributesError,
+    MarketValuationError,
+    ValuationRateLimitError,
+)
 from backend.api.dependencies import (
     get_db,
     get_property_repo,
@@ -62,6 +70,7 @@ from backend.api.dependencies import (
     get_fiscal_report_renderer,
     get_carryforward_repo,
     get_valuation_repo,
+    get_request_property_valuation_use_case,
 )
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
@@ -441,7 +450,11 @@ async def download_fiscal_report_pdf(
 # Endpoints F-29: Atributos Físicos y Valoración
 # ──────────────────────────────────────────────
 
-def _valuation_entity_to_response(val: PropertyValuation) -> PropertyValuationResponse:
+def _valuation_entity_to_response(
+    val: PropertyValuation,
+    cooldown_days_remaining: int = 0,
+    is_cached: bool = False,
+) -> PropertyValuationResponse:
     """Convierte una entidad PropertyValuation a DTO de respuesta."""
     return PropertyValuationResponse(
         id=val.id,
@@ -479,6 +492,8 @@ def _valuation_entity_to_response(val: PropertyValuation) -> PropertyValuationRe
             for s in val.sources
         ],
         raw_notes=val.raw_notes,
+        cooldown_days_remaining=cooldown_days_remaining,
+        is_cached=is_cached,
     )
 
 
@@ -507,20 +522,52 @@ def update_property_physical_attributes(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/{property_id}/valuation", response_model=PropertyValuationResponse)
+def request_property_valuation(
+    property_id: str,
+    force: bool = Query(default=False, description="Forzar recálculo omitiendo el cooldown"),
+    current_user: User = Depends(get_current_user),
+    use_case: RequestPropertyValuationUseCase = Depends(get_request_property_valuation_use_case),
+) -> PropertyValuationResponse:
+    """Solicita una estimación de mercado para la propiedad respetando o forzando el cooldown."""
+    try:
+        result = use_case.execute(property_id=property_id, user_id=current_user.id, force=force)
+        return _valuation_entity_to_response(
+            result.valuation,
+            cooldown_days_remaining=result.cooldown_days_remaining,
+            is_cached=result.is_cached,
+        )
+    except MissingPhysicalAttributesError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValuationRateLimitError as e:
+        headers = {}
+        if e.retry_after_seconds:
+            headers["Retry-After"] = str(e.retry_after_seconds)
+        raise HTTPException(status_code=429, detail=str(e), headers=headers)
+    except MarketValuationError as e:
+        raise HTTPException(status_code=502, detail=f"Error en proveedor de valoración: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno inesperado: {e}")
+
+
 @router.get("/{property_id}/valuation/latest", response_model=PropertyValuationResponse | None)
 def get_latest_property_valuation(
     property_id: str,
-    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
-    valuation_repo: SQLitePropertyValuationRepository = Depends(get_valuation_repo),
     current_user: User = Depends(get_current_user),
+    use_case: RequestPropertyValuationUseCase = Depends(get_request_property_valuation_use_case),
 ) -> PropertyValuationResponse | None:
     """Devuelve la valoración más reciente de la propiedad o None si todavía no existe."""
     try:
-        use_case = GetPropertyValuationUseCase(property_repo, valuation_repo)
-        val = use_case.get_latest(current_user.id, property_id)
-        if val is None:
+        result = use_case.get_latest(property_id=property_id, user_id=current_user.id)
+        if result is None:
             return None
-        return _valuation_entity_to_response(val)
+        return _valuation_entity_to_response(
+            result.valuation,
+            cooldown_days_remaining=result.cooldown_days_remaining,
+            is_cached=result.is_cached,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

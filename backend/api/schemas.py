@@ -121,6 +121,8 @@ class PropertyValuationResponse(BaseModel):
     reasoning_factors: list[ReasoningFactorDTO] = []
     sources: list[ValuationSourceDTO] = []
     raw_notes: str | None = None
+    cooldown_days_remaining: int = 0
+    is_cached: bool = False
 
 
 # ──────────────────────────────────────────────
