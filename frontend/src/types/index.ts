@@ -60,6 +60,8 @@ export interface PropertyValuation {
   reasoning_factors: ReasoningFactor[];
   sources: ValuationSource[];
   raw_notes?: string | null;
+  cooldown_days_remaining?: number;
+  is_cached?: boolean;
 }
 
 export interface Income {

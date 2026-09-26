@@ -121,6 +121,14 @@ export async function getLatestValuation(propertyId: string): Promise<PropertyVa
   return handleResponse<PropertyValuation | null>(res);
 }
 
+export async function requestValuation(propertyId: string, force: boolean = false): Promise<PropertyValuation> {
+  const query = force ? "?force=true" : "";
+  const res = await apiFetch(`${API_BASE}/properties/${propertyId}/valuation${query}`, {
+    method: "POST",
+  });
+  return handleResponse<PropertyValuation>(res);
+}
+
 export async function getIncomes(propertyId: string): Promise<Income[]> {
   const res = await apiFetch(`${API_BASE}/properties/${propertyId}/incomes`);
   return handleResponse<Income[]>(res);
