@@ -1,3 +1,42 @@
+# 📱 Walkthrough y Resumen — Épica E-05: Experiencia Móvil y Distribución Multiplataforma (PWA y Capacitor)
+
+## Resumen Ejecutivo de la Épica
+
+Se ha completado de forma autónoma el ciclo SDD íntegro para la **Épica E-05**, habilitando la experiencia móvil nativa y la distribución multiplataforma para Arrendis:
+
+1. **Especificaciones Técnicas (SDD) y Aprobación Arquitectónica:**
+   - Creación de las especificaciones atómicas en [`specs/epics/E-05-version-movil/`](file:///home/carlos/rental-launch-prep/specs/epics/E-05-version-movil/):
+     - `F-34/design.md`: Optimización Táctil Mobile-First y Viewport Seguro.
+     - `F-35/design.md`: Manifiesto PWA, Service Worker y Splash Screen.
+     - `F-36/design.md`: Guía y Prompt Inteligente de Instalación Android e iOS.
+     - `F-37/design.md`: Empaquetado Nativo con Capacitor y Pipeline de APK Local Android.
+   - Auditoría y dictamen oficial emitido por el subagente especializado `software_architect_reviewer`: **VEREDICTO: APROBADO**.
+
+2. **Implementación de F-34 (Optimización Táctil y Viewport Seguro):**
+   - Configuración de `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />` y metadatos WebKit en `frontend/index.html`.
+   - Adición de variables de entorno para áreas seguras (`env(safe-area-inset-*)`), `touch-action: manipulation` (supresión de retardo de 300ms), `overscroll-behavior-y: none`, `-webkit-tap-highlight-color: transparent` y prevención de selección involuntaria de texto en controles en `frontend/src/index.css`.
+   - Adaptación de la cabecera `AppHeader` y el contenedor `page-container` para respetar el notch, Dynamic Island y barra de inicio inferior.
+
+3. **Implementación de F-35 (Manifiesto PWA y Service Worker con Vite):**
+   - Integración de `vite-plugin-pwa` en `frontend/vite.config.ts`.
+   - Definición del Manifiesto Web con tokens de diseño Atelier Editorial (`display: standalone`, paleta tiza `#f9f7f5` y acento granate `#6b0008`).
+   - Iconografía completa en `frontend/public/` (192x192, 512x512 y maskable).
+   - **Regla Arquitectónica de Red:** Configuración estricta en Workbox con `NetworkOnly` y exclusión de `/^\/(api|docs|openapi\.json)/` para que ninguna petición financiera de FastAPI sea servida desde caché obsoleta.
+   - Registro automático del Service Worker en `frontend/src/main.tsx`.
+
+4. **Implementación de F-36 (Asistente Inteligente de Instalación):**
+   - Hook reactivo `usePWAInstall`: detección de modo standalone, captura del evento nativo `beforeinstallprompt`, detección de iOS y control de fatiga mediante *cooldown* de 14 días en `localStorage`.
+   - Componente `PWAInstallBanner`: banner inferior sobrio con diseño Atelier Editorial, botón de instalación en 1 clic para Android y botón guía para iOS.
+   - Componente `PWAInstallModalIOS`: modal didáctico con los 3 pasos de Safari y uso estricto de iconos SVG de `lucide-react` (`Share2`, `PlusSquare`, `CheckCircle2`), respetando al 100% las 6 leyes anti-slop.
+
+5. **Implementación de F-37 (Capacitor y Pipeline de APK Local):**
+   - Configuración de `@capacitor/core`, `@capacitor/cli` y `@capacitor/android` en `frontend/package.json`.
+   - Fichero `frontend/capacitor.config.ts` con identificador `com.arrendis.app` y esquema HTTPS seguro.
+   - Generación del proyecto nativo Android (`frontend/android/`) con permisos de red en `AndroidManifest.xml`.
+   - Script de compilación y empaquetado directo `scripts/build_android_apk.sh` para facilitar el *sideloading* en dispositivos de prueba mediante `./gradlew assembleDebug`.
+
+---
+
 # Walkthrough y Resumen - Feature F-07
 
 ## Resumen del Trabajo Realizado
