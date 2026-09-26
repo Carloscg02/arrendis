@@ -50,6 +50,7 @@ import ExpenseForm from "../components/ExpenseForm";
 import FiscalDataForm from "../components/FiscalDataForm";
 import FiscalReportView from "../components/FiscalReportView";
 import { ContractSection } from "../components/ContractSection";
+import MarketValuationPanel from "../components/MarketValuationPanel";
 import Modal from "../components/Modal";
 import InvoiceUploadModal from "../components/InvoiceUploadModal";
 import CupsModal from "../components/CupsModal";
@@ -76,7 +77,7 @@ export default function PropertyDetail() {
   const [isCupsModalOpen, setIsCupsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "fiscal" | "contracts" | "valuation">("dashboard");
   const [isIncomesOpen, setIsIncomesOpen] = useState(false);
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
   const [expensesTab, setExpensesTab] = useState<"list" | "automate">("list");
@@ -440,6 +441,12 @@ export default function PropertyDetail() {
             <ReceiptText size={16} /> Datos Fiscales
             <span className={`status-dot ${property.has_fiscal_data ? "complete" : "pending"}`} />
           </button>
+          <button 
+            className={`tab-btn ${activeTab === "valuation" ? "active" : ""}`}
+            onClick={() => setActiveTab("valuation")}
+          >
+            <TrendingUp size={16} /> Estimación de Mercado
+          </button>
         </div>
 
         {activeTab === "dashboard" ? (
@@ -761,7 +768,7 @@ export default function PropertyDetail() {
           <div className="contracts-tab-content">
             <ContractSection propertyId={property.id} />
           </div>
-        ) : (
+        ) : activeTab === "fiscal" ? (
           <div className="fiscal-tab-content">
             <FiscalDataForm 
               propertyId={property.id} 
@@ -769,6 +776,13 @@ export default function PropertyDetail() {
               onCancel={() => setActiveTab("dashboard")} 
             />
             <FiscalReportView propertyId={property.id} />
+          </div>
+        ) : (
+          <div className="valuation-tab-content">
+            <MarketValuationPanel
+              property={property}
+              onPropertyUpdated={(updated) => setProperty(updated)}
+            />
           </div>
         )}
       </div>

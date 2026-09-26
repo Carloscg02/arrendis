@@ -16,7 +16,7 @@
     {
       "id": "E-03",
       "title": "Estimación de Mercado y Orientación de Renta por IA",
-      "status": "in_discovery",
+      "status": "done",
       "spec": "specs/epics/E-03-valoracion-mercado/vision_y_dominio.md"
     }
   ],
@@ -52,7 +52,7 @@
     { "id": "F-29", "epic": "E-03", "title": "Atributos Físicos de Propiedad y Entidades de Dominio de Valoración", "status": "done" },
     { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "done" },
     { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "done" },
-    { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "backlog" },
+    { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "done" },
     { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" }
   ]
 }
