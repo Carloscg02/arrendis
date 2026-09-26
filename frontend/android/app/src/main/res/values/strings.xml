@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Arrendis</string>
+    <string name="title_activity_main">Arrendis</string>
+    <string name="package_name">com.arrendis.app</string>
+    <string name="custom_url_scheme">com.arrendis.app</string>
+</resources>
