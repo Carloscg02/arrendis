@@ -28,7 +28,7 @@
     {
       "id": "E-05",
       "title": "Experiencia Móvil y Distribución Multiplataforma (PWA y Capacitor)",
-      "status": "in_discovery",
+      "status": "done",
       "spec": "specs/epics/E-05-version-movil/vision_y_dominio.md"
     }
   ],
@@ -69,6 +69,6 @@
     { "id": "F-34", "epic": "E-05", "title": "Optimización Táctil Mobile-First y Viewport Seguro (CSS anti-clunkiness, safe areas y touch targets)", "status": "done" },
     { "id": "F-35", "epic": "E-05", "title": "Manifiesto PWA, Service Worker con Vite y Pantalla de Carga (Standalone + Splash Screen)", "status": "done" },
     { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "done" },
-    { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "backlog" }
+    { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "done" }
   ]
 }
