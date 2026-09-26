@@ -102,6 +102,15 @@ export default function PropertyCard({ property }: Props) {
             <MapPin size={13} style={{ flexShrink: 0 }} />
             <span>{property.address.street}, {property.address.city} {property.address.postal_code}</span>
           </p>
+          {property.surface_m2 ? (
+            <p className="text-xs text-[#5c544e] font-sans mt-1">
+              {property.surface_m2} m²
+              {property.bedrooms !== null && property.bedrooms !== undefined ? ` · ${property.bedrooms} hab.` : ''}
+              {property.bathrooms !== null && property.bathrooms !== undefined ? ` · ${property.bathrooms} ${property.bathrooms === 1 ? 'baño' : 'baños'}` : ''}
+              {property.floor !== null && property.floor !== undefined ? ` · Planta ${property.floor}ª` : ''}
+              {property.has_elevator ? ' (con ascensor)' : (property.has_elevator === false && property.floor && property.floor > 1 ? ' (sin ascensor)' : '')}
+            </p>
+          ) : null}
         </div>
 
         <div>

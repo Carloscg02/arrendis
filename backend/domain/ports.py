@@ -10,7 +10,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from datetime import date
-from backend.domain.entities import Expense, Income, Property, User, LeaseContract, FiscalCarryforward
+from backend.domain.entities import (
+    Expense,
+    Income,
+    Property,
+    User,
+    LeaseContract,
+    FiscalCarryforward,
+    PropertyCondition,
+    PropertyValuation,
+)
 from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, LLMResponse
 
 
@@ -73,6 +82,20 @@ class PropertyRepository(ABC):
         cups_water: str | None,
     ) -> None:
         """Actualiza los CUPS de una propiedad."""
+        ...
+
+    @abstractmethod
+    def update_physical_attributes(
+        self,
+        property_id: str,
+        surface_m2: int | None,
+        bedrooms: int | None,
+        bathrooms: int | None,
+        floor: int | None,
+        has_elevator: bool | None,
+        condition: PropertyCondition | None,
+    ) -> None:
+        """Actualiza exclusivamente los atributos físicos de una propiedad."""
         ...
 
 
@@ -277,4 +300,29 @@ class PDFTextExtractorPort(ABC):
             PDFExtractionError: Si el documento está corrupto o protegido por contraseña.
         """
         ...
+
+
+class PropertyValuationRepository(ABC):
+    """Puerto de salida para persistir y consultar informes de valoración."""
+
+    @abstractmethod
+    def save(self, valuation: PropertyValuation) -> None:
+        """Guarda o actualiza una valoración."""
+        ...
+
+    @abstractmethod
+    def find_by_id(self, valuation_id: str) -> PropertyValuation | None:
+        """Recupera una valoración por su ID."""
+        ...
+
+    @abstractmethod
+    def find_latest_by_property_id(self, property_id: str) -> PropertyValuation | None:
+        """Recupera la valoración más reciente de una propiedad."""
+        ...
+
+    @abstractmethod
+    def list_by_property_id(self, property_id: str) -> list[PropertyValuation]:
+        """Recupera el histórico completo de valoraciones de una propiedad ordenadas por fecha descendente."""
+        ...
+
 

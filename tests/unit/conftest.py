@@ -1,10 +1,19 @@
 import pytest
 
 from datetime import date
-from backend.domain.entities import Expense, Income, Property, User, LeaseContract
-from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, PasswordHasherPort, TokenServicePort, LeaseContractRepository
+from backend.domain.entities import Expense, Income, Property, User, LeaseContract, PropertyCondition, PropertyValuation
+from backend.domain.ports import (
+    ExpenseRepository,
+    IncomeRepository,
+    PropertyRepository,
+    UserRepository,
+    PasswordHasherPort,
+    TokenServicePort,
+    LeaseContractRepository,
+    PropertyValuationRepository,
+    LLMProviderPort,
+)
 from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, LLMResponse
-from backend.domain.ports import LLMProviderPort
 
 
 class InMemoryPropertyRepository(PropertyRepository):
@@ -72,6 +81,26 @@ class InMemoryPropertyRepository(PropertyRepository):
             prop.cups_electricity = cups_electricity
             prop.cups_gas = cups_gas
             prop.cups_water = cups_water
+
+    def update_physical_attributes(
+        self,
+        property_id: str,
+        surface_m2: int | None,
+        bedrooms: int | None,
+        bathrooms: int | None,
+        floor: int | None,
+        has_elevator: bool | None,
+        condition: PropertyCondition | None,
+    ) -> None:
+        prop = self._store.get(property_id)
+        if prop:
+            prop.surface_m2 = surface_m2
+            prop.bedrooms = bedrooms
+            prop.bathrooms = bathrooms
+            prop.floor = floor
+            prop.has_elevator = has_elevator
+            prop.condition = condition
+
 
 
 class InMemoryIncomeRepository(IncomeRepository):

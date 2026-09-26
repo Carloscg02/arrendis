@@ -19,6 +19,7 @@ from backend.adapters.sqlite_adapter import (
     SQLiteUserRepository,
     SQLiteLeaseContractRepository,
     SQLiteFiscalCarryforwardRepository,
+    SQLitePropertyValuationRepository,
 )
 from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
@@ -32,6 +33,11 @@ def get_db(request: Request) -> SQLiteConnection:
 def get_property_repo(db: SQLiteConnection = Depends(get_db)) -> SQLitePropertyRepository:
     """Retorna el repositorio de propiedades con la conexión activa."""
     return SQLitePropertyRepository(db)
+
+
+def get_valuation_repo(db: SQLiteConnection = Depends(get_db)) -> SQLitePropertyValuationRepository:
+    """Retorna el repositorio de valoraciones con la conexión activa."""
+    return SQLitePropertyValuationRepository(db)
 
 
 def get_income_repo(db: SQLiteConnection = Depends(get_db)) -> SQLiteIncomeRepository:

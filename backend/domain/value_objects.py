@@ -360,3 +360,54 @@ class FiscalQuickEstimate:
     def estimated_tax_savings_typical(self) -> Decimal:
         """Ahorro fiscal anual estimado al tipo marginal medio habitual (~30%)."""
         return (self.annual_amortization * Decimal("0.30")).quantize(Decimal("0.01"))
+
+
+# ──────────────────────────────────────────────
+# Value Objects F-29: Estimación de Mercado
+# ──────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class ValuationRange:
+    """Horquilla de precios estimada (mínimo, mediano, máximo)."""
+    min_price: Money
+    median_price: Money
+    max_price: Money
+
+    def __post_init__(self) -> None:
+        if self.min_price.currency != self.median_price.currency or self.median_price.currency != self.max_price.currency:
+            raise ValueError("Todas las cantidades del rango de valoración deben compartir la misma moneda.")
+        if self.min_price.amount > self.median_price.amount:
+            raise ValueError(f"El precio mínimo ({self.min_price}) no puede ser mayor que el precio mediano ({self.median_price}).")
+        if self.median_price.amount > self.max_price.amount:
+            raise ValueError(f"El precio mediano ({self.median_price}) no puede ser mayor que el precio máximo ({self.max_price}).")
+
+
+@dataclass(frozen=True)
+class ReasoningFactor:
+    """Factor explicativo de ajuste que impacta en la valoración."""
+    factor_name: str
+    impact_percent: Decimal
+    description: str
+
+    def __post_init__(self) -> None:
+        if not self.factor_name or not self.factor_name.strip():
+            raise ValueError("El nombre del factor no puede estar vacío.")
+        if not self.description or not self.description.strip():
+            raise ValueError("La descripción del factor no puede estar vacía.")
+
+
+@dataclass(frozen=True)
+class ValuationSource:
+    """Testigo o anuncio de referencia encontrado en la búsqueda web."""
+    title: str
+    url: str
+    price: Decimal | None = None
+    surface_m2: int | None = None
+    date_found: date | None = None
+
+    def __post_init__(self) -> None:
+        if not self.title or not self.title.strip():
+            raise ValueError("El título de la fuente no puede estar vacío.")
+        if not self.url or not self.url.strip() or not (self.url.startswith("http://") or self.url.startswith("https://")):
+            raise ValueError("La URL de la fuente debe comenzar por http:// o https://.")
+
