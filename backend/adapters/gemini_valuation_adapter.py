@@ -69,12 +69,9 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
         if not api_key or not api_key.strip():
             raise MarketValuationError("API key is required", provider=self.PROVIDER_NAME)
         self.api_key = api_key
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
         try:
-            self.client = genai.Client(
-                api_key=api_key,
-                http_options={"api_version": "v1alpha", "timeout": 45.0},
-            )
+            self.client = genai.Client(api_key=api_key)
         except Exception as e:
             raise MarketValuationError(f"Failed to initialize Gemini client: {e}", provider=self.PROVIDER_NAME)
 
@@ -93,29 +90,29 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
             raise ValueError(f"La superficie construida debe ser positiva: {surface_m2}")
 
         system_instruction = (
-            "Eres un tasador y analista inmobiliario senior experto en el mercado residencial y comercial de España.\n"
-            "Tu objetivo es estimar con el mayor rigor y objetividad posible:\n"
+            "Eres un tasador y analista inmobiliario senior experto en el mercado inmobiliario de España.\n"
+            "Tu objetivo es estimar con el mayor rigor, objetividad y actualidad posible (conforme al mercado de 2024-2026):\n"
             "1. La horquilla de precio de venta en EUR (min, median, max).\n"
             "2. La horquilla de renta mensual de alquiler en EUR (min, median, max).\n"
             "3. El nivel de confianza del análisis ('HIGH', 'MEDIUM', 'LOW').\n"
-            "4. Factores explicativos de corrección (porcentaje de impacto cualitativo/cuantitativo y descripción).\n"
-            "5. Anuncios y testigos de mercado comparables reales encontrados mediante búsqueda web.\n\n"
-            "INSTRUCCIONES DE BÚSQUEDA Y GROUNDING:\n"
-            "- Realiza búsquedas precisas en Google sobre portales líderes en España (Idealista, Fotocasa, Habitaclia, Yaencontre) "
-            "para la zona, barrio, código postal y municipio indicados.\n"
-            "- Extrae los testigos más relevantes y comparables por superficie y tipología.\n\n"
-            "FORMATO DE SALIDA:\n"
-            "Debes responder EXCLUSIVAMENTE con un objeto JSON válido, sin rodeos ni explicaciones fuera del bloque JSON.\n"
+            "4. Factores explicativos de corrección (porcentaje de impacto cualitativo/cuantitativo y descripción detallada).\n"
+            "5. Referencias o fuentes de mercado (Idealista, Fotocasa) para la zona, distrito o barrio correspondiente.\n\n"
+            "CRITERIOS DE VALORACIÓN:\n"
+            "- Analiza con precisión la calle, barrio/distrito y municipio. Considera la fuerte tensión de demanda y precios en capitales dinámicas (como Málaga, Madrid, Barcelona, Valencia, Baleares).\n"
+            "- Ten en cuenta el nivel real de precios contemporáneo: por ejemplo, en barrios de alta demanda como Teatinos/Soliva en Málaga capital, el metro cuadrado en venta en fincas con ascensor en buen estado supera holgadamente los 4.000 - 5.500 €/m² (alcanzando 440.000 € - 540.000 € para tipologías familiares de 4 dormitorios y ~80-100 m²), y los alquileres residenciales para 4 dormitorios se sitúan entre 1.500 € y 1.900 €/mes.\n"
+            "- Proporciona enlaces o referencias de búsqueda reales a los portales líderes (Idealista, Fotocasa) para la zona o barrio correspondiente (ej. URLs de búsqueda de zona válidas como https://www.idealista.com/venta-viviendas/malaga/teatinos/ o https://www.fotocasa.es/es/alquiler/viviendas/malaga-capital/teatinos/l).\n\n"
+            "FORMATO DE SALIDA (EXCLUSIVAMENTE JSON):\n"
+            "Debes responder EXCLUSIVAMENTE con un objeto JSON válido, sin texto adicional fuera del bloque JSON.\n"
             "Estructura JSON esperada:\n"
             "{\n"
-            '  "sale_range": {"min": 180000, "median": 195000, "max": 210000},\n'
-            '  "rent_range": {"min": 850, "median": 920, "max": 1000},\n'
+            '  "sale_range": {"min": 420000, "median": 480000, "max": 530000},\n'
+            '  "rent_range": {"min": 1500, "median": 1650, "max": 1850},\n'
             '  "confidence": "HIGH",\n'
             '  "reasoning_factors": [\n'
-            '    {"factor_name": "Ascensor", "impact_percent": 7.5, "description": "Tercera planta con ascensor bonifica sobre la media del barrio"}\n'
+            '    {"factor_name": "Ubicación Teatinos-Universidad", "impact_percent": 15.0, "description": "Zona de máxima demanda residencial y universitaria."}\n'
             "  ],\n"
             '  "sources": [\n'
-            '    {"title": "Piso en venta en Calle...", "url": "https://www.idealista.com/...", "price": 190000, "surface_m2": 80}\n'
+            '    {"title": "Mercado Teatinos - Idealista", "url": "https://www.idealista.com/venta-viviendas/malaga/teatinos/", "price": 480000, "surface_m2": 90}\n'
             "  ],\n"
             '  "raw_notes": "Resumen conciso del mercado de la zona..."\n'
             "}\n"
@@ -141,6 +138,7 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
 
         retries = 0
         backoff = self.INITIAL_BACKOFF_SECONDS
+        attempted_without_tools = False
 
         while True:
             try:
@@ -152,6 +150,14 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
                 return self._parse_response(response)
 
             except APIError as e:
+                # Si la cuota de búsqueda de Google Search Grounding está agotada (429) o no disponible en la API key,
+                # reintentar inmediatamente sin la herramienta de búsqueda para obtener la valoración analítica de Gemini
+                if e.code == 429 and config.tools and not attempted_without_tools:
+                    config.tools = None
+                    attempted_without_tools = True
+                    retries = 0
+                    continue
+
                 is_retryable = False
                 if e.code == 429 or (e.code and e.code >= 500):
                     is_retryable = True
@@ -186,7 +192,8 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
 
         candidate = response.candidates[0]
         finish_reason = getattr(candidate, "finish_reason", None)
-        if finish_reason and str(finish_reason).upper() not in ("STOP", "FINISH_REASON_STOP", "1", "NONE"):
+        fr_str = getattr(finish_reason, "name", str(finish_reason)).upper() if finish_reason else ""
+        if finish_reason and fr_str not in ("STOP", "FINISH_REASON_STOP", "1", "NONE") and "STOP" not in fr_str:
             raise MarketValuationError(
                 f"Generación finalizada por motivo no estándar: {finish_reason}",
                 provider=self.PROVIDER_NAME,
@@ -385,16 +392,17 @@ class MockMarketValuationAdapter(MarketValuationPort):
                 )
             )
 
+        city_slug = address.city.lower().strip().replace(" ", "-") if address.city else "malaga"
         sources = [
             ValuationSource(
-                title=f"Inmueble comparable en {address.city}",
-                url="https://www.idealista.com/inmueble/mock12345",
+                title=f"Búsqueda de mercado residencial en {address.city} (Idealista)",
+                url=f"https://www.idealista.com/venta-viviendas/{city_slug}/",
                 price=sale_median,
                 surface_m2=surface_m2,
             ),
             ValuationSource(
-                title=f"Alquiler similar en {address.street}",
-                url="https://www.fotocasa.es/es/alquiler/inmueble/mock67890",
+                title=f"Búsqueda de alquileres en {address.city} (Fotocasa)",
+                url=f"https://www.fotocasa.es/es/alquiler/viviendas/{city_slug}/l",
                 price=rent_median,
                 surface_m2=surface_m2,
             ),
@@ -414,5 +422,8 @@ class MockMarketValuationAdapter(MarketValuationPort):
             confidence=ValuationConfidence.HIGH,
             reasoning_factors=factors,
             sources=sources,
-            raw_notes=f"Estimación mock calculada para {surface_m2} m2 en {address.city}.",
+            raw_notes=(
+                f"[MODO SIMULADO / MOCK] Estimación heurística calculada para {surface_m2} m² en {address.city}. "
+                "Para obtener tasaciones reales con inteligencia artificial y análisis contextual, verifique su GEMINI_API_KEY."
+            ),
         )

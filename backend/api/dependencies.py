@@ -148,12 +148,23 @@ def get_process_inbound_email_use_case(
 
 
 def get_market_valuation_port() -> MarketValuationPort:
-    """Retorna el adaptador de valoración de mercado (Gemini con Search Grounding o Mock)."""
+    """Retorna el adaptador de valoración de mercado (Gemini o Mock)."""
+    import sys
+    import logging
+    logger = logging.getLogger("backend.api.dependencies")
+
+    # En entorno de tests automatizados (pytest), usar Mock para evitar llamadas externas
+    if os.getenv("TESTING") == "1" or "pytest" in sys.modules:
+        if os.getenv("USE_REAL_VALUATION_IN_TESTS", "false").lower() not in ("true", "1", "yes"):
+            return MockMarketValuationAdapter()
+
     api_key = os.getenv("GEMINI_API_KEY")
     use_mock = os.getenv("USE_MOCK_VALUATION", "false").lower() in ("true", "1", "yes")
     if api_key and not use_mock:
         return GeminiMarketValuationAdapter(api_key=api_key)
+    logger.warning("GEMINI_API_KEY no configurada o USE_MOCK_VALUATION activa. Usando MockMarketValuationAdapter.")
     return MockMarketValuationAdapter()
+
 
 
 def get_request_property_valuation_use_case(

@@ -256,3 +256,56 @@ def test_gemini_adapter_invalid_json_response(mock_client_cls, sample_address: A
             address=sample_address,
             surface_m2=90,
         )
+
+
+@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_cls, sample_address: Address):
+    """Verifica que ante un 429 por agotamiento de cuota de búsqueda, se reintenta sin herramientas y se obtiene la valoración."""
+    mock_client = MagicMock()
+    mock_client_cls.return_value = mock_client
+
+    payload_data = {
+        "sale_range": {"min": 400000, "median": 450000, "max": 500000},
+        "rent_range": {"min": 1500, "median": 1650, "max": 1800},
+        "confidence": "HIGH",
+        "reasoning_factors": [
+            {
+                "factor_name": "Ubicación Teatinos",
+                "impact_percent": 15.0,
+                "description": "Alta demanda residencial.",
+            }
+        ],
+        "sources": [
+            {
+                "title": "Idealista Teatinos",
+                "url": "https://www.idealista.com/venta-viviendas/malaga/teatinos/",
+            }
+        ],
+        "raw_notes": "Mercado dinámico en Málaga.",
+    }
+
+    mock_response = MagicMock()
+    mock_response.text = f"```json\n{json.dumps(payload_data)}\n```"
+    mock_candidate = MagicMock()
+    mock_candidate.finish_reason = "STOP"
+    mock_candidate.grounding_metadata = None
+    mock_response.candidates = [mock_candidate]
+
+    # Primer intento con tools lanza 429, segundo intento sin tools devuelve éxito
+    api_429 = APIError(429, {"error": {"message": "Resource has been exhausted"}})
+    mock_client.models.generate_content.side_effect = [api_429, mock_response]
+
+    adapter = GeminiMarketValuationAdapter(api_key="fake-test-key")
+    result = adapter.estimate_valuation(
+        address=sample_address,
+        surface_m2=90,
+    )
+
+    assert result.confidence == ValuationConfidence.HIGH
+    assert result.sale_range.median_price.amount == Decimal("450000.00")
+    assert result.rent_range.median_price.amount == Decimal("1650.00")
+    assert mock_client.models.generate_content.call_count == 2
+    # Comprobar que en el segundo intento no se pasaron herramientas
+    second_call_kwargs = mock_client.models.generate_content.call_args_list[1].kwargs
+    assert second_call_kwargs["config"].tools is None
+
