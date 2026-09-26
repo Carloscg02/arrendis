@@ -5,6 +5,10 @@ import App from './App';
 import './index.css';
 import { ToastProvider } from './components/Toast';
 import { AuthProvider } from './components/AuthProvider';
+import { registerSW } from 'virtual:pwa-register';
+
+// Registrar PWA Service Worker (autoUpdate)
+registerSW({ immediate: true });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
