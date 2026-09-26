@@ -87,7 +87,17 @@ export default function MarketValuationPanel({
         toast.success("Estimación de mercado completada con éxito.");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Fallo en la estimación de mercado";
+      let msg = err instanceof Error ? err.message : "Fallo en la estimación de mercado";
+      if (
+        msg.toLowerCase().includes("límites") ||
+        msg.toLowerCase().includes("proveedor de valoración") ||
+        msg.toLowerCase().includes("rate limit") ||
+        msg.toLowerCase().includes("429") ||
+        msg.toLowerCase().includes("502") ||
+        msg.toLowerCase().includes("503")
+      ) {
+        msg = "Los límites de uso de IA de la web no están disponibles temporalmente. Por favor, inténtalo más tarde.";
+      }
       setError(msg);
       toast.error(msg);
     } finally {

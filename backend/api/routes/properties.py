@@ -545,9 +545,16 @@ def request_property_valuation(
         headers = {}
         if e.retry_after_seconds:
             headers["Retry-After"] = str(e.retry_after_seconds)
-        raise HTTPException(status_code=429, detail=str(e), headers=headers)
+        raise HTTPException(
+            status_code=429,
+            detail="Los límites de uso de IA de la web no están disponibles temporalmente. Por favor, inténtalo más tarde.",
+            headers=headers,
+        )
     except MarketValuationError as e:
-        raise HTTPException(status_code=502, detail=f"Error en proveedor de valoración: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail="Error en proveedor de valoración: Los límites de uso de IA de la web no están disponibles temporalmente. Por favor, inténtalo más tarde.",
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno inesperado: {e}")
 

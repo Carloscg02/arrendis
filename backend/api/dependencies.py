@@ -158,12 +158,21 @@ def get_market_valuation_port() -> MarketValuationPort:
         if os.getenv("USE_REAL_VALUATION_IN_TESTS", "false").lower() not in ("true", "1", "yes"):
             return MockMarketValuationAdapter()
 
-    api_key = os.getenv("GEMINI_API_KEY")
     use_mock = os.getenv("USE_MOCK_VALUATION", "false").lower() in ("true", "1", "yes")
-    if api_key and not use_mock:
-        return GeminiMarketValuationAdapter(api_key=api_key)
-    logger.warning("GEMINI_API_KEY no configurada o USE_MOCK_VALUATION activa. Usando MockMarketValuationAdapter.")
-    return MockMarketValuationAdapter()
+    if use_mock:
+        logger.warning("USE_MOCK_VALUATION activa. Usando MockMarketValuationAdapter para desarrollo simulado.")
+        return MockMarketValuationAdapter()
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key and api_key.strip():
+        return GeminiMarketValuationAdapter(api_key=api_key.strip())
+
+    class UnconfiguredValuationAdapter(MarketValuationPort):
+        def estimate_valuation(self, *args, **kwargs):
+            raise ValuationRateLimitError(provider="gemini")
+
+    logger.warning("GEMINI_API_KEY no configurada. Las valoraciones devolverán error de servicio no disponible.")
+    return UnconfiguredValuationAdapter()
 
 
 
