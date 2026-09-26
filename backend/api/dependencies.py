@@ -6,6 +6,7 @@ Proveen los repositorios concretos (SQLite) a los endpoints via Depends().
 
 from __future__ import annotations
 
+import os
 from fastapi import Depends, Request, Header, HTTPException
 from backend.domain.entities import User
 
@@ -21,8 +22,9 @@ from backend.adapters.sqlite_adapter import (
     SQLiteFiscalCarryforwardRepository,
     SQLitePropertyValuationRepository,
 )
-from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort
+from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort, MarketValuationPort
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
+from backend.adapters.gemini_valuation_adapter import GeminiMarketValuationAdapter, MockMarketValuationAdapter
 
 
 def get_db(request: Request) -> SQLiteConnection:
@@ -143,4 +145,13 @@ def get_process_inbound_email_use_case(
         user_repo=user_repo,
         single_invoice_use_case=single_use_case,
     )
+
+
+def get_market_valuation_port() -> MarketValuationPort:
+    """Retorna el adaptador de valoración de mercado (Gemini con Search Grounding o Mock)."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    use_mock = os.getenv("USE_MOCK_VALUATION", "false").lower() in ("true", "1", "yes")
+    if api_key and not use_mock:
+        return GeminiMarketValuationAdapter(api_key=api_key)
+    return MockMarketValuationAdapter()
 

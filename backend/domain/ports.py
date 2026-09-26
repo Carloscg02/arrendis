@@ -19,8 +19,17 @@ from backend.domain.entities import (
     FiscalCarryforward,
     PropertyCondition,
     PropertyValuation,
+    PropertyType,
 )
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, LLMResponse
+from backend.domain.value_objects import (
+    CadastralBreakdown,
+    AcquisitionCost,
+    FiscalReport,
+    LLMRequest,
+    LLMResponse,
+    Address,
+    MarketValuationResult,
+)
 
 
 class PropertyRepository(ABC):
@@ -323,6 +332,44 @@ class PropertyValuationRepository(ABC):
     @abstractmethod
     def list_by_property_id(self, property_id: str) -> list[PropertyValuation]:
         """Recupera el histórico completo de valoraciones de una propiedad ordenadas por fecha descendente."""
+        ...
+
+
+class MarketValuationPort(ABC):
+    """Puerto de salida agnóstico para la estimación de valor de venta y alquiler de inmuebles."""
+
+    @abstractmethod
+    def estimate_valuation(
+        self,
+        address: Address,
+        surface_m2: int,
+        property_type: PropertyType = PropertyType.APARTMENT,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        floor: int | None = None,
+        has_elevator: bool | None = None,
+        condition: PropertyCondition | None = None,
+    ) -> MarketValuationResult:
+        """Estima el valor de mercado de compraventa y alquiler mensual.
+
+        Args:
+            address: Dirección física completa (calle, número, código postal, ciudad).
+            surface_m2: Superficie construida en metros cuadrados (> 0).
+            property_type: Tipología del inmueble (piso, unifamiliar, local, garaje).
+            bedrooms: Número de dormitorios (None o >= 0, ej: 0 para estudios).
+            bathrooms: Número de cuartos de baño (None o >= 0).
+            floor: Planta (opcional, None si unifamiliar o desconocido).
+            has_elevator: Presencia de ascensor (opcional).
+            condition: Estado de conservación (opcional).
+
+        Returns:
+            MarketValuationResult con los rangos calculados, testigos y factores explicativos.
+
+        Raises:
+            ValuationRateLimitError: Si se agotan los reintentos por límite de cuota (429).
+            MarketValuationError: Si ocurre un error en la llamada o en la validación estructurada.
+            ValueError: Si los parámetros físicos de entrada son inválidos (ej. surface_m2 <= 0).
+        """
         ...
 
 

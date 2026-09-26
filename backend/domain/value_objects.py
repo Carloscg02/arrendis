@@ -7,10 +7,10 @@ No tienen identidad propia — dos Money(100, "EUR") son intercambiables.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from datetime import date
-from backend.domain.entities import UtilityType, ExtractionConfidence
+from backend.domain.entities import UtilityType, ExtractionConfidence, ValuationConfidence
 
 
 @dataclass(frozen=True)
@@ -410,4 +410,22 @@ class ValuationSource:
             raise ValueError("El título de la fuente no puede estar vacío.")
         if not self.url or not self.url.strip() or not (self.url.startswith("http://") or self.url.startswith("https://")):
             raise ValueError("La URL de la fuente debe comenzar por http:// o https://.")
+
+
+@dataclass(frozen=True)
+class MarketValuationResult:
+    """Resultado bruto devuelto por el puerto de estimación de mercado."""
+    sale_range: ValuationRange
+    rent_range: ValuationRange
+    confidence: ValuationConfidence
+    reasoning_factors: list[ReasoningFactor] = field(default_factory=list)
+    sources: list[ValuationSource] = field(default_factory=list)
+    raw_notes: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.sale_range.min_price.currency != self.rent_range.min_price.currency:
+            raise ValueError("Las divisas de los rangos de venta y alquiler deben coincidir.")
+        if self.confidence in (ValuationConfidence.LOW, ValuationConfidence.MEDIUM):
+            if not self.reasoning_factors and not (self.raw_notes and self.raw_notes.strip()):
+                raise ValueError("Se requiere al menos un factor o nota explicativa para confianza LOW o MEDIUM.")
 
