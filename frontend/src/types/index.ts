@@ -7,6 +7,9 @@ export interface Address {
   country: string;
 }
 
+export type PropertyCondition = 'a_reformar' | 'buen_estado' | 'reformado' | 'a_estrenar';
+export type ValuationConfidence = 'high' | 'medium' | 'low';
+
 export interface Property {
   id: string;
   name: string;
@@ -18,6 +21,45 @@ export interface Property {
   cups_electricity?: string | null;
   cups_gas?: string | null;
   cups_water?: string | null;
+  surface_m2?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floor?: number | null;
+  has_elevator?: boolean | null;
+  condition?: PropertyCondition | null;
+}
+
+export interface ValuationRange {
+  min: number;
+  median: number;
+  max: number;
+  currency: string;
+}
+
+export interface ReasoningFactor {
+  factor_name: string;
+  impact_percent: number;
+  description: string;
+}
+
+export interface ValuationSource {
+  title: string;
+  url: string;
+  price?: number | null;
+  surface_m2?: number | null;
+  date_found?: string | null;
+}
+
+export interface PropertyValuation {
+  id: string;
+  property_id: string;
+  valuation_date: string;
+  sale_range: ValuationRange;
+  rent_range: ValuationRange;
+  confidence: ValuationConfidence;
+  reasoning_factors: ReasoningFactor[];
+  sources: ValuationSource[];
+  raw_notes?: string | null;
 }
 
 export interface Income {
@@ -85,6 +127,21 @@ export interface PropertyCreateInput {
   name: string;
   address: Address;
   property_type: string;
+  surface_m2?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floor?: number | null;
+  has_elevator?: boolean | null;
+  condition?: PropertyCondition | null;
+}
+
+export interface PhysicalAttributesUpdateInput {
+  surface_m2?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floor?: number | null;
+  has_elevator?: boolean | null;
+  condition?: PropertyCondition | null;
 }
 
 export interface IncomeCreateInput {

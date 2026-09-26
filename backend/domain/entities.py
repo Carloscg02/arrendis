@@ -46,6 +46,21 @@ class PropertyType(Enum):
     LAND = "land"
 
 
+class PropertyCondition(Enum):
+    """Estado de conservación de un inmueble."""
+    A_REFORMAR = "a_reformar"
+    BUEN_ESTADO = "buen_estado"
+    REFORMADO = "reformado"
+    A_ESTRENAR = "a_estrenar"
+
+
+class ValuationConfidence(Enum):
+    """Nivel de confianza de la estimación de mercado."""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class PropertyStatus(Enum):
     """Estado actual de una propiedad."""
     AVAILABLE = "available"
@@ -108,6 +123,9 @@ from backend.domain.value_objects import (
     CadastralBreakdown,
     AcquisitionCost,
     UtilityInvoiceData,
+    ValuationRange,
+    ReasoningFactor,
+    ValuationSource,
 )
 
 
@@ -135,6 +153,12 @@ class Property:
     cups_electricity: str | None = None
     cups_gas: str | None = None
     cups_water: str | None = None
+    surface_m2: int | None = None
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    floor: int | None = None
+    has_elevator: bool | None = None
+    condition: PropertyCondition | None = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     def __post_init__(self) -> None:
@@ -165,6 +189,14 @@ class Property:
                     raise ValueError(
                         f"{label} no tiene formato CUPS válido ('{value}'). Debe comenzar por 'ES' seguido de 16 a 18 dígitos y 2 a 4 caracteres de control (ejemplo: ES0031103721971011PR0F)."
                     )
+
+        # Validaciones F-29: Atributos físicos
+        if self.surface_m2 is not None and self.surface_m2 <= 0:
+            raise ValueError("La superficie en m² debe ser estrictamente positiva (> 0).")
+        if self.bedrooms is not None and self.bedrooms < 0:
+            raise ValueError("El número de habitaciones no puede ser negativo.")
+        if self.bathrooms is not None and self.bathrooms < 0:
+            raise ValueError("El número de baños no puede ser negativo.")
 
     @property
     def has_fiscal_data(self) -> bool:
@@ -472,6 +504,43 @@ class InboundEmailProcessResult:
     error_count: int
     items: list[InboundInvoiceItemResult]
     message: str = ""
+
+
+# ──────────────────────────────────────────────
+# Entidades F-29: Estimación de Mercado
+# ──────────────────────────────────────────────
+
+@dataclass
+class PropertyValuation:
+    """Informe de valoración de mercado para venta y alquiler de una propiedad.
+
+    Identidad basada en el campo `id` (UUID4).
+    """
+
+    property_id: str
+    valuation_date: date
+    sale_range: ValuationRange
+    rent_range: ValuationRange
+    confidence: ValuationConfidence
+    reasoning_factors: list[ReasoningFactor] = field(default_factory=list)
+    sources: list[ValuationSource] = field(default_factory=list)
+    raw_notes: str | None = None
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+
+    def __post_init__(self) -> None:
+        if not self.property_id or not self.property_id.strip():
+            raise ValueError("El property_id no puede estar vacío.")
+        if self.sale_range.min_price.currency != self.rent_range.min_price.currency:
+            raise ValueError("Las divisas de los rangos de venta y alquiler deben coincidir.")
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PropertyValuation):
+            return NotImplemented
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
 
 
 

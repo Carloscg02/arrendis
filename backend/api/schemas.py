@@ -9,13 +9,27 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from enum import Enum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 # ──────────────────────────────────────────────
 # Property Schemas
 # ──────────────────────────────────────────────
+
+class PropertyConditionEnum(str, Enum):
+    A_REFORMAR = "a_reformar"
+    BUEN_ESTADO = "buen_estado"
+    REFORMADO = "reformado"
+    A_ESTRENAR = "a_estrenar"
+
+
+class ValuationConfidenceEnum(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
 
 class AddressSchema(BaseModel):
     """Representación JSON de una dirección."""
@@ -32,6 +46,23 @@ class PropertyCreate(BaseModel):
     name: str
     address: AddressSchema
     property_type: str  # Valor del enum: "apartment", "house", etc.
+    surface_m2: int | None = Field(default=None, gt=0)
+    bedrooms: int | None = Field(default=None, ge=0)
+    bathrooms: int | None = Field(default=None, ge=0)
+    floor: int | None = None
+    has_elevator: bool | None = None
+    condition: PropertyConditionEnum | None = None
+
+
+class PhysicalAttributesUpdate(BaseModel):
+    """Request body para actualizar los atributos físicos de una propiedad."""
+
+    surface_m2: int | None = Field(default=None, gt=0)
+    bedrooms: int | None = Field(default=None, ge=0)
+    bathrooms: int | None = Field(default=None, ge=0)
+    floor: int | None = None
+    has_elevator: bool | None = None
+    condition: PropertyConditionEnum | None = None
 
 
 class PropertyResponse(BaseModel):
@@ -47,6 +78,49 @@ class PropertyResponse(BaseModel):
     cups_electricity: str | None = None
     cups_gas: str | None = None
     cups_water: str | None = None
+    surface_m2: int | None = None
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    floor: int | None = None
+    has_elevator: bool | None = None
+    condition: str | None = None
+
+
+# ──────────────────────────────────────────────
+# Valuation Schemas (F-29)
+# ──────────────────────────────────────────────
+
+class ValuationRangeDTO(BaseModel):
+    min: float
+    median: float
+    max: float
+    currency: str = "EUR"
+
+
+class ReasoningFactorDTO(BaseModel):
+    factor_name: str
+    impact_percent: float
+    description: str
+
+
+class ValuationSourceDTO(BaseModel):
+    title: str
+    url: str
+    price: float | None = None
+    surface_m2: int | None = None
+    date_found: str | None = None
+
+
+class PropertyValuationResponse(BaseModel):
+    id: str
+    property_id: str
+    valuation_date: str
+    sale_range: ValuationRangeDTO
+    rent_range: ValuationRangeDTO
+    confidence: ValuationConfidenceEnum
+    reasoning_factors: list[ReasoningFactorDTO] = []
+    sources: list[ValuationSourceDTO] = []
+    raw_notes: str | None = None
 
 
 # ──────────────────────────────────────────────
