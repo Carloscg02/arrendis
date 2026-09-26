@@ -542,5 +542,22 @@ class PropertyValuation:
         return hash(self.id)
 
 
+class MarketValuationError(Exception):
+    """Error base de dominio para fallos en la estimación de mercado."""
+    def __init__(self, message: str, provider: str = "unknown") -> None:
+        self.provider = provider
+        super().__init__(f"[{provider}] {message}")
+
+
+class ValuationRateLimitError(MarketValuationError):
+    """Exceso de cuota o rate limit alcanzado en el servicio de valoración."""
+    def __init__(self, provider: str = "unknown", retry_after_seconds: int | None = None) -> None:
+        self.retry_after_seconds = retry_after_seconds
+        msg = "Límite de tasa excedido en el servicio de valoración"
+        if retry_after_seconds:
+            msg += f" (reintentar tras {retry_after_seconds}s)"
+        super().__init__(msg, provider=provider)
+
+
 
 
