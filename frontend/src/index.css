@@ -2584,3 +2584,266 @@ input:focus, select:focus, textarea:focus {
   .property-card-image { width: 100%; height: 180px; border-right: none; border-bottom: 1px solid var(--panel-border); }
   .page-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* ==========================================================================
+   PWA Installation Banner & iOS Guide Modal (E-05 F-36)
+   ========================================================================== */
+.pwa-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  background: rgba(249, 247, 245, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--panel-border);
+  box-shadow: 0 -4px 20px rgba(28, 25, 23, 0.06);
+  padding: 0.85rem max(1rem, var(--safe-right)) max(0.85rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+  animation: pwa-slide-up 0.25s var(--ease-out);
+}
+
+@keyframes pwa-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pwa-banner__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pwa-banner__info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.pwa-banner__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-burgundy-subtle);
+  border: 1px solid var(--brand-burgundy-border);
+  color: var(--brand-burgundy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pwa-banner__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pwa-banner__title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.pwa-banner__desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.pwa-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pwa-banner__dismiss-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
+  transition: color var(--transition-fast);
+}
+
+.pwa-banner__dismiss-btn:hover {
+  color: var(--text-primary);
+}
+
+.pwa-banner__install-btn {
+  font-size: 0.82rem;
+  padding: 0.45rem 1rem;
+  background-color: var(--brand-burgundy);
+  border-color: var(--brand-burgundy);
+  color: #ffffff;
+}
+
+.pwa-banner__install-btn:hover {
+  background-color: var(--brand-burgundy-hover);
+}
+
+.pwa-banner__close-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-banner__close-icon:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+/* Modal iOS Guide */
+.pwa-ios-modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-modal);
+  padding: 1.75rem;
+  position: relative;
+  z-index: 61;
+  animation: modal-appear 0.2s var(--ease-out);
+}
+
+.pwa-ios-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--panel-border-subtle);
+}
+
+.pwa-ios-modal__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pwa-ios-modal__icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-burgundy-subtle);
+  border: 1px solid var(--brand-burgundy-border);
+  color: var(--brand-burgundy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-ios-modal__title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pwa-ios-modal__close-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pwa-ios-modal__close-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--panel-border-hover);
+}
+
+.pwa-ios-modal__subtitle {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.25rem;
+  line-height: 1.45;
+}
+
+.pwa-ios-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.pwa-ios-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--panel-border-subtle);
+  border-radius: var(--radius-xs);
+}
+
+.pwa-ios-step__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-secondary);
+  border: 1px solid var(--panel-border);
+  color: var(--brand-burgundy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pwa-ios-step__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pwa-ios-step__content strong {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.pwa-ios-step__content span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.pwa-ios-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+}
+
+.pwa-ios-modal__confirm-btn {
+  width: 100%;
+}
+

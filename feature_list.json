@@ -68,7 +68,7 @@
     { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" },
     { "id": "F-34", "epic": "E-05", "title": "Optimización Táctil Mobile-First y Viewport Seguro (CSS anti-clunkiness, safe areas y touch targets)", "status": "done" },
     { "id": "F-35", "epic": "E-05", "title": "Manifiesto PWA, Service Worker con Vite y Pantalla de Carga (Standalone + Splash Screen)", "status": "done" },
-    { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "backlog" },
+    { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "done" },
     { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "backlog" }
   ]
 }
