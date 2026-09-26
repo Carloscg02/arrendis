@@ -12,6 +12,12 @@
       "title": "Automatización de Gastos de Suministros vía Email",
       "status": "in_discovery",
       "spec": "specs/epics/E-02-suministros/vision_y_dominio.md"
+    },
+    {
+      "id": "E-03",
+      "title": "Estimación de Mercado y Orientación de Renta por IA",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-03-valoracion-mercado/vision_y_dominio.md"
     }
   ],
   "features": [
@@ -42,6 +48,11 @@
     { "id": "F-25", "title": "Entorno de Pre-producción (Staging) Aislado y Dual Branch Workflow (Cloudflare + Oracle VM)", "status": "backlog" },
     { "id": "F-26", "epic": "E-01", "title": "Retirada de 'Clasificación Fiscal Inteligente' de la UI y Limpieza de Deuda Técnica", "status": "done" },
     { "id": "F-27", "epic": "E-02", "title": "Guía Interactiva Paso a Paso con Capturas Reales para Automatización de Reglas en Gmail", "status": "done" },
-    { "id": "F-28", "title": "Onboarding Guiado & Estimador Fiscal Interactivo Multiplataforma (First-Time User Experience)", "status": "done" }
+    { "id": "F-28", "title": "Onboarding Guiado & Estimador Fiscal Interactivo Multiplataforma (First-Time User Experience)", "status": "done" },
+    { "id": "F-29", "epic": "E-03", "title": "Atributos Físicos de Propiedad y Entidades de Dominio de Valoración", "status": "backlog" },
+    { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "backlog" },
+    { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "backlog" },
+    { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "backlog" },
+    { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" }
   ]
 }

@@ -12,17 +12,15 @@
 
 ---
 
-## Aspectos técnicos destacados
-
-Este proyecto no es un CRUD convencional ni un prototipo impulsado por peticiones descontroladas a una IA. Ha sido diseñado y desplegado como un sistema en producción real con foco en **ingeniería de software sólida, rigor fiscal y coste operativo cero**:
+## Resumen técnico
 
 * **Arquitectura Hexagonal y DDD estricto**: Dominio en Python puro sin dependencias de frameworks externos, con puertos tipados y adaptadores intercambiables.
-* **Spec-Driven Development (SDD)**: Metodología donde el desarrollador actúa como arquitecto orquestador y la IA como motor de ejecución guiado por especificaciones formales (`specs/`) y puertas de aprobación de diseño antes de escribir código.
+* **Spec-Driven Development (SDD)**: Metodología donde el desarrollador actúa como arquitecto orquestador y la IA como motor de ejecución guiado por especificaciones formales (`specs/`), puertas de aprobación de diseño antes de escribir código y distribución de la implementación del spec entre subagentes implementadores y revisores.
 * **Autenticación Shielded JWT**: Sistema híbrido de doble token (Access Token en memoria de React y Refresh Token en cookie HttpOnly) para mitigar vectores XSS y CSRF, con aislamiento multi-tenant estricto.
 * **Procesamiento Inteligente de Facturas (Edge + LLM)**: Ingesta serverless por correo (`facturas@arrendis.com`), anonimización de datos personales con `PrivacyScrubber` (RGPD) y extracción híbrida: Regex de alta velocidad (<2 ms) con fallback a Google Gemini Flash.
-* **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española (amortización del 3% construcción/adquisición, arrastre de excesos de financiación y reparación a 4 años, prorrateo por días de ocupación y reducciones de la Ley de Vivienda).
-* **Infraestructura Cloud Real (0 €/mes)**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en Docker) con SQLite en modo WAL y hot-backups automatizados.
-* **Calidad y Verificación**: Suite de más de **350 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
+* **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española utilizando todas las casillas oficiales de hacienda con generación de informe en PDF.
+* **Infraestructura Cloud Real**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en Docker) con SQLite en modo WAL y hot-backups automatizados.
+* **Testing y CICD**: Suite de más de **350 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
 
 ---
 
