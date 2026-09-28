@@ -1679,7 +1679,7 @@ td,
   color: var(--text-muted);
 }
 
-input, select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   width: 100%;
   padding: 0.75rem 0.9rem;
   background: var(--bg-secondary);
@@ -1689,6 +1689,51 @@ input, select, textarea {
   font-family: var(--font-sans);
   font-size: 0.92rem;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  accent-color: var(--brand-burgundy, #6b0008);
+  cursor: pointer;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.form-checkbox-group {
+  margin-top: 0.65rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-checkbox-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.55rem !important;
+  cursor: pointer !important;
+  margin-bottom: 0 !important;
+  text-transform: none !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+  letter-spacing: normal !important;
+  line-height: 1 !important;
+  user-select: none;
+}
+
+.form-checkbox-label input[type="checkbox"] {
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: var(--brand-burgundy, #6b0008);
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
 }
 
 input:focus, select:focus, textarea:focus {
