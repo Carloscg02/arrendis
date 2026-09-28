@@ -354,6 +354,12 @@ export interface OnboardingBootstrapRequest {
   purchase_price?: number | null;
   acquisition_year?: number | null;
   construction_ratio?: number;
+  surface_m2?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  floor?: number | null;
+  has_elevator?: boolean | null;
+  condition?: string | null;
   monthly_rent?: number | null;
   cups_electricity?: string | null;
   cups_gas?: string | null;

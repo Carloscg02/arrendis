@@ -316,6 +316,7 @@ export default function PropertyDetail() {
           propertyName={property.name}
           onUploadPdf={() => setIsUploadModalOpen(true)}
           onViewFiscal={() => setActiveTab("fiscal")}
+          onViewValuation={() => setActiveTab("valuation")}
           onDismiss={() => {
             setShowWelcomeBanner(false);
             searchParams.delete("welcome");

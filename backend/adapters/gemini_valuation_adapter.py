@@ -91,30 +91,32 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
 
         system_instruction = (
             "Eres un tasador y analista inmobiliario senior experto en el mercado inmobiliario de España.\n"
-            "Tu objetivo es estimar con el mayor rigor, objetividad y actualidad posible (conforme al mercado de 2024-2026):\n"
+            "Tu objetivo es estimar con el mayor rigor, objetividad y actualidad posible (conforme al mercado de 2025-2026):\n"
             "1. La horquilla de precio de venta en EUR (min, median, max).\n"
             "2. La horquilla de renta mensual de alquiler en EUR (min, median, max).\n"
             "3. El nivel de confianza del análisis ('HIGH', 'MEDIUM', 'LOW').\n"
             "4. Factores explicativos de corrección (porcentaje de impacto cualitativo/cuantitativo y descripción detallada).\n"
-            "5. Referencias o fuentes de mercado (Idealista, Fotocasa) para la zona, distrito o barrio correspondiente.\n\n"
-            "CRITERIOS DE VALORACIÓN:\n"
-            "- Analiza con precisión la calle, barrio/distrito y municipio. Considera la fuerte tensión de demanda y precios en capitales dinámicas (como Málaga, Madrid, Barcelona, Valencia, Baleares).\n"
-            "- Ten en cuenta el nivel real de precios contemporáneo: por ejemplo, en barrios de alta demanda como Teatinos/Soliva en Málaga capital, el metro cuadrado en venta en fincas con ascensor en buen estado supera holgadamente los 4.000 - 5.500 €/m² (alcanzando 440.000 € - 540.000 € para tipologías familiares de 4 dormitorios y ~80-100 m²), y los alquileres residenciales para 4 dormitorios se sitúan entre 1.500 € y 1.900 €/mes.\n"
-            "- Proporciona enlaces o referencias de búsqueda reales a los portales líderes (Idealista, Fotocasa) para la zona o barrio correspondiente (ej. URLs de búsqueda de zona válidas como https://www.idealista.com/venta-viviendas/malaga/teatinos/ o https://www.fotocasa.es/es/alquiler/viviendas/malaga-capital/teatinos/l).\n\n"
+            "5. Referencias o fuentes de mercado (Idealista, Fotocasa) para la zona, distrito o micro-barrio correspondiente.\n\n"
+            "CRITERIOS DE VALORACIÓN CRÍTICOS:\n"
+            "- MICRO-LOCALIZACIÓN OBLIGATORIA: Identifica siempre el MICRO-BARRIO o subzona específica a partir del nombre de la calle y el código postal (ej. en Málaga, la calle Salvador Espada Leal en CP 29002 pertenece al barrio de HUELIN, junto al paseo marítimo y Tomás Echeverría; NO debe tasarse con la media del macro-distrito 'Carretera de Cádiz'; en Madrid, determina si es Malasaña, Salamanca, Pacífico, etc.).\n"
+            "- NUNCA USAR MEDIAS AGREGADAS DE MACRO-DISTRITOS SI EXISTE DISPERSIÓN: En distritos amplios y heterogéneos (ej. Carretera de Cádiz, Cruz de Humilladero, Fuencarral, Carabanchel), los precios por m² varían drásticamente entre barrios contiguos (ej. Huelin o Pacífico rondan los 4.000 - 4.400 €/m², mientras que barrios interiores como La Luz o San Andrés bajan a 2.300 €/m²). Usar la media genérica del distrito infravalora o sobrevalora gravemente el inmueble.\n"
+            "- BÚSQUEDA HIPERLOCAL Y FILTRADA: Al usar Google Search, realiza consultas combinando la calle exacta, el micro-barrio identificado, el número de dormitorios y la superficie (ej. 'pisos 3 dormitorios Salvador Espada Leal Huelin Málaga', 'precio m2 Huelin Málaga venta 2025 2026', 'alquiler 3 dormitorios Huelin').\n"
+            "- FUENTES Y ENLACES REPRESENTATIVOS: En el campo 'sources', proporciona URLs acotadas al micro-barrio específico en Idealista y Fotocasa (ej. 'https://www.idealista.com/venta-viviendas/malaga/carretera-de-cadiz/huelin/' o con filtros de dormitorios/precio si procede). NUNCA proporciones únicamente la URL de macro-distrito genérico si existe la sub-ruta del micro-barrio.\n"
+            "- PONDERACIÓN DE DORMITORIOS Y ESTADO: Pondera adecuadamente el número de dormitorios, planta y ascensor. Por ejemplo, 3 o 4 dormitorios en zonas familiares o de alta demanda tienen una prima de liquidez y absorción tanto en venta como en alquiler residencial.\n\n"
             "FORMATO DE SALIDA (EXCLUSIVAMENTE JSON):\n"
             "Debes responder EXCLUSIVAMENTE con un objeto JSON válido, sin texto adicional fuera del bloque JSON.\n"
             "Estructura JSON esperada:\n"
             "{\n"
-            '  "sale_range": {"min": 420000, "median": 480000, "max": 530000},\n'
-            '  "rent_range": {"min": 1500, "median": 1650, "max": 1850},\n'
+            '  "sale_range": {"min": 315000, "median": 345000, "max": 380000},\n'
+            '  "rent_range": {"min": 1250, "median": 1400, "max": 1600},\n'
             '  "confidence": "HIGH",\n'
             '  "reasoning_factors": [\n'
-            '    {"factor_name": "Ubicación Teatinos-Universidad", "impact_percent": 15.0, "description": "Zona de máxima demanda residencial y universitaria."}\n'
+            '    {"factor_name": "Micro-ubicación Huelin", "impact_percent": 20.0, "description": "Ubicación en barrio cotizado junto al paseo marítimo con precios significativamente superiores a la media del macro-distrito."}\n'
             "  ],\n"
             '  "sources": [\n'
-            '    {"title": "Mercado Teatinos - Idealista", "url": "https://www.idealista.com/venta-viviendas/malaga/teatinos/", "price": 480000, "surface_m2": 90}\n'
+            '    {"title": "Venta viviendas en Huelin, Málaga - Idealista", "url": "https://www.idealista.com/venta-viviendas/malaga/carretera-de-cadiz/huelin/", "price": 345000, "surface_m2": 80}\n'
             "  ],\n"
-            '  "raw_notes": "Resumen conciso del mercado de la zona..."\n'
+            '  "raw_notes": "Análisis específico del micro-barrio..."\n'
             "}\n"
         )
 
@@ -127,7 +129,11 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
             f"- Baños: {bathrooms if bathrooms is not None else 'No especificado'}\n"
             f"- Planta: {floor if floor is not None else 'No especificada'}\n"
             f"- Ascensor: {'Sí' if has_elevator is True else ('No' if has_elevator is False else 'Desconocido')}\n"
-            f"- Estado de conservación: {condition.value if condition else 'No especificado'}\n"
+            f"- Estado de conservación: {condition.value if condition else 'No especificado'}\n\n"
+            "Instrucciones específicas:\n"
+            "1. Determina el micro-barrio exacto o zona de influencia de la dirección indicada.\n"
+            "2. Busca precios reales y comparables para esa tipología, dormitorios y micro-barrio en 2025-2026.\n"
+            "3. En las fuentes, incluye enlaces al micro-barrio específico en Idealista o Fotocasa."
         )
 
         config = types.GenerateContentConfig(

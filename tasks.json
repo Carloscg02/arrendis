@@ -7,6 +7,13 @@
       "title": "Define Domain Entities and Value Objects",
       "status": "pending",
       "assigned_agent": "spec_author"
+    },
+    {
+      "id": "T-02",
+      "title": "Desacoplar API keys de Gemini: Free Tier para Facturas vs Pay-As-You-Go para Valoración",
+      "status": "backlog",
+      "assigned_agent": "backend_dev",
+      "documentation": "docs/separacion_api_keys_facturas_valoracion.md"
     }
   ]
 }
