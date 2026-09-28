@@ -70,6 +70,14 @@ export default function PropertyDetail() {
   const [profit, setProfit] = useState<ProfitReport | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectTabWithScroll = (tab: "dashboard" | "fiscal" | "contracts" | "valuation") => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      tabsContainerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  };
 
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -315,8 +323,8 @@ export default function PropertyDetail() {
         <WelcomeOnboardingBanner
           propertyName={property.name}
           onUploadPdf={() => setIsUploadModalOpen(true)}
-          onViewFiscal={() => setActiveTab("fiscal")}
-          onViewValuation={() => setActiveTab("valuation")}
+          onViewFiscal={() => handleSelectTabWithScroll("fiscal")}
+          onViewValuation={() => handleSelectTabWithScroll("valuation")}
           onDismiss={() => {
             setShowWelcomeBanner(false);
             searchParams.delete("welcome");
@@ -422,7 +430,7 @@ export default function PropertyDetail() {
           {kpiCards}
         </div>
 
-        <div className="tabs-container">
+        <div ref={tabsContainerRef} className="tabs-container">
           <button 
             className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
             onClick={() => setActiveTab("dashboard")}
