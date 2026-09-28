@@ -109,8 +109,15 @@ export default function PropertyForm({ onSubmit, onCancel }: Props) {
         </select>
       </div>
 
-      <div className="border-t border-[#e8e4de] pt-4 mt-4">
-        <p className="text-xs uppercase tracking-wider text-[#8c827a] font-mono mb-3">
+      <div style={{ borderTop: "1px solid var(--panel-border, #e8e4de)", paddingTop: "1rem", marginTop: "1.25rem" }}>
+        <p style={{
+          fontSize: "0.72rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: "var(--text-muted, #8c827a)",
+          fontFamily: "var(--font-mono)",
+          margin: "0 0 0.75rem 0",
+        }}>
           Características Físicas (Opcional — para valoración de mercado)
         </p>
         <div className="form-row">
@@ -171,15 +178,39 @@ export default function PropertyForm({ onSubmit, onCancel }: Props) {
           </div>
         </div>
 
-        <div className="form-group mt-2">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="form-checkbox-group" style={{ marginTop: "0.85rem", marginBottom: "0.25rem" }}>
+          <label
+            className="form-checkbox-label"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.55rem",
+              cursor: "pointer",
+              marginBottom: 0,
+              textTransform: "none",
+              fontFamily: "var(--font-sans)",
+              fontSize: "0.88rem",
+              fontWeight: 500,
+              color: "var(--text-primary, #2c2623)",
+              letterSpacing: "normal",
+              userSelect: "none",
+            }}
+          >
             <input
               type="checkbox"
               checked={hasElevator}
               onChange={(e) => setHasElevator(e.target.checked)}
-              className="accent-[#6b0008]"
+              style={{
+                width: "1.15rem",
+                height: "1.15rem",
+                margin: 0,
+                padding: 0,
+                accentColor: "var(--brand-burgundy, #6b0008)",
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
             />
-            <span className="text-sm font-sans text-[#2c2623]">Dispone de ascensor</span>
+            <span>Dispone de ascensor</span>
           </label>
         </div>
       </div>
