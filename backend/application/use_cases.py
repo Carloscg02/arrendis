@@ -1230,6 +1230,12 @@ class BootstrapOnboardingUseCase:
         cups_electricity: str | None = None,
         cups_gas: str | None = None,
         cups_water: str | None = None,
+        surface_m2: int | None = None,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        floor: int | None = None,
+        has_elevator: bool | None = None,
+        condition: str | None = None,
     ) -> Property:
         # 1. Crear propiedad
         address = Address(
@@ -1238,6 +1244,13 @@ class BootstrapOnboardingUseCase:
             postal_code=postal_code,
             country=country,
         )
+        prop_condition = None
+        if condition:
+            try:
+                prop_condition = PropertyCondition(condition)
+            except ValueError:
+                prop_condition = None
+
         prop = Property(
             name=property_name,
             address=address,
@@ -1247,6 +1260,12 @@ class BootstrapOnboardingUseCase:
             cups_electricity=cups_electricity,
             cups_gas=cups_gas,
             cups_water=cups_water,
+            surface_m2=surface_m2,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            floor=floor,
+            has_elevator=has_elevator,
+            condition=prop_condition,
         )
         self._property_repo.save(prop)
 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Sparkles, UploadCloud, FileText, X } from 'lucide-react';
+import { Sparkles, UploadCloud, FileText, TrendingUp, X } from 'lucide-react';
 
 interface WelcomeOnboardingBannerProps {
   propertyName: string;
   onUploadPdf: () => void;
   onViewFiscal: () => void;
+  onViewValuation?: () => void;
   onDismiss: () => void;
 }
 
@@ -12,6 +13,7 @@ export const WelcomeOnboardingBanner: React.FC<WelcomeOnboardingBannerProps> = (
   propertyName,
   onUploadPdf,
   onViewFiscal,
+  onViewValuation,
   onDismiss,
 }) => {
   return (
@@ -75,14 +77,14 @@ export const WelcomeOnboardingBanner: React.FC<WelcomeOnboardingBannerProps> = (
           maxWidth: '90%',
         }}
       >
-        Tu patrimonio ya está en Arrendis. Para experimentar la automatización y el cálculo tributario oficial, te recomendamos probar estas dos acciones:
+        Tu patrimonio ya está en Arrendis. Para experimentar la automatización, el cálculo tributario y el análisis de mercado en vivo, te recomendamos probar estas acciones:
       </p>
 
-      {/* Grid de 2 acciones inmediatas */}
+      {/* Grid de 3 acciones inmediatas */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: '1rem',
         }}
       >
@@ -162,6 +164,47 @@ export const WelcomeOnboardingBanner: React.FC<WelcomeOnboardingBannerProps> = (
           >
             <FileText size={14} /> Ver Borrador IRPF
           </button>
+        </div>
+
+        {/* Acción 3: Ver tasación de mercado */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-primary, #f9f7f5)',
+            border: '1px solid var(--panel-border, #e5e2dd)',
+            borderRadius: '6px',
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.3rem' }}>
+              <TrendingUp size={16} color="var(--brand-burgundy, #6b0008)" />
+              <strong style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                3. Consulta la Tasación de Mercado
+              </strong>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              Descubre la horquilla de venta, renta sugerida y comparables reales de tu zona rastreados con IA en Idealista y Fotocasa.
+            </p>
+          </div>
+          {onViewValuation && (
+            <button
+              onClick={onViewValuation}
+              className="btn btn-secondary btn-sm"
+              style={{
+                alignSelf: 'flex-start',
+                fontSize: '0.8rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <TrendingUp size={14} /> Ver Tasación IA
+            </button>
+          )}
         </div>
       </div>
     </div>

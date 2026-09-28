@@ -100,6 +100,12 @@ def bootstrap_onboarding(
             cups_electricity=body.cups_electricity,
             cups_gas=body.cups_gas,
             cups_water=body.cups_water,
+            surface_m2=body.surface_m2,
+            bedrooms=body.bedrooms,
+            bathrooms=body.bathrooms,
+            floor=body.floor,
+            has_elevator=body.has_elevator,
+            condition=body.condition,
         )
     except ValueError as e:
         raise HTTPException(

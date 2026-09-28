@@ -496,6 +496,14 @@ class OnboardingBootstrapRequest(BaseModel):
     acquisition_year: int | None = None
     construction_ratio: Decimal = Decimal("0.70")
 
+    # Atributos físicos para tasación de mercado (opcional)
+    surface_m2: int | None = None
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    floor: int | None = None
+    has_elevator: bool | None = None
+    condition: str | None = None
+
     # Rental & supplies (opcional)
     monthly_rent: Decimal | None = None
     cups_electricity: str | None = None
