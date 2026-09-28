@@ -1528,6 +1528,7 @@ td,
   gap: 2rem;
   margin-bottom: 2rem;
   border-bottom: 1px solid var(--panel-border);
+  scroll-margin-top: 76px;
 }
 
 .tab-btn {
