@@ -13,7 +13,7 @@ import type {
   BatchInvoiceUploadResponse,
 } from "../types";
 import * as authService from './auth';
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 export const BACKEND_STATIC_URL = API_BASE.replace(/\/api\/?$/, "");
 
 async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
