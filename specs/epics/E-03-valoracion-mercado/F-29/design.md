@@ -1,7 +1,7 @@
 # 📐 F-29: Atributos Físicos de Propiedad y Entidades de Dominio de Valoración — Design
 
 > **Épica:** E-03 — Estimación de Mercado y Orientación de Renta por IA  
-> **Estado:** Borrador — Pendiente de aprobación  
+> **Estado:** Implementada (Done)  
 > **Dependencias:** F-08 (Multi-tenancy) ✅, F-09 (Datos Fiscales) ✅, F-10 (Contratos) ✅  
 > **Fecha:** 2026-09-26  
 
