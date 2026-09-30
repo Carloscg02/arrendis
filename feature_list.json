@@ -53,6 +53,7 @@
     { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "done" },
     { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "done" },
     { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "done" },
-    { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" }
+    { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" },
+    { "id": "F-34", "title": "Separación de Claves Gemini (GEMINI_INVOICE_API_KEY vs GEMINI_VALUATION_API_KEY) para Blindaje de Costes 0€", "status": "backlog", "doc": "docs/separacion_api_keys_facturas_valoracion.md" }
   ]
 }

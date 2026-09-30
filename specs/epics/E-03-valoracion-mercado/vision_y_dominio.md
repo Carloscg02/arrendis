@@ -1,8 +1,8 @@
 # 🏢 Épica E-03: Estimación de Mercado y Orientación de Renta por IA
 
 > **Versión:** 1.0  
-> **Estado:** En Descubrimiento (Discovery)  
-> **Fecha:** 2026-09-24  
+> **Estado:** Completada (Done)  
+> **Fecha:** 2026-09-30  
 > **Dependencias previas:** F-08 (Multi-tenancy), F-09 (Datos Físicos/Fiscales de Propiedad), F-10 (Contratos de Arrendamiento), F-17 (Puerto LLM)
 
 ---
@@ -123,8 +123,8 @@ En la interfaz de usuario:
 
 | Feature ID | Título | Estado | Descripción |
 |---|---|---|---|
-| **F-29** | Atributos Físicos de Propiedad y Entidades de Valoración | Pendiente | Extensión de `Property` en dominio, BD y API con $m^2$, habitaciones, planta, ascensor y estado de reforma. Creación de entidades `PropertyValuation` y VOs de fuentes. |
-| **F-30** | Puerto de Valoración y Adaptador Gemini con Search Grounding | Pendiente | Creación de `MarketValuationPort` e implementación de `GeminiMarketValuationAdapter` con `google.genai`, herramientas de búsqueda web en tiempo real y validación de esquema JSON. |
-| **F-31** | Caso de Uso de Estimación con Política de Cooldown y Persistencia | Pendiente | Orquestación del caso de uso, verificación de periodo de enfriamiento (`VALUATION_COOLDOWN_DAYS`), guardado en SQLite y endpoints FastAPI (`POST /properties/{id}/valuation`, `GET /properties/{id}/valuation`). |
-| **F-32** | Interfaz UI de Estimación de Mercado y Explicabilidad (Atelier) | Pendiente | Pantalla/Panel en frontend con solicitud bajo demanda, horquillas visuales de alquiler/venta, desglose de factores de ajuste, enlaces a testigos y estado de cooldown. |
+| **F-29** | Atributos Físicos de Propiedad y Entidades de Valoración | Completada | Extensión de `Property` en dominio, BD y API con $m^2$, habitaciones, planta, ascensor y estado de reforma. Creación de entidades `PropertyValuation` y VOs de fuentes. |
+| **F-30** | Puerto de Valoración y Adaptador Gemini con Search Grounding | Completada | Creación de `MarketValuationPort` e implementación de `GeminiMarketValuationAdapter` con `google.genai`, herramientas de búsqueda web en tiempo real y validación de esquema JSON. |
+| **F-31** | Caso de Uso de Estimación con Política de Cooldown y Persistencia | Completada | Orquestación del caso de uso, verificación de periodo de enfriamiento (`VALUATION_COOLDOWN_DAYS`), guardado en SQLite y endpoints FastAPI (`POST /properties/{id}/valuation`, `GET /properties/{id}/valuation`). |
+| **F-32** | Interfaz UI de Estimación de Mercado y Explicabilidad (Atelier) | Completada | Pantalla/Panel en frontend con solicitud bajo demanda, horquillas visuales de alquiler/venta, desglose de factores de ajuste, enlaces a testigos y estado de cooldown. |
 | **F-33** | *(Opcional / Futuro)* Mapa Interactivo de Testigos Georreferenciados | Deferred | Visualización espacial con Leaflet / OpenStreetMap de los comparables detectados en el radio de la propiedad. |
