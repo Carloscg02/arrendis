@@ -40,6 +40,22 @@ function HomeRoute() {
     );
   }
 
+  // Si la app se ejecuta instalada en modo standalone (PWA o APK/Capacitor en móvil),
+  // se omite la landing comercial y se dirige de inmediato al Login / Cartera.
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true ||
+    document.referrer.includes('android-app://')
+  );
+
+  if (isStandalone) {
+    return (
+      <PublicOnlyRoute>
+        <Login />
+      </PublicOnlyRoute>
+    );
+  }
+
   return <Landing />;
 }
 
