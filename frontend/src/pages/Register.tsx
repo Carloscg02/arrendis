@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import ArrendisLogo from '../components/ArrendisLogo';
+import { usePWAInstall } from '../utils/usePWAInstall';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function Register() {
   const { register } = useAuth();
   const { error, success } = useToast();
   const navigate = useNavigate();
+  const { isStandalone } = usePWAInstall();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,10 +61,17 @@ export default function Register() {
       {/* Right Column: Editorial Registration Form */}
       <div className="auth-split-form-panel">
         <div className="auth-split-form-header">
-          <Link to="/" className="auth-split-back-link">
-            <ArrowLeft size={13} />
-            <span>Volver a la portada</span>
-          </Link>
+          {isStandalone ? (
+            <Link to="/login" className="auth-split-back-link">
+              <ArrowLeft size={13} />
+              <span>Volver a Iniciar Sesión</span>
+            </Link>
+          ) : (
+            <Link to="/" className="auth-split-back-link">
+              <ArrowLeft size={13} />
+              <span>Volver a la portada</span>
+            </Link>
+          )}
         </div>
 
         <div className="auth-split-form-content">

@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthProvider';
 import { useToast } from '../components/Toast';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import ArrendisLogo from '../components/ArrendisLogo';
+import { usePWAInstall } from '../utils/usePWAInstall';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function Login() {
   const { login } = useAuth();
   const { error, success } = useToast();
   const navigate = useNavigate();
+  const { isStandalone } = usePWAInstall();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +53,14 @@ export default function Login() {
 
       {/* Right Column: Editorial Atelier Form */}
       <div className="auth-split-form-panel">
-        <div className="auth-split-form-header">
-          <Link to="/" className="auth-split-back-link">
-            <ArrowLeft size={13} />
-            <span>Volver a la portada</span>
-          </Link>
-        </div>
+        {!isStandalone && (
+          <div className="auth-split-form-header">
+            <Link to="/" className="auth-split-back-link">
+              <ArrowLeft size={13} />
+              <span>Volver a la portada</span>
+            </Link>
+          </div>
+        )}
 
         <div className="auth-split-form-content">
           <div style={{ marginBottom: '1.75rem' }}>
