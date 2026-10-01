@@ -83,6 +83,10 @@ Every screen, modal, component, and spec in Arrendis MUST adhere to these 6 laws
 6. **Tabular Numerals & Monospace Precision**:
    - **Always**: Render monetary amounts (€), percentages (%), official AEAT casillas (`[0102]`), dates, and cadastral references with `font-family: var(--font-mono)` and `font-variant-numeric: tabular-nums`.
 
+7. **Mobile-First & Touch Ergonomics by Default**:
+   - **Never**: Design desktop-only layouts, hardcode horizontal pixel widths (>360px) in content, or create interactive tap targets smaller than 44x44px.
+   - **Always**: Ensure every screen, modal, and ledger is fully responsive. Under `<680px`, multi-column forms (`.form-row`) must stack vertically, data tables must be horizontally scrollable without breaking the page container, and safe-area insets (`--safe-top`, `--safe-bottom`) must be respected for mobile and PWA standalone execution.
+
 ---
 
 ## 3. Design Tokens (CSS Variables Reference)
