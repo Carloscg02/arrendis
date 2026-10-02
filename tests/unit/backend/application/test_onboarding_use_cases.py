@@ -47,6 +47,9 @@ def test_it_f28_03_bootstrap_onboarding_use_case_complete():
         acquisition_year=2021,
         monthly_rent=Decimal("1200"),
         cups_electricity="ES0031103721971011PR0F",
+        surface_m2=85,
+        bedrooms=3,
+        has_elevator=True,
     )
 
     # 1. Propiedad guardada
@@ -55,6 +58,9 @@ def test_it_f28_03_bootstrap_onboarding_use_case_complete():
     assert saved_prop.name == "Piso en Fuencarral"
     assert saved_prop.status == PropertyStatus.RENTED
     assert saved_prop.cups_electricity == "ES0031103721971011PR0F"
+    assert saved_prop.surface_m2 == 85
+    assert saved_prop.bedrooms == 3
+    assert saved_prop.has_elevator is True
 
     # 2. Fiscalidad guardada
     prop_repo.update_fiscal_data.assert_called_once()

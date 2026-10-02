@@ -17,8 +17,9 @@ fi
 CLEAN_SLUG=$(echo "$FEATURE_INPUT" | tr '[:upper:]' '[:lower:]' | sed -E 's/^feature\///' | sed -E 's/[^a-z0-9_-]+/-/g')
 BRANCH_NAME="feature/${CLEAN_SLUG}"
 
-# Directorio raíz del repositorio principal
-MAIN_REPO="$(git rev-parse --show-toplevel)"
+# Directorio raíz del repositorio principal (robusto incluso si se ejecuta desde otro worktree)
+GIT_COMMON="$(git rev-parse --git-common-dir)"
+MAIN_REPO="$(cd "$GIT_COMMON/.." && pwd)"
 PARENT_DIR="$(dirname "$MAIN_REPO")"
 WORKTREE_PATH="${PARENT_DIR}/rental-${CLEAN_SLUG}"
 

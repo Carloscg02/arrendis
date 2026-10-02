@@ -26,6 +26,21 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM EXIT
 
+# Cargar variables de entorno desde .env si existe
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    echo "Cargando variables de entorno desde .env..."
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+    if [ -n "$GEMINI_API_KEY" ]; then
+        echo "✓ GEMINI_API_KEY configurada (${GEMINI_API_KEY:0:8}...)"
+    else
+        echo "⚠ GEMINI_API_KEY no encontrada en .env (se usará MockAdapter)"
+    fi
+else
+    echo "⚠ Archivo .env no encontrado en $PROJECT_ROOT"
+fi
+
 # 1. Iniciar Backend
 echo "[1/2] Iniciando Backend en http://localhost:8000..."
 if [ -d "$PROJECT_ROOT/venv" ]; then

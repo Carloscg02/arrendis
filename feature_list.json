@@ -16,7 +16,7 @@
     {
       "id": "E-03",
       "title": "Estimación de Mercado y Orientación de Renta por IA",
-      "status": "in_discovery",
+      "status": "done",
       "spec": "specs/epics/E-03-valoracion-mercado/vision_y_dominio.md"
     },
     {
@@ -61,14 +61,15 @@
     { "id": "F-26", "epic": "E-01", "title": "Retirada de 'Clasificación Fiscal Inteligente' de la UI y Limpieza de Deuda Técnica", "status": "done" },
     { "id": "F-27", "epic": "E-02", "title": "Guía Interactiva Paso a Paso con Capturas Reales para Automatización de Reglas en Gmail", "status": "done" },
     { "id": "F-28", "title": "Onboarding Guiado & Estimador Fiscal Interactivo Multiplataforma (First-Time User Experience)", "status": "done" },
-    { "id": "F-29", "epic": "E-03", "title": "Atributos Físicos de Propiedad y Entidades de Dominio de Valoración", "status": "backlog" },
-    { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "backlog" },
-    { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "backlog" },
-    { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "backlog" },
+    { "id": "F-29", "epic": "E-03", "title": "Atributos Físicos de Propiedad y Entidades de Dominio de Valoración", "status": "done" },
+    { "id": "F-30", "epic": "E-03", "title": "Puerto de Valoración y Adaptador Gemini con Google Search Grounding", "status": "done" },
+    { "id": "F-31", "epic": "E-03", "title": "Caso de Uso de Estimación con Política de Cooldown y Persistencia de Fuentes", "status": "done" },
+    { "id": "F-32", "epic": "E-03", "title": "Interfaz UI de Estimación de Mercado, Explicabilidad de Factores y Fuentes (Atelier)", "status": "done" },
     { "id": "F-33", "epic": "E-03", "title": "Visualización Georreferenciada en Mapa Interactivo de Testigos de Mercado", "status": "deferred" },
     { "id": "F-34", "epic": "E-05", "title": "Optimización Táctil Mobile-First y Viewport Seguro (CSS anti-clunkiness, safe areas y touch targets)", "status": "done" },
     { "id": "F-35", "epic": "E-05", "title": "Manifiesto PWA, Service Worker con Vite y Pantalla de Carga (Standalone + Splash Screen)", "status": "done" },
     { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "done" },
-    { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "done" }
+    { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "done" },
+    { "id": "F-38", "title": "Separación de Claves Gemini (GEMINI_INVOICE_API_KEY vs GEMINI_VALUATION_API_KEY) para Blindaje de Costes 0€", "status": "backlog", "doc": "docs/separacion_api_keys_facturas_valoracion.md" }
   ]
 }
