@@ -1,6 +1,8 @@
 import type {
   Property,
   PropertyCreateInput,
+  PhysicalAttributesUpdateInput,
+  PropertyValuation,
   Income,
   IncomeCreateInput,
   Expense,
@@ -97,6 +99,34 @@ export async function getPropertyById(id: string): Promise<Property> {
 export async function deleteProperty(id: string): Promise<void> {
   const res = await apiFetch(`${API_BASE}/properties/${id}`, { method: "DELETE" });
   await handleResponse<void>(res);
+}
+
+export async function updatePhysicalAttributes(
+  id: string,
+  data: PhysicalAttributesUpdateInput
+): Promise<Property> {
+  const res = await apiFetch(`${API_BASE}/properties/${id}/physical-attributes`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Property>(res);
+}
+
+export async function getLatestValuation(propertyId: string): Promise<PropertyValuation | null> {
+  const res = await apiFetch(`${API_BASE}/properties/${propertyId}/valuation/latest`);
+  if (res.status === 404 || res.status === 204) {
+    return null;
+  }
+  return handleResponse<PropertyValuation | null>(res);
+}
+
+export async function requestValuation(propertyId: string, force: boolean = false): Promise<PropertyValuation> {
+  const query = force ? "?force=true" : "";
+  const res = await apiFetch(`${API_BASE}/properties/${propertyId}/valuation${query}`, {
+    method: "POST",
+  });
+  return handleResponse<PropertyValuation>(res);
 }
 
 export async function getIncomes(propertyId: string): Promise<Income[]> {

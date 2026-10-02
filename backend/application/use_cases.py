@@ -35,6 +35,9 @@ from backend.domain.entities import (
     DuplicateInvoiceError,
     InboundInvoiceItemResult,
     InboundEmailProcessResult,
+    PropertyCondition,
+    ValuationConfidence,
+    PropertyValuation,
 )
 from backend.domain.ports import (
     ExpenseRepository,
@@ -48,9 +51,24 @@ from backend.domain.ports import (
     FiscalCarryforwardRepository,
     LLMProviderPort,
     PDFTextExtractorPort,
+    PropertyValuationRepository,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator, FiscalSimulatorService
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, UtilityInvoiceData, FiscalQuickEstimate
+from backend.domain.value_objects import (
+    Address,
+    Money,
+    Email,
+    PasswordHash,
+    CadastralBreakdown,
+    AcquisitionCost,
+    FiscalReport,
+    LLMRequest,
+    UtilityInvoiceData,
+    FiscalQuickEstimate,
+    ValuationRange,
+    ReasoningFactor,
+    ValuationSource,
+)
 from backend.domain.extraction import ExtractionStrategy, UtilityExtractorRegistry
 
 class CreatePropertyUseCase:
@@ -68,20 +86,14 @@ class CreatePropertyUseCase:
         postal_code: str,
         country: str,
         property_type: str,
+        surface_m2: int | None = None,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        floor: int | None = None,
+        has_elevator: bool | None = None,
+        condition: str | None = None,
     ) -> Property:
-        """Crea una Property con los datos proporcionados y la persiste.
-
-        Args:
-            name: Nombre descriptivo de la propiedad.
-            street: Calle de la dirección.
-            city: Ciudad.
-            postal_code: Código postal.
-            country: País (por defecto "ES").
-            property_type: Tipo de propiedad (valor del enum PropertyType).
-
-        Returns:
-            La Property creada.
-        """
+        """Crea una Property con los datos proporcionados y la persiste."""
         # Crear value objects
         address = Address(
             street=street,
@@ -95,6 +107,8 @@ class CreatePropertyUseCase:
         if existing_prop is not None:
             raise ValueError(f"Property with name '{name}' already exists.")
 
+        condition_enum = PropertyCondition(condition) if condition else None
+
         # Crear la entidad
         prop = Property(
             name=name,
@@ -102,6 +116,12 @@ class CreatePropertyUseCase:
             property_type=PropertyType(property_type),
             user_id=user_id,
             status=PropertyStatus.AVAILABLE,
+            surface_m2=surface_m2,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            floor=floor,
+            has_elevator=has_elevator,
+            condition=condition_enum,
         )
 
         # Persistir
@@ -130,6 +150,75 @@ class GetPropertyUseCase:
         if prop is None or prop.user_id != user_id:
             raise ValueError(f"No existe la propiedad con id '{property_id}'.")
         return prop
+
+
+class UpdatePropertyPhysicalAttributesUseCase:
+    """Caso de uso: actualizar exclusivamente los atributos físicos de una propiedad."""
+
+    def __init__(self, property_repo: PropertyRepository) -> None:
+        self._property_repo = property_repo
+
+    def execute(
+        self,
+        user_id: str,
+        property_id: str,
+        surface_m2: int | None,
+        bedrooms: int | None,
+        bathrooms: int | None,
+        floor: int | None,
+        has_elevator: bool | None,
+        condition: str | None,
+    ) -> Property:
+        prop = self._property_repo.find_by_id(property_id)
+        if prop is None or prop.user_id != user_id:
+            raise ValueError(f"No existe la propiedad con id '{property_id}'.")
+
+        condition_enum = PropertyCondition(condition) if condition else None
+
+        # Modificar temporalmente para validar invariantes del dominio
+        prop.surface_m2 = surface_m2
+        prop.bedrooms = bedrooms
+        prop.bathrooms = bathrooms
+        prop.floor = floor
+        prop.has_elevator = has_elevator
+        prop.condition = condition_enum
+        prop.__post_init__()
+
+        self._property_repo.update_physical_attributes(
+            property_id=property_id,
+            surface_m2=surface_m2,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            floor=floor,
+            has_elevator=has_elevator,
+            condition=condition_enum,
+        )
+        return prop
+
+
+class GetPropertyValuationUseCase:
+    """Caso de uso: consultar informes de valoración guardados."""
+
+    def __init__(
+        self,
+        property_repo: PropertyRepository,
+        valuation_repo: PropertyValuationRepository,
+    ) -> None:
+        self._property_repo = property_repo
+        self._valuation_repo = valuation_repo
+
+    def get_latest(self, user_id: str, property_id: str) -> PropertyValuation | None:
+        prop = self._property_repo.find_by_id(property_id)
+        if prop is None or prop.user_id != user_id:
+            raise ValueError(f"No existe la propiedad con id '{property_id}'.")
+        return self._valuation_repo.find_latest_by_property_id(property_id)
+
+    def get_history(self, user_id: str, property_id: str) -> list[PropertyValuation]:
+        prop = self._property_repo.find_by_id(property_id)
+        if prop is None or prop.user_id != user_id:
+            raise ValueError(f"No existe la propiedad con id '{property_id}'.")
+        return self._valuation_repo.list_by_property_id(property_id)
+
 
 
 class RecordIncomeUseCase:
@@ -1141,6 +1230,12 @@ class BootstrapOnboardingUseCase:
         cups_electricity: str | None = None,
         cups_gas: str | None = None,
         cups_water: str | None = None,
+        surface_m2: int | None = None,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        floor: int | None = None,
+        has_elevator: bool | None = None,
+        condition: str | None = None,
     ) -> Property:
         # 1. Crear propiedad
         address = Address(
@@ -1149,6 +1244,13 @@ class BootstrapOnboardingUseCase:
             postal_code=postal_code,
             country=country,
         )
+        prop_condition = None
+        if condition:
+            try:
+                prop_condition = PropertyCondition(condition)
+            except ValueError:
+                prop_condition = None
+
         prop = Property(
             name=property_name,
             address=address,
@@ -1158,6 +1260,12 @@ class BootstrapOnboardingUseCase:
             cups_electricity=cups_electricity,
             cups_gas=cups_gas,
             cups_water=cups_water,
+            surface_m2=surface_m2,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            floor=floor,
+            has_elevator=has_elevator,
+            condition=prop_condition,
         )
         self._property_repo.save(prop)
 

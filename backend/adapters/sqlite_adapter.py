@@ -7,6 +7,7 @@ y ExpenseRepository usando SQLite como base de datos.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 from datetime import date
@@ -27,9 +28,30 @@ from backend.domain.entities import (
     LeaseContract,
     LeaseType,
     FiscalCarryforward,
+    PropertyCondition,
+    ValuationConfidence,
+    PropertyValuation,
 )
-from backend.domain.ports import ExpenseRepository, IncomeRepository, PropertyRepository, UserRepository, LeaseContractRepository, FiscalCarryforwardRepository
-from backend.domain.value_objects import Address, Money, Email, PasswordHash, CadastralBreakdown, AcquisitionCost
+from backend.domain.ports import (
+    ExpenseRepository,
+    IncomeRepository,
+    PropertyRepository,
+    UserRepository,
+    LeaseContractRepository,
+    FiscalCarryforwardRepository,
+    PropertyValuationRepository,
+)
+from backend.domain.value_objects import (
+    Address,
+    Money,
+    Email,
+    PasswordHash,
+    CadastralBreakdown,
+    AcquisitionCost,
+    ValuationRange,
+    ReasoningFactor,
+    ValuationSource,
+)
 
 
 class SQLiteConnection:
@@ -157,6 +179,20 @@ class SQLiteConnection:
             except sqlite3.OperationalError:
                 pass
 
+        # Migración F-29: Atributos Físicos de Mercado
+        for col in [
+            "surface_m2 INTEGER DEFAULT NULL",
+            "bedrooms INTEGER DEFAULT NULL",
+            "bathrooms INTEGER DEFAULT NULL",
+            "floor INTEGER DEFAULT NULL",
+            "has_elevator INTEGER DEFAULT NULL",
+            "condition TEXT DEFAULT NULL",
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE properties ADD COLUMN {col}")
+            except sqlite3.OperationalError:
+                pass
+
         # Tabla de ingresos
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS incomes (
@@ -252,6 +288,32 @@ class SQLiteConnection:
             )
         """)
 
+        # Tabla de valoraciones de mercado (F-29)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS property_valuations (
+                id TEXT PRIMARY KEY,
+                property_id TEXT NOT NULL,
+                valuation_date TEXT NOT NULL,
+                sale_price_min TEXT NOT NULL,
+                sale_price_median TEXT NOT NULL,
+                sale_price_max TEXT NOT NULL,
+                rent_price_min TEXT NOT NULL,
+                rent_price_median TEXT NOT NULL,
+                rent_price_max TEXT NOT NULL,
+                currency TEXT NOT NULL DEFAULT 'EUR',
+                confidence TEXT NOT NULL,
+                reasoning_factors TEXT NOT NULL,
+                sources TEXT NOT NULL,
+                raw_notes TEXT DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_property_valuations_prop_date 
+            ON property_valuations(property_id, valuation_date DESC)
+        """)
+
         active_conn.commit()
 
     @property
@@ -290,8 +352,9 @@ class SQLitePropertyRepository(PropertyRepository):
                  cadastral_ref, cadastral_land_value, cadastral_construction_value,
                  acquisition_purchase_price, acquisition_construction_portion, acquisition_land_portion,
                  acquisition_transfer_tax, acquisition_notary_fees, acquisition_registry_fees, acquisition_date,
-                 cups_electricity, cups_gas, cups_water)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 cups_electricity, cups_gas, cups_water,
+                 surface_m2, bedrooms, bathrooms, floor, has_elevator, condition)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 property.id,
@@ -317,6 +380,12 @@ class SQLitePropertyRepository(PropertyRepository):
                 property.cups_electricity,
                 property.cups_gas,
                 property.cups_water,
+                property.surface_m2,
+                property.bedrooms,
+                property.bathrooms,
+                property.floor,
+                1 if property.has_elevator is True else (0 if property.has_elevator is False else None),
+                property.condition.value if property.condition else None,
             ),
         )
         self._conn.commit()
@@ -382,6 +451,34 @@ class SQLitePropertyRepository(PropertyRepository):
         self._conn.execute(
             "UPDATE properties SET cups_electricity = ?, cups_gas = ?, cups_water = ? WHERE id = ?",
             (cups_electricity, cups_gas, cups_water, property_id),
+        )
+        self._conn.commit()
+
+    def update_physical_attributes(
+        self,
+        property_id: str,
+        surface_m2: int | None,
+        bedrooms: int | None,
+        bathrooms: int | None,
+        floor: int | None,
+        has_elevator: bool | None,
+        condition: PropertyCondition | None,
+    ) -> None:
+        """Actualiza exclusivamente los atributos físicos de una propiedad."""
+        elevator_val = 1 if has_elevator is True else (0 if has_elevator is False else None)
+        condition_val = condition.value if condition else None
+        self._conn.execute(
+            """
+            UPDATE properties SET
+                surface_m2 = ?,
+                bedrooms = ?,
+                bathrooms = ?,
+                floor = ?,
+                has_elevator = ?,
+                condition = ?
+            WHERE id = ?
+            """,
+            (surface_m2, bedrooms, bathrooms, floor, elevator_val, condition_val, property_id),
         )
         self._conn.commit()
 
@@ -474,6 +571,19 @@ class SQLitePropertyRepository(PropertyRepository):
             if len(cadastral_ref) != 20:
                 cadastral_ref = None
 
+        has_elevator = None
+        if "has_elevator" in row.keys() and row["has_elevator"] is not None:
+            has_elevator = bool(row["has_elevator"])
+
+        condition = None
+        if "condition" in row.keys() and row["condition"] is not None:
+            condition = PropertyCondition(row["condition"])
+
+        surface_m2 = row["surface_m2"] if "surface_m2" in row.keys() else None
+        bedrooms = row["bedrooms"] if "bedrooms" in row.keys() else None
+        bathrooms = row["bathrooms"] if "bathrooms" in row.keys() else None
+        floor = row["floor"] if "floor" in row.keys() else None
+
         return Property(
             id=row["id"],
             name=row["name"],
@@ -494,6 +604,12 @@ class SQLitePropertyRepository(PropertyRepository):
             cups_electricity=row["cups_electricity"],
             cups_gas=row["cups_gas"],
             cups_water=row["cups_water"],
+            surface_m2=surface_m2,
+            bedrooms=bedrooms,
+            bathrooms=bathrooms,
+            floor=floor,
+            has_elevator=has_elevator,
+            condition=condition,
         )
 
 
@@ -953,3 +1069,147 @@ class SQLiteFiscalCarryforwardRepository(FiscalCarryforwardRepository):
             original_amount=Decimal(row["original_amount"]),
             amount_applied=Decimal(row["amount_applied"]),
         )
+
+
+class SQLitePropertyValuationRepository(PropertyValuationRepository):
+    """Implementación de PropertyValuationRepository usando SQLite."""
+
+    def __init__(self, connection: SQLiteConnection) -> None:
+        self._sqlite_conn = connection
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        return self._sqlite_conn.connection
+
+    def save(self, valuation: PropertyValuation) -> None:
+        """Guarda o actualiza una valoración en la base de datos."""
+        from datetime import datetime, timezone
+
+        reasoning_json = json.dumps([
+            {
+                "factor_name": f.factor_name,
+                "impact_percent": str(f.impact_percent),
+                "description": f.description,
+            }
+            for f in valuation.reasoning_factors
+        ], ensure_ascii=False)
+
+        sources_json = json.dumps([
+            {
+                "title": s.title,
+                "url": s.url,
+                "price": str(s.price) if s.price is not None else None,
+                "surface_m2": s.surface_m2,
+                "date_found": s.date_found.isoformat() if s.date_found else None,
+            }
+            for s in valuation.sources
+        ], ensure_ascii=False)
+
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO property_valuations (
+                id, property_id, valuation_date,
+                sale_price_min, sale_price_median, sale_price_max,
+                rent_price_min, rent_price_median, rent_price_max,
+                currency, confidence, reasoning_factors, sources,
+                raw_notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                valuation.id,
+                valuation.property_id,
+                valuation.valuation_date.isoformat(),
+                str(valuation.sale_range.min_price.amount),
+                str(valuation.sale_range.median_price.amount),
+                str(valuation.sale_range.max_price.amount),
+                str(valuation.rent_range.min_price.amount),
+                str(valuation.rent_range.median_price.amount),
+                str(valuation.rent_range.max_price.amount),
+                valuation.sale_range.min_price.currency,
+                valuation.confidence.value,
+                reasoning_json,
+                sources_json,
+                valuation.raw_notes,
+                created_at,
+            ),
+        )
+        self._conn.commit()
+
+    def find_by_id(self, valuation_id: str) -> PropertyValuation | None:
+        cursor = self._conn.execute(
+            "SELECT * FROM property_valuations WHERE id = ?",
+            (valuation_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
+    def find_latest_by_property_id(self, property_id: str) -> PropertyValuation | None:
+        cursor = self._conn.execute(
+            "SELECT * FROM property_valuations WHERE property_id = ? ORDER BY valuation_date DESC, created_at DESC LIMIT 1",
+            (property_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_entity(row)
+
+    def list_by_property_id(self, property_id: str) -> list[PropertyValuation]:
+        cursor = self._conn.execute(
+            "SELECT * FROM property_valuations WHERE property_id = ? ORDER BY valuation_date DESC, created_at DESC",
+            (property_id,),
+        )
+        return [self._row_to_entity(row) for row in cursor.fetchall()]
+
+    @staticmethod
+    def _row_to_entity(row: sqlite3.Row) -> PropertyValuation:
+        currency = row["currency"]
+        sale_range = ValuationRange(
+            min_price=Money(Decimal(row["sale_price_min"]), currency),
+            median_price=Money(Decimal(row["sale_price_median"]), currency),
+            max_price=Money(Decimal(row["sale_price_max"]), currency),
+        )
+        rent_range = ValuationRange(
+            min_price=Money(Decimal(row["rent_price_min"]), currency),
+            median_price=Money(Decimal(row["rent_price_median"]), currency),
+            max_price=Money(Decimal(row["rent_price_max"]), currency),
+        )
+        confidence = ValuationConfidence(row["confidence"])
+
+        factors_raw = json.loads(row["reasoning_factors"])
+        reasoning_factors = [
+            ReasoningFactor(
+                factor_name=f["factor_name"],
+                impact_percent=Decimal(f["impact_percent"]),
+                description=f["description"],
+            )
+            for f in factors_raw
+        ]
+
+        sources_raw = json.loads(row["sources"])
+        sources = [
+            ValuationSource(
+                title=s["title"],
+                url=s["url"],
+                price=Decimal(s["price"]) if s.get("price") is not None else None,
+                surface_m2=s.get("surface_m2"),
+                date_found=date.fromisoformat(s["date_found"]) if s.get("date_found") else None,
+            )
+            for s in sources_raw
+        ]
+
+        return PropertyValuation(
+            id=row["id"],
+            property_id=row["property_id"],
+            valuation_date=date.fromisoformat(row["valuation_date"]),
+            sale_range=sale_range,
+            rent_range=rent_range,
+            confidence=confidence,
+            reasoning_factors=reasoning_factors,
+            sources=sources,
+            raw_notes=row["raw_notes"],
+        )
+

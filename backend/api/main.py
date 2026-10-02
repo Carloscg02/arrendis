@@ -7,13 +7,35 @@ de properties, incomes y expenses.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+
+def _load_env_file() -> None:
+    import sys
+    if "pytest" in sys.modules or os.getenv("TESTING") == "1":
+        return
+    env_file = Path(__file__).resolve().parent.parent.parent / ".env"
+    if env_file.is_file():
+        with open(env_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip("'\"")
+                if k not in os.environ:
+                    os.environ[k] = v
+
+_load_env_file()
+
+
 
 from backend.adapters.sqlite_adapter import SQLiteConnection
 from backend.api.routes.expenses import router as expenses_router

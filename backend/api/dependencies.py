@@ -6,6 +6,7 @@ Proveen los repositorios concretos (SQLite) a los endpoints via Depends().
 
 from __future__ import annotations
 
+import os
 from fastapi import Depends, Request, Header, HTTPException
 from backend.domain.entities import User
 
@@ -19,9 +20,11 @@ from backend.adapters.sqlite_adapter import (
     SQLiteUserRepository,
     SQLiteLeaseContractRepository,
     SQLiteFiscalCarryforwardRepository,
+    SQLitePropertyValuationRepository,
 )
-from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort
+from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort, MarketValuationPort
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
+from backend.adapters.gemini_valuation_adapter import GeminiMarketValuationAdapter, MockMarketValuationAdapter
 
 
 def get_db(request: Request) -> SQLiteConnection:
@@ -32,6 +35,11 @@ def get_db(request: Request) -> SQLiteConnection:
 def get_property_repo(db: SQLiteConnection = Depends(get_db)) -> SQLitePropertyRepository:
     """Retorna el repositorio de propiedades con la conexión activa."""
     return SQLitePropertyRepository(db)
+
+
+def get_valuation_repo(db: SQLiteConnection = Depends(get_db)) -> SQLitePropertyValuationRepository:
+    """Retorna el repositorio de valoraciones con la conexión activa."""
+    return SQLitePropertyValuationRepository(db)
 
 
 def get_income_repo(db: SQLiteConnection = Depends(get_db)) -> SQLiteIncomeRepository:
@@ -136,5 +144,49 @@ def get_process_inbound_email_use_case(
     return ProcessInboundEmailUseCase(
         user_repo=user_repo,
         single_invoice_use_case=single_use_case,
+    )
+
+
+def get_market_valuation_port() -> MarketValuationPort:
+    """Retorna el adaptador de valoración de mercado (Gemini o Mock)."""
+    import sys
+    import logging
+    logger = logging.getLogger("backend.api.dependencies")
+
+    # En entorno de tests automatizados (pytest), usar Mock para evitar llamadas externas
+    if os.getenv("TESTING") == "1" or "pytest" in sys.modules:
+        if os.getenv("USE_REAL_VALUATION_IN_TESTS", "false").lower() not in ("true", "1", "yes"):
+            return MockMarketValuationAdapter()
+
+    use_mock = os.getenv("USE_MOCK_VALUATION", "false").lower() in ("true", "1", "yes")
+    if use_mock:
+        logger.warning("USE_MOCK_VALUATION activa. Usando MockMarketValuationAdapter para desarrollo simulado.")
+        return MockMarketValuationAdapter()
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key and api_key.strip():
+        return GeminiMarketValuationAdapter(api_key=api_key.strip())
+
+    class UnconfiguredValuationAdapter(MarketValuationPort):
+        def estimate_valuation(self, *args, **kwargs):
+            raise ValuationRateLimitError(provider="gemini")
+
+    logger.warning("GEMINI_API_KEY no configurada. Las valoraciones devolverán error de servicio no disponible.")
+    return UnconfiguredValuationAdapter()
+
+
+
+def get_request_property_valuation_use_case(
+    property_repo: SQLitePropertyRepository = Depends(get_property_repo),
+    valuation_repo: SQLitePropertyValuationRepository = Depends(get_valuation_repo),
+    valuation_port: MarketValuationPort = Depends(get_market_valuation_port),
+) -> RequestPropertyValuationUseCase:
+    from backend.application.valuation_use_cases import RequestPropertyValuationUseCase
+    cooldown_days = int(os.getenv("VALUATION_COOLDOWN_DAYS", "30"))
+    return RequestPropertyValuationUseCase(
+        property_repo=property_repo,
+        valuation_repo=valuation_repo,
+        valuation_port=valuation_port,
+        cooldown_days=cooldown_days,
     )
 

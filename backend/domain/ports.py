@@ -10,8 +10,26 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from datetime import date
-from backend.domain.entities import Expense, Income, Property, User, LeaseContract, FiscalCarryforward
-from backend.domain.value_objects import CadastralBreakdown, AcquisitionCost, FiscalReport, LLMRequest, LLMResponse
+from backend.domain.entities import (
+    Expense,
+    Income,
+    Property,
+    User,
+    LeaseContract,
+    FiscalCarryforward,
+    PropertyCondition,
+    PropertyValuation,
+    PropertyType,
+)
+from backend.domain.value_objects import (
+    CadastralBreakdown,
+    AcquisitionCost,
+    FiscalReport,
+    LLMRequest,
+    LLMResponse,
+    Address,
+    MarketValuationResult,
+)
 
 
 class PropertyRepository(ABC):
@@ -73,6 +91,20 @@ class PropertyRepository(ABC):
         cups_water: str | None,
     ) -> None:
         """Actualiza los CUPS de una propiedad."""
+        ...
+
+    @abstractmethod
+    def update_physical_attributes(
+        self,
+        property_id: str,
+        surface_m2: int | None,
+        bedrooms: int | None,
+        bathrooms: int | None,
+        floor: int | None,
+        has_elevator: bool | None,
+        condition: PropertyCondition | None,
+    ) -> None:
+        """Actualiza exclusivamente los atributos físicos de una propiedad."""
         ...
 
 
@@ -277,4 +309,67 @@ class PDFTextExtractorPort(ABC):
             PDFExtractionError: Si el documento está corrupto o protegido por contraseña.
         """
         ...
+
+
+class PropertyValuationRepository(ABC):
+    """Puerto de salida para persistir y consultar informes de valoración."""
+
+    @abstractmethod
+    def save(self, valuation: PropertyValuation) -> None:
+        """Guarda o actualiza una valoración."""
+        ...
+
+    @abstractmethod
+    def find_by_id(self, valuation_id: str) -> PropertyValuation | None:
+        """Recupera una valoración por su ID."""
+        ...
+
+    @abstractmethod
+    def find_latest_by_property_id(self, property_id: str) -> PropertyValuation | None:
+        """Recupera la valoración más reciente de una propiedad."""
+        ...
+
+    @abstractmethod
+    def list_by_property_id(self, property_id: str) -> list[PropertyValuation]:
+        """Recupera el histórico completo de valoraciones de una propiedad ordenadas por fecha descendente."""
+        ...
+
+
+class MarketValuationPort(ABC):
+    """Puerto de salida agnóstico para la estimación de valor de venta y alquiler de inmuebles."""
+
+    @abstractmethod
+    def estimate_valuation(
+        self,
+        address: Address,
+        surface_m2: int,
+        property_type: PropertyType = PropertyType.APARTMENT,
+        bedrooms: int | None = None,
+        bathrooms: int | None = None,
+        floor: int | None = None,
+        has_elevator: bool | None = None,
+        condition: PropertyCondition | None = None,
+    ) -> MarketValuationResult:
+        """Estima el valor de mercado de compraventa y alquiler mensual.
+
+        Args:
+            address: Dirección física completa (calle, número, código postal, ciudad).
+            surface_m2: Superficie construida en metros cuadrados (> 0).
+            property_type: Tipología del inmueble (piso, unifamiliar, local, garaje).
+            bedrooms: Número de dormitorios (None o >= 0, ej: 0 para estudios).
+            bathrooms: Número de cuartos de baño (None o >= 0).
+            floor: Planta (opcional, None si unifamiliar o desconocido).
+            has_elevator: Presencia de ascensor (opcional).
+            condition: Estado de conservación (opcional).
+
+        Returns:
+            MarketValuationResult con los rangos calculados, testigos y factores explicativos.
+
+        Raises:
+            ValuationRateLimitError: Si se agotan los reintentos por límite de cuota (429).
+            MarketValuationError: Si ocurre un error en la llamada o en la validación estructurada.
+            ValueError: Si los parámetros físicos de entrada son inválidos (ej. surface_m2 <= 0).
+        """
+        ...
+
 

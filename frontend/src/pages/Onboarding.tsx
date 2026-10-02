@@ -9,7 +9,8 @@ import {
   UploadCloud, 
   Zap,
   Info,
-  BookOpen
+  BookOpen,
+  TrendingUp
 } from 'lucide-react';
 import ArrendisLogo from '../components/ArrendisLogo';
 import { useAuth } from '../components/AuthProvider';
@@ -22,7 +23,7 @@ export default function Onboarding() {
   const toast = useToast();
   const { markOnboardingCompleted } = useAuth();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [submitting, setSubmitting] = useState(false);
   const [skipping, setSkipping] = useState(false);
 
@@ -30,6 +31,7 @@ export default function Onboarding() {
   const [propertyName, setPropertyName] = useState('');
   const [propertyType, setPropertyType] = useState('apartment');
   const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [street, setStreet] = useState('');
 
   // Paso 2: Fiscalidad
@@ -39,7 +41,15 @@ export default function Onboarding() {
   const [estimate, setEstimate] = useState<QuickEstimateResponse | null>(null);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
 
-  // Paso 3: Alquiler y Suministros
+  // Paso 3: Atributos físicos para tasación de mercado
+  const [surfaceM2, setSurfaceM2] = useState<number | ''>(80);
+  const [bedrooms, setBedrooms] = useState<number | ''>(3);
+  const [bathrooms, setBathrooms] = useState<number | ''>(1);
+  const [floor, setFloor] = useState<number | ''>(2);
+  const [hasElevator, setHasElevator] = useState<boolean | null>(true);
+  const [condition, setCondition] = useState<string>('buen_estado');
+
+  // Paso 4: Alquiler y Suministros
   const [monthlyRent, setMonthlyRent] = useState<number | ''>(950);
   const [cupsElectricity, setCupsElectricity] = useState('');
   const [skipCupsNotice, setSkipCupsNotice] = useState(false);
@@ -100,6 +110,11 @@ export default function Onboarding() {
     setStep(3);
   };
 
+  // Manejador del paso 3
+  const handleNextStep3 = () => {
+    setStep(4);
+  };
+
   // Finalización y bootstrap atómico
   const handleFinish = async () => {
     try {
@@ -109,14 +124,21 @@ export default function Onboarding() {
         property_type: propertyType,
         city: city.trim() || 'Ciudad',
         street: street.trim() || 'Dirección pendiente',
+        postal_code: postalCode.trim() || '00000',
         purchase_price: purchasePrice ? Number(purchasePrice) : null,
         acquisition_year: acquisitionYear ? Number(acquisitionYear) : null,
+        surface_m2: surfaceM2 ? Number(surfaceM2) : null,
+        bedrooms: bedrooms !== '' ? Number(bedrooms) : null,
+        bathrooms: bathrooms !== '' ? Number(bathrooms) : null,
+        floor: floor !== '' ? Number(floor) : null,
+        has_elevator: hasElevator,
+        condition: condition || null,
         monthly_rent: monthlyRent ? Number(monthlyRent) : null,
         cups_electricity: cupsElectricity.trim() || null,
       });
 
       markOnboardingCompleted();
-      toast.success('¡Patrimonio registrado con éxito! Tu estimación fiscal está activa.');
+      toast.success('¡Patrimonio registrado con éxito! Tu estimación fiscal y tasación están activas.');
       navigate(`/properties/${res.id}?welcome=true`);
     } catch (err: any) {
       toast.error(err.message || 'Error al registrar tu propiedad.');
@@ -154,10 +176,10 @@ export default function Onboarding() {
             letterSpacing: '0.08em',
             color: 'var(--text-muted)',
           }}>
-            Paso {step} de 3
+            Paso {step} de 4
           </span>
           <div style={{ display: 'flex', gap: '0.35rem' }}>
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
                 style={{
@@ -267,7 +289,7 @@ export default function Onboarding() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
                       Tipo de inmueble
@@ -298,7 +320,7 @@ export default function Onboarding() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ej. Madrid, Barcelona, Valencia..."
+                      placeholder="Ej. Madrid, Málaga, Barcelona..."
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       style={{
@@ -308,6 +330,27 @@ export default function Onboarding() {
                         borderRadius: '6px',
                         fontSize: '0.95rem',
                         outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+                      Código Postal (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 29002, 28004..."
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.95rem',
+                        outline: 'none',
+                        fontFamily: 'var(--font-mono)',
                       }}
                     />
                   </div>
@@ -761,14 +804,494 @@ export default function Onboarding() {
                     cursor: 'pointer',
                   }}
                 >
+                  Continuar a Tasación de Mercado <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 3: Tasación y Valoración de Mercado con IA */}
+          {step === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--brand-burgundy, #6b0008)',
+                  display: 'block',
+                  marginBottom: '0.4rem',
+                }}>
+                  Paso 3 · Tasación de Mercado con IA
+                </span>
+                <h1 style={{
+                  fontSize: '1.75rem',
+                  fontFamily: 'var(--font-serif)',
+                  fontWeight: 400,
+                  margin: '0 0 0.5rem 0',
+                  color: 'var(--text-primary)',
+                  letterSpacing: '-0.02em',
+                }}>
+                  Valoración de venta y renta óptima con búsqueda en vivo
+                </h1>
+                <p style={{
+                  fontSize: '0.92rem',
+                  color: 'var(--text-secondary)',
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}>
+                  Arrendis conecta con inteligencia artificial y rastrea en tiempo real portales inmobiliarios líderes (Idealista y Fotocasa). Detecta el micro-barrio exacto y comparables directos para calcular el valor de venta real, la renta sugerida y la rentabilidad esperada.
+                </p>
+              </div>
+
+              {/* Banner explícito de ejemplo ilustrativo */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.65rem',
+                padding: '0.85rem 1rem',
+                backgroundColor: 'var(--bg-tertiary, #f1f5f9)',
+                border: '1px solid var(--panel-border, #e2e8f0)',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
+                color: 'var(--text-secondary, #475569)',
+                lineHeight: 1.45,
+              }}>
+                <Info size={16} color="var(--brand-burgundy, #6b0008)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>
+                  <strong>Ejemplo ilustrativo:</strong> El siguiente extracto muestra cómo se estructura el análisis de mercado. Al acceder a la ficha de tu propiedad y pulsar <em>«Calcular estimación»</em>, Arrendis cruzará la calle, tipología y características de tu inmueble con anuncios contemporáneos para proporcionarte este desglose completo y transparente.
+                </span>
+              </div>
+
+              {/* Simulador / Mockup Nativo del Panel de Tasación de Mercado */}
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid var(--panel-border, #e2e8f0)',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.05))',
+              }}>
+                {/* Cabecera del Panel */}
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  borderBottom: '1px solid var(--panel-border, #e2e8f0)',
+                  padding: '0.85rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <TrendingUp size={16} color="var(--brand-burgundy, #6b0008)" />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+                      ARRENDIS MARKET INTEL · Búsqueda Hiperlocal (Idealista / Fotocasa)
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-mono)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      fontWeight: 600,
+                    }}>
+                      Ejemplo demostrativo
+                    </span>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontFamily: 'var(--font-mono)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      backgroundColor: '#ecfdf5',
+                      color: '#047857',
+                      fontWeight: 600,
+                    }}>
+                      Alta Confianza (Grounding Activo)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Métricas Principales en 2 Columnas */}
+                <div style={{
+                  padding: '1.25rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '1rem',
+                  backgroundColor: 'var(--bg-primary, #f8fafc)',
+                  borderBottom: '1px solid var(--panel-border, #e2e8f0)',
+                }}>
+                  {/* Tarjeta Venta */}
+                  <div style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--panel-border, #e2e8f0)',
+                    borderRadius: '6px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                  }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                      Horquilla de Venta Estimada
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        335.000 €
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        valor mediano
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: '0.25rem', borderTop: '1px dashed var(--panel-border, #e2e8f0)' }}>
+                      <span>Rango: <strong>305.000 € – 370.000 €</strong></span>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--brand-burgundy)' }}>~ 4.187 €/m²</span>
+                    </div>
+                  </div>
+
+                  {/* Tarjeta Alquiler */}
+                  <div style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid var(--panel-border, #e2e8f0)',
+                    borderRadius: '6px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                  }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                      Renta Mensual Sugerida
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--brand-burgundy, #6b0008)' }}>
+                        1.350 € <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>/ mes</span>
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        renta de mercado
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: '0.25rem', borderTop: '1px dashed var(--panel-border, #e2e8f0)' }}>
+                      <span>Rango: <strong>1.200 € – 1.500 €/mes</strong></span>
+                      <span style={{ fontWeight: 600, color: 'var(--success, #047857)' }}>~ 4.84% rentabilidad bruta</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Factores Explicativos de Razonamiento */}
+                <div style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                    Factores Explicativos del Cálculo (Transparencia Total)
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.65rem 0.85rem',
+                    backgroundColor: 'rgba(107, 0, 8, 0.03)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(107, 0, 8, 0.12)',
+                  }}>
+                    <div>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--brand-burgundy, #6b0008)' }}>
+                        Micro-ubicación identificada
+                      </strong>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                        Detección automática de la subzona cotizada (evitando promedios diluidos del macro-distrito municipal).
+                      </div>
+                    </div>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      color: 'var(--brand-burgundy, #6b0008)',
+                    }}>
+                      + 25.0%
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.65rem 0.85rem',
+                    backgroundColor: 'var(--bg-primary, #f8fafc)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--panel-border, #e2e8f0)',
+                  }}>
+                    <div>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                        Tipología familiar (3 dormitorios)
+                      </strong>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                        Elevada demanda residencial y máxima liquidez para perfiles de larga estancia.
+                      </div>
+                    </div>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      color: 'var(--success, #047857)',
+                    }}>
+                      + 15.0%
+                    </span>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.65rem 0.85rem',
+                    backgroundColor: 'var(--bg-primary, #f8fafc)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--panel-border, #e2e8f0)',
+                  }}>
+                    <div>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                        Planta 2ª con ascensor
+                      </strong>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                        Acceso accesible garantizado; sólida comercialización frente a inmuebles sin ascensor.
+                      </div>
+                    </div>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                    }}>
+                      - 5.0%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fuentes y Comparables Detectados */}
+                <div style={{
+                  padding: '0.75rem 1.25rem',
+                  backgroundColor: '#f8fafc',
+                  borderTop: '1px solid var(--panel-border, #e2e8f0)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-secondary)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <strong>Fuentes de mercado en vivo:</strong>
+                    <span style={{ padding: '0.1rem 0.4rem', backgroundColor: '#ffffff', border: '1px solid var(--panel-border)', borderRadius: '4px' }}>
+                      Idealista (Venta micro-barrio)
+                    </span>
+                    <span style={{ padding: '0.1rem 0.4rem', backgroundColor: '#ffffff', border: '1px solid var(--panel-border)', borderRadius: '4px' }}>
+                      Fotocasa (Alquiler 3 dorm)
+                    </span>
+                  </div>
+                  <span>Enlaces directos a comparables contrastados</span>
+                </div>
+              </div>
+
+              {/* Sección opcional: Características físicas para tasación */}
+              <div style={{
+                backgroundColor: 'var(--bg-primary, #f9f7f5)',
+                border: '1px solid var(--panel-border, #e5e2dd)',
+                borderRadius: '8px',
+                padding: '1.25rem',
+              }}>
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    Configurar atributos de tasación de este inmueble (Opcional)
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Introduce los metros y dormitorios ahora para que queden guardados en tu propiedad y puedas pulsar «Calcular estimación» nada más entrar:
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Superficie (m²)
+                    </label>
+                    <input
+                      type="number"
+                      min="10"
+                      step="1"
+                      placeholder="Ej. 80"
+                      value={surfaceM2}
+                      onChange={(e) => setSurfaceM2(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Dormitorios
+                    </label>
+                    <select
+                      value={bedrooms}
+                      onChange={(e) => setBedrooms(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <option value="">No especificado</option>
+                      <option value="1">1 dormitorio</option>
+                      <option value="2">2 dormitorios</option>
+                      <option value="3">3 dormitorios</option>
+                      <option value="4">4 dormitorios</option>
+                      <option value="5">5+ dormitorios</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Baños
+                    </label>
+                    <select
+                      value={bathrooms}
+                      onChange={(e) => setBathrooms(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <option value="">No especificado</option>
+                      <option value="1">1 baño</option>
+                      <option value="2">2 baños</option>
+                      <option value="3">3+ baños</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Planta
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ej. 2"
+                      value={floor}
+                      onChange={(e) => setFloor(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Ascensor
+                    </label>
+                    <select
+                      value={hasElevator === null ? '' : (hasElevator ? 'true' : 'false')}
+                      onChange={(e) => setHasElevator(e.target.value === '' ? null : e.target.value === 'true')}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <option value="">Desconocido</option>
+                      <option value="true">Sí tiene ascensor</option>
+                      <option value="false">No tiene ascensor</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, marginBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                      Estado
+                    </label>
+                    <select
+                      value={condition}
+                      onChange={(e) => setCondition(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        border: '1px solid var(--panel-border)',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      <option value="buen_estado">Buen estado</option>
+                      <option value="reformado">Reformado</option>
+                      <option value="a_reformar">A reformar</option>
+                      <option value="a_estrenar">A estrenar</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de navegación del Paso 3 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--panel-border)',
+                    padding: '0.75rem 1.25rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <ArrowLeft size={16} /> Atrás
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextStep3}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '0.92rem',
+                    backgroundColor: 'var(--brand-burgundy, #6b0008)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
                   Continuar a Suministros <ArrowRight size={16} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* PASO 3: Automatización de Suministros y Facturas */}
-          {step === 3 && (
+          {/* PASO 4: Automatización de Suministros y Facturas */}
+          {step === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               <div>
                 <span style={{
@@ -780,7 +1303,7 @@ export default function Onboarding() {
                   display: 'block',
                   marginBottom: '0.4rem',
                 }}>
-                  Paso 3 · Automatización de Suministros
+                  Paso 4 · Automatización de Suministros
                 </span>
                 <h1 style={{
                   fontSize: '1.75rem',
@@ -1043,11 +1566,11 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              {/* Botones de navegación del Paso 3 */}
+              {/* Botones de navegación del Paso 4 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(3)}
                   disabled={submitting}
                   style={{
                     background: 'none',
