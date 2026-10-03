@@ -48,6 +48,7 @@ from backend.api.routes.webhooks import router as webhooks_router
 from backend.api.routes.onboarding import router as onboarding_router
 from backend.api.routes.health import router as health_router
 from backend.api.middleware.security import SecurityHeadersMiddleware
+from backend.api.middleware.rate_limit import RateLimitMiddleware
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
@@ -92,6 +93,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate Limiting en endpoints de autenticación (F-40)
+app.add_middleware(RateLimitMiddleware)
 
 # Cabeceras HTTP de Seguridad (F-39)
 app.add_middleware(SecurityHeadersMiddleware)
