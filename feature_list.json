@@ -21,8 +21,8 @@
     },
     {
       "id": "E-04",
-      "title": "Preparación para Lanzamiento, Seguridad y Observabilidad Web (GA Readiness)",
-      "status": "in_discovery",
+      "title": "Preparación para Lanzamiento, Blindaje Web y Cumplimiento Normativo (Launch Readiness & Hardening)",
+      "status": "ready_for_specification",
       "spec": "specs/epics/E-04-preparacion-lanzamiento/vision_y_dominio.md"
     },
     {
@@ -30,6 +30,12 @@
       "title": "Experiencia Móvil y Distribución Multiplataforma (PWA y Capacitor)",
       "status": "done",
       "spec": "specs/epics/E-05-version-movil/vision_y_dominio.md"
+    },
+    {
+      "id": "E-06",
+      "title": "Identidad Avanzada, Control de Cuentas y Observabilidad de Usuarios",
+      "status": "in_discovery",
+      "spec": "specs/epics/E-06-identidad-y-control-acceso/vision_y_dominio.md"
     }
   ],
   "features": [
@@ -70,6 +76,14 @@
     { "id": "F-35", "epic": "E-05", "title": "Manifiesto PWA, Service Worker con Vite y Pantalla de Carga (Standalone + Splash Screen)", "status": "done" },
     { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "done" },
     { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "done" },
-    { "id": "F-38", "title": "Separación de Claves Gemini (GEMINI_INVOICE_API_KEY vs GEMINI_VALUATION_API_KEY) para Blindaje de Costes 0€", "status": "backlog", "doc": "docs/separacion_api_keys_facturas_valoracion.md" }
+    { "id": "F-38", "title": "Separación de Claves Gemini (GEMINI_INVOICE_API_KEY vs GEMINI_VALUATION_API_KEY) para Blindaje de Costes 0€", "status": "backlog", "doc": "docs/separacion_api_keys_facturas_valoracion.md" },
+    { "id": "F-39", "epic": "E-04", "title": "Cabeceras HTTP de Seguridad, Cookies Seguras de Producción y Endpoint de Salud (/api/health)", "status": "backlog" },
+    { "id": "F-40", "epic": "E-04", "title": "Protección contra Fuerza Bruta y Rate Limiting en Endpoints de Autenticación", "status": "backlog" },
+    { "id": "F-41", "epic": "E-04", "title": "Marco Legal y Cumplimiento Normativo RGPD (Páginas /privacy, /terms y Aviso Early Access)", "status": "backlog" },
+    { "id": "F-42", "epic": "E-04", "title": "Descubrimiento Web, SEO, Social Graph y Crawling (robots.txt, sitemap.xml, Open Graph, Twitter Cards)", "status": "backlog" },
+    { "id": "F-43", "epic": "E-04", "title": "Resiliencia de Navegación (Página 404 Personalizada Atelier Editorial) y Accesibilidad en Formularios", "status": "backlog" },
+    { "id": "F-44", "epic": "E-06", "title": "Control Administrativo del Estado de Cuentas (is_active) y Política de Acceso de Usuarios", "status": "backlog" },
+    { "id": "F-45", "epic": "E-06", "title": "Autenticación Social Federada con Google OAuth2 (Google Identity Services)", "status": "backlog" },
+    { "id": "F-46", "epic": "E-06", "title": "Registro de Auditoría de Accesos y Métricas Operativas de Usuarios", "status": "backlog" }
   ]
 }
