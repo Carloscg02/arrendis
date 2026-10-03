@@ -42,7 +42,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth }: Mo
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay" onClick={onClose} role="button" tabIndex={-1} onKeyDown={(e) => e.key === 'Escape' && onClose()}>
           <motion.div
             className="modal-content"
             style={maxWidth ? { maxWidth } : undefined}

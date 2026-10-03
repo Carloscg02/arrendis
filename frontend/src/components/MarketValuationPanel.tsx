@@ -377,8 +377,7 @@ export default function MarketValuationPanel({
                         {isSafeUrl ? (
                           <a
                             href={src.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            target="_blank" rel="noopener noreferrer"
                             className="source-title-link"
                           >
                             <span>{src.title || "Anuncio comparable"}</span>

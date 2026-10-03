@@ -483,7 +483,7 @@ export default function PropertyDetail() {
                     </span>
                   </div>
                 </div>
-                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                <div className="collapsible-header-actions" role="group" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn btn-sm btn-primary"
                     onClick={() => setIsIncomeModalOpen(true)}
@@ -583,7 +583,7 @@ export default function PropertyDetail() {
                     </span>
                   </div>
                 </div>
-                <div className="collapsible-header-actions" onClick={(e) => e.stopPropagation()}>
+                <div className="collapsible-header-actions" role="group" onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn btn-sm btn-secondary"
                     onClick={() => {

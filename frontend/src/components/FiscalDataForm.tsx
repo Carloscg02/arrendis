@@ -117,7 +117,7 @@ export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: Fisca
         </div>
       )}
       <div className={`fiscal-section ${expandedSection === "both" || expandedSection === "cadastral" ? "expanded" : "collapsed"}`}>
-        <div className="fiscal-section-header" onClick={() => toggleSection("cadastral")}>
+        <div className="fiscal-section-header" role="button" tabIndex={0} onClick={() => toggleSection("cadastral")} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("cadastral"); } }}>
           <div className="fiscal-section-title">
             <Map className="fiscal-icon" size={20} />
             <h4>Datos Catastrales</h4>
@@ -162,7 +162,7 @@ export default function FiscalDataForm({ propertyId, onSubmit, onCancel }: Fisca
       </div>
 
       <div className={`fiscal-section ${expandedSection === "both" || expandedSection === "acquisition" ? "expanded" : "collapsed"}`}>
-        <div className="fiscal-section-header" onClick={() => toggleSection("acquisition")}>
+        <div className="fiscal-section-header" role="button" tabIndex={0} onClick={() => toggleSection("acquisition")} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("acquisition"); } }}>
           <div className="fiscal-section-title">
             <Building className="fiscal-icon" size={20} />
             <h4>Datos de Adquisición</h4>
