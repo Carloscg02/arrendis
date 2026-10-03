@@ -1,0 +1,18 @@
+# robots.txt para Arrendis (Gestión de Alquileres y Cálculo Fiscal)
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /login
+Allow: /register
+Allow: /privacy
+Allow: /terms
+
+# Desindexación estricta de áreas privadas y sensibles
+Disallow: /portfolio
+Disallow: /properties
+Disallow: /properties/
+Disallow: /onboarding
+Disallow: /api/
+
+# Mapa del sitio
+Sitemap: https://arrendis.com/sitemap.xml

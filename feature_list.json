@@ -80,7 +80,7 @@
     { "id": "F-39", "epic": "E-04", "title": "Cabeceras HTTP de Seguridad, Cookies Seguras de Producción y Endpoint de Salud (/api/health)", "status": "done" },
     { "id": "F-40", "epic": "E-04", "title": "Protección contra Fuerza Bruta y Rate Limiting en Endpoints de Autenticación", "status": "done" },
     { "id": "F-41", "epic": "E-04", "title": "Marco Legal y Cumplimiento Normativo RGPD (Páginas /privacy, /terms y Aviso Early Access)", "status": "done" },
-    { "id": "F-42", "epic": "E-04", "title": "Descubrimiento Web, SEO, Social Graph y Crawling (robots.txt, sitemap.xml, Open Graph, Twitter Cards)", "status": "backlog" },
+    { "id": "F-42", "epic": "E-04", "title": "Descubrimiento Web, SEO, Social Graph y Crawling (robots.txt, sitemap.xml, Open Graph, Twitter Cards)", "status": "done" },
     { "id": "F-43", "epic": "E-04", "title": "Resiliencia de Navegación (Página 404 Personalizada Atelier Editorial) y Accesibilidad en Formularios", "status": "backlog" },
     { "id": "F-44", "epic": "E-06", "title": "Control Administrativo del Estado de Cuentas (is_active) y Política de Acceso de Usuarios", "status": "backlog" },
     { "id": "F-45", "epic": "E-06", "title": "Autenticación Social Federada con Google OAuth2 (Google Identity Services)", "status": "backlog" },
