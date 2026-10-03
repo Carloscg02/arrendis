@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Landing from './pages/Landing';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
@@ -116,6 +117,9 @@ function App() {
               <Register />
             </PublicOnlyRoute>
           } />
+
+          {/* Ruta comodín de captura 404 Atelier Editorial (F-43) */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
         <PWAInstallBanner />
       </AuthProvider>

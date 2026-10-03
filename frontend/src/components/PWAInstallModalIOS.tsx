@@ -10,7 +10,7 @@ export default function PWAInstallModalIOS({ isOpen, onClose }: PWAInstallModalI
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title">
-      <div className="modal-backdrop" onClick={onClose} />
+      <div className="modal-backdrop" role="button" tabIndex={-1} onClick={onClose} onKeyDown={(e) => e.key === 'Escape' && onClose()} />
       <div className="pwa-ios-modal">
         <header className="pwa-ios-modal__header">
           <div className="pwa-ios-modal__title-row">
