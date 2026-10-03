@@ -46,6 +46,8 @@ from backend.api.routes.contracts import router as contracts_router
 from backend.api.routes.llm import router as llm_router
 from backend.api.routes.webhooks import router as webhooks_router
 from backend.api.routes.onboarding import router as onboarding_router
+from backend.api.routes.health import router as health_router
+from backend.api.middleware.security import SecurityHeadersMiddleware
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
 
 
@@ -91,7 +93,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Cabeceras HTTP de Seguridad (F-39)
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Incluir routers
+app.include_router(health_router)
 app.include_router(properties_router)
 app.include_router(incomes_router)
 app.include_router(expenses_router)

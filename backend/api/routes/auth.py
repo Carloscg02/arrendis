@@ -23,12 +23,18 @@ from backend.domain.entities import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+def _is_cookie_secure() -> bool:
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    cookie_secure_env = os.getenv("COOKIE_SECURE", "").lower()
+    return env in ("production", "staging") or cookie_secure_env in ("true", "1", "yes")
+
+
 def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,  # False for local dev (HTTP), True in production
+        secure=_is_cookie_secure(),
         samesite="lax",
         path="/api/auth",
         max_age=7 * 24 * 3600,
@@ -106,7 +112,13 @@ def refresh_token(
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(key="refresh_token", path="/api/auth")
+    response.delete_cookie(
+        key="refresh_token",
+        path="/api/auth",
+        httponly=True,
+        secure=_is_cookie_secure(),
+        samesite="lax",
+    )
     return {"message": "Sesión cerrada"}
 
 

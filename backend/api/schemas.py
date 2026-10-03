@@ -509,3 +509,16 @@ class OnboardingBootstrapRequest(BaseModel):
     cups_electricity: str | None = None
     cups_gas: str | None = None
     cups_water: str | None = None
+
+
+# Schemas para Sonda de Salud (F-39)
+class HealthResponse(BaseModel):
+    status: str = "healthy"
+    database: str = "connected"
+    version: str = "0.1.0"
+
+
+class HealthDegradedResponse(BaseModel):
+    status: str = "degraded"
+    database: str = "disconnected"
+    error: str

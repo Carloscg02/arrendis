@@ -77,7 +77,7 @@
     { "id": "F-36", "epic": "E-05", "title": "Guía y Prompt Inteligente de Instalación PWA (Banner y Modal Safari/Android)", "status": "done" },
     { "id": "F-37", "epic": "E-05", "title": "Empaquetado Nativo con Capacitor y Pipeline de Generación de APK Local para Android", "status": "done" },
     { "id": "F-38", "title": "Separación de Claves Gemini (GEMINI_INVOICE_API_KEY vs GEMINI_VALUATION_API_KEY) para Blindaje de Costes 0€", "status": "backlog", "doc": "docs/separacion_api_keys_facturas_valoracion.md" },
-    { "id": "F-39", "epic": "E-04", "title": "Cabeceras HTTP de Seguridad, Cookies Seguras de Producción y Endpoint de Salud (/api/health)", "status": "backlog" },
+    { "id": "F-39", "epic": "E-04", "title": "Cabeceras HTTP de Seguridad, Cookies Seguras de Producción y Endpoint de Salud (/api/health)", "status": "done" },
     { "id": "F-40", "epic": "E-04", "title": "Protección contra Fuerza Bruta y Rate Limiting en Endpoints de Autenticación", "status": "backlog" },
     { "id": "F-41", "epic": "E-04", "title": "Marco Legal y Cumplimiento Normativo RGPD (Páginas /privacy, /terms y Aviso Early Access)", "status": "backlog" },
     { "id": "F-42", "epic": "E-04", "title": "Descubrimiento Web, SEO, Social Graph y Crawling (robots.txt, sitemap.xml, Open Graph, Twitter Cards)", "status": "backlog" },

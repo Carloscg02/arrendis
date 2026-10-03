@@ -332,6 +332,16 @@ class SQLiteConnection:
             self._local.conn.close()
             self._local.conn = None
 
+    def check_health(self) -> bool:
+        """Verifica la conectividad activa con la base de datos SQLite."""
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT 1")
+            row = cursor.fetchone()
+            return row is not None and row[0] == 1
+        except Exception:
+            return False
+
 
 class SQLitePropertyRepository(PropertyRepository):
     """Implementación de PropertyRepository usando SQLite."""
