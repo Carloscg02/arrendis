@@ -4,6 +4,8 @@ import PropertyDetail from './pages/PropertyDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import Onboarding from './pages/Onboarding';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
@@ -69,6 +71,10 @@ function App() {
           
           {/* Acceso directo a la landing page pública */}
           <Route path="/landing" element={<Landing />} />
+
+          {/* Rutas legales públicas (F-41) */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
 
           {/* Onboarding guiado */}
           <Route path="/onboarding" element={

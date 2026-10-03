@@ -347,14 +347,22 @@ export default function Landing() {
                 <li><span>Aviso: Herramienta de estimación</span></li>
               </ul>
             </div>
+            <div className="landing-footer__col">
+              <span className="mono-eyebrow">LEGAL &amp; PRIVACIDAD</span>
+              <ul className="landing-footer__links">
+                <li><Link to="/privacy">Política de Privacidad</Link></li>
+                <li><Link to="/terms">Términos de Servicio</Link></li>
+                <li><span>Cumplimiento RGPD / LSSI</span></li>
+              </ul>
+            </div>
           </div>
 
           <div className="landing-footer__bottom">
             <span className="mono-caption">
               © {new Date().getFullYear()} ARRENDIS · GESTIÓN DE ALQUILERES Y CÁLCULO FISCAL.
             </span>
-            <span className="mono-caption text-muted">
-              HERRAMIENTA ESTIMATIVA DE APOYO AL PROPIETARIO.
+            <span className="mono-caption px-2 py-0.5 rounded bg-[var(--bg-tertiary)] border border-[var(--panel-border)] text-[10px]">
+              Versión Preliminar (Early Access) · Cálculos fiscales orientativos no vinculantes
             </span>
           </div>
         </div>
