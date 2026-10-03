@@ -51,7 +51,7 @@ Para que GitHub Actions pueda conectarse de forma segura a tu servidor de Oracle
 | :--- | :--- |
 | `ORACLE_SSH_HOST` | Tu IP pública de Oracle Cloud (ej. `80.225.189.17`) |
 | `ORACLE_SSH_USER` | `ubuntu` |
-| `ORACLE_SSH_KEY` | El contenido de texto completo de tu archivo de clave privada `.key` (abierto con bloc de notas o editor de texto, incluyendo las líneas `-----BEGIN RSA PRIVATE KEY-----` y `-----END RSA PRIVATE KEY-----`). |
+| `ORACLE_SSH_KEY` | El contenido de texto completo de tu archivo de clave privada `.key` (abierto con bloc de notas o editor de texto, incluyendo los bloques delimitadores de inicio y fin de la clave privada). |
 
 ---
 
