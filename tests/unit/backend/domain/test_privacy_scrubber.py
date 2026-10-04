@@ -5,7 +5,7 @@ Verifica la anonimización de datos personales (PII) antes de invocar a modelos 
 asegurando el principio de minimización de datos del RGPD.
 """
 
-from backend.domain.extraction import PrivacyScrubber
+from backend.adapters.extraction import PrivacyScrubber
 
 
 def test_privacy_scrubber_redacts_dni():

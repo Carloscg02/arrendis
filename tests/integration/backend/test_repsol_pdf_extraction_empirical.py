@@ -11,7 +11,8 @@ from pathlib import Path
 
 from backend.adapters.pdf_extractor_adapter import PyMuPDFTextExtractorAdapter
 from backend.domain.entities import ExtractionConfidence, UtilityType
-from backend.domain.extraction import RepsolExtractionStrategy
+from backend.adapters.extraction import RepsolExtractionStrategy
+
 
 
 def test_empirical_extraction_repsol_sample_pdf():
