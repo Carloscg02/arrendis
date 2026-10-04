@@ -33,9 +33,9 @@
      - `MarketValuationPort`: *"Dados los atributos físicos y ubicación de un inmueble, estima sus rangos de valor de venta y alquiler (`MarketValuationResult`)"*.
 3. **Conservación de `LLMProviderPort` como Puerto Técnico Transversal:**
    - `LLMProviderPort` y `GeminiFlashAdapter` **permanecen** como la infraestructura transversal de IA para operaciones técnicas del sistema, como el chequeo de salud de conectividad (`CheckLLMHealthUseCase` y `/api/llm/health`).
-4. **Casos de Uso Aislados y Compatibles:**
+4. **Casos de Uso Aislados y Limpios:**
    - Los casos de uso (`ProcessUtilityInvoiceUseCase`, `RequestPropertyValuationUseCase`) orquestan entidades y llaman a los puertos. No contienen prompts, ni parámetros de temperatura, ni lógica de reintentos de red.
-   - `ProcessUtilityInvoiceUseCase` mantiene compatibilidad con firmas legacy (`registry`, `fallback_strategy`) mientras migra al puerto canónico.
+   - `ProcessUtilityInvoiceUseCase` adopta un constructor estrictamente limpio (`pdf_extractor`, `invoice_extractor`, `property_repo`, `expense_repo`) sin arrastrar parámetros obsoletos (`registry`, `fallback_strategy`). Los ~12 tests existentes se actualizan de forma transparente.
    - `valuation_use_cases.py` se mantiene como un fichero independiente y cohesionado, evitando la masificación de `use_cases.py`.
 5. **Adaptadores Especializados e Independientes (Infraestructura):**
    - Cada adaptador vive en su propio paquete modular (`backend/adapters/extraction/` y `backend/adapters/valuation/`).
@@ -139,36 +139,23 @@ class InvoiceExtractorPort(ABC):
        - Ejecuta `fallback_strategy.extract(text)`. Si tiene éxito -> `ExtractedInvoice(data=..., strategy_used=fallback_strategy.provider_name)`.
        - Si falla -> lanza `ExtractionFailedError("La extracción de la factura no pudo completarse ni por Regex ni por IA.")`.
 
-### 4.3 Retrocompatibilidad en `ProcessUtilityInvoiceUseCase`
+### 4.3 Constructor Limpio en `ProcessUtilityInvoiceUseCase` y Actualización de Tests
 
-Para no romper ninguno de los 15+ tests existentes que pasan argumentos nominales (`registry`, `fallback_strategy`), el constructor de `ProcessUtilityInvoiceUseCase` se diseña como sigue:
+En lugar de arrastrar parámetros obsoletos en código de producción, el constructor de `ProcessUtilityInvoiceUseCase` adopta su forma canónica y limpia:
 
 ```python
 class ProcessUtilityInvoiceUseCase:
     def __init__(
         self,
         pdf_extractor: PDFTextExtractorPort,
+        invoice_extractor: InvoiceExtractorPort,
         property_repo: PropertyRepository,
         expense_repo: ExpenseRepository,
-        invoice_extractor: InvoiceExtractorPort | None = None,
-        # Argumentos legacy para total retrocompatibilidad:
-        registry: UtilityExtractorRegistry | None = None,
-        fallback_strategy: ExtractionStrategy | None = None,
     ) -> None:
         self._pdf_extractor = pdf_extractor
+        self._invoice_extractor = invoice_extractor
         self._property_repo = property_repo
         self._expense_repo = expense_repo
-        
-        if invoice_extractor is not None:
-            self._invoice_extractor = invoice_extractor
-        elif registry is not None:
-            from backend.adapters.extraction.composite_registry import CompositeInvoiceExtractor
-            self._invoice_extractor = CompositeInvoiceExtractor(
-                registry=registry,
-                fallback_strategy=fallback_strategy,
-            )
-        else:
-            raise ValueError("Se requiere 'invoice_extractor' o 'registry' para inicializar el caso de uso.")
 
     def execute(self, pdf_bytes: bytes, user_id: str) -> ProcessUtilityInvoiceResult:
         raw_text = self._pdf_extractor.extract_text(pdf_bytes)
@@ -182,6 +169,8 @@ class ProcessUtilityInvoiceUseCase:
 
         # Continuación de validación de duplicados y matching de propiedad...
 ```
+
+Los ~12 puntos de instanciación en los tests (`test_process_utility_invoice_use_case.py`, `test_f21_inbound_email_use_case.py` y `test_process_utility_invoice_sqlite.py`) se actualizan directamente para inyectar `invoice_extractor = CompositeInvoiceExtractor(...)` o `mock_invoice_extractor`. De esta manera, el código de producción permanece 100% puro y libre de parches de retrocompatibilidad.
 
 ### 4.4 Inyección de Dependencias en `backend/api/dependencies.py`
 
