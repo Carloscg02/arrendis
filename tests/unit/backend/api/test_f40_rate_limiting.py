@@ -174,3 +174,55 @@ def test_x_forwarded_for_ip_tracking(client: TestClient):
             headers={"X-Forwarded-For": f"{ip_other}, 10.0.0.1"},
         )
         assert res_other.status_code == 401
+
+
+def test_heavy_endpoint_rate_limiting_http_429(client: TestClient):
+    """Verifica que endpoints de computo pesado (Tier 2) bloquean en la peticion 31."""
+    with patch.dict(os.environ, {"FORCE_RATE_LIMIT": "1"}):
+        default_rate_limiter.reset()
+
+        # 30 peticiones permitidas a endpoint pesado
+        for _ in range(30):
+            res = client.post("/api/properties/test-id/valuation")
+            # 401 por falta de auth, pero pasa el rate limiter sin ser 429
+            assert res.status_code == 401
+
+        # La 31 debe responder 429 por límite Tier 2 (Heavy)
+        res_blocked = client.post("/api/properties/test-id/valuation")
+        assert res_blocked.status_code == 429
+        data = res_blocked.json()
+        assert data.get("tier") == "heavy"
+        assert "alto coste" in data["detail"]
+
+
+def test_global_endpoint_rate_limiting_http_429(client: TestClient):
+    """Verifica que el resto de rutas /api (Tier 3) aplican el limite global de 100 req/min."""
+    with patch.dict(os.environ, {"FORCE_RATE_LIMIT": "1"}):
+        default_rate_limiter.reset()
+
+        # 100 peticiones a /api/health
+        for _ in range(100):
+            res = client.get("/api/health")
+            assert res.status_code == 200
+
+        # La 101 debe responder 429 por límite Tier 3 (Global)
+        res_blocked = client.get("/api/health")
+        assert res_blocked.status_code == 429
+        data = res_blocked.json()
+        assert data.get("tier") == "global"
+        assert "Límite global" in data["detail"]
+
+
+def test_cors_options_preflight_exempt_from_rate_limiting(client: TestClient):
+    """Verifica que las peticiones OPTIONS (CORS preflight) nunca son bloqueadas por rate limit."""
+    with patch.dict(os.environ, {"FORCE_RATE_LIMIT": "1"}):
+        default_rate_limiter.reset()
+
+        cors_headers = {
+            "Origin": "https://arrendis.com",
+            "Access-Control-Request-Method": "POST",
+        }
+        for _ in range(150):
+            res = client.options("/api/auth/login", headers=cors_headers)
+            assert res.status_code == 200
+
