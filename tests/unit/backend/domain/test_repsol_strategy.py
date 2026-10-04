@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 
 from backend.domain.entities import ExtractionConfidence, UtilityType
-from backend.domain.extraction import RepsolExtractionStrategy
+from backend.adapters.extraction import RepsolExtractionStrategy
 
 
 def test_repsol_strategy_can_handle_repsol_text():
