@@ -10,7 +10,9 @@ from backend.domain.entities import (
     MissingPhysicalAttributesError,
 )
 from backend.domain.value_objects import Address
-from backend.adapters.gemini_valuation_adapter import MockMarketValuationAdapter
+from backend.adapters.valuation import MockMarketValuationAdapter
+
+
 
 
 def _create_sample_property(

@@ -11,6 +11,7 @@ from backend.adapters.extraction.gemini_extractor_adapter import (
     AIExtractionStrategy,
     GeminiInvoiceExtractor,
 )
+from backend.adapters.extraction.gemini_adapter import GeminiFlashAdapter
 from backend.adapters.extraction.composite_registry import CompositeInvoiceExtractor
 
 __all__ = [
@@ -21,5 +22,7 @@ __all__ = [
     "RepsolInvoiceExtractor",
     "AIExtractionStrategy",
     "GeminiInvoiceExtractor",
+    "GeminiFlashAdapter",
     "CompositeInvoiceExtractor",
 ]
+

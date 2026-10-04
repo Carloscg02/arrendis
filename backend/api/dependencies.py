@@ -30,8 +30,9 @@ from backend.domain.ports import (
     MarketValuationPort,
     InvoiceExtractorPort,
 )
-from backend.adapters.gemini_adapter import GeminiFlashAdapter
 from backend.adapters.valuation import GeminiMarketValuationAdapter, MockMarketValuationAdapter
+
+
 
 
 def get_db(request: Request) -> SQLiteConnection:
