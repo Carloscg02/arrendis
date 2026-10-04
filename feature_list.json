@@ -36,8 +36,15 @@
       "title": "Identidad Avanzada, Control de Cuentas y Observabilidad de Usuarios",
       "status": "in_discovery",
       "spec": "specs/epics/E-06-identidad-y-control-acceso/vision_y_dominio.md"
+    },
+    {
+      "id": "E-07",
+      "title": "Estrategia de Testing Agéntico y Pirámide Invertida (E2E Playwright, Integración Real y Golden Tests)",
+      "status": "backlog",
+      "spec": "specs/epics/E-07-estrategia-testing-agentico/vision_y_dominio.md"
     }
   ],
+
   "features": [
     { "id": "F-01", "title": "Property Catalog and Listing", "status": "done" },
     { "id": "F-02", "title": "API Implementation", "status": "done" },
@@ -84,6 +91,11 @@
     { "id": "F-43", "epic": "E-04", "title": "Resiliencia de Navegación (Página 404 Personalizada Atelier Editorial) y Accesibilidad en Formularios", "status": "backlog" },
     { "id": "F-44", "epic": "E-06", "title": "Control Administrativo del Estado de Cuentas (is_active) y Política de Acceso de Usuarios", "status": "backlog" },
     { "id": "F-45", "epic": "E-06", "title": "Autenticación Social Federada con Google OAuth2 (Google Identity Services)", "status": "backlog" },
-    { "id": "F-46", "epic": "E-06", "title": "Registro de Auditoría de Accesos y Métricas Operativas de Usuarios", "status": "backlog" }
+    { "id": "F-46", "epic": "E-06", "title": "Registro de Auditoría de Accesos y Métricas Operativas de Usuarios", "status": "backlog" },
+    { "id": "F-47", "epic": "E-07", "title": "Setup Playwright E2E y Matriz de Flujos Críticos de Usuario (Auth, Onboarding, Inmuebles, Facturas, Fiscalidad)", "status": "backlog" },
+    { "id": "F-48", "epic": "E-07", "title": "Integración de Playwright en CI/CD con GitHub Actions (Artefactos, Traza de Red y Capturas en Fallo)", "status": "backlog" },
+    { "id": "F-49", "epic": "E-07", "title": "Framework Central de Golden Tests (Muestras Empíricas Reales de Facturas PDF, Muestras de Tasación y Regresiones Fiscales)", "status": "backlog" },
+    { "id": "F-50", "epic": "E-07", "title": "Poda y Saneamiento de la Suite: Erradicación del 'Teatro del Mock' y Blindaje de Tests Unitarios Algorítmicos Puros", "status": "backlog" }
   ]
 }
+
