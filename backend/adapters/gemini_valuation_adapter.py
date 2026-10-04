@@ -5,6 +5,10 @@ import time
 import random
 from decimal import Decimal
 from typing import Any
+import urllib.request
+import urllib.error
+from urllib.parse import urlparse, urlunparse, urljoin
+from concurrent.futures import ThreadPoolExecutor
 
 from pydantic import BaseModel, Field
 from google import genai
@@ -55,6 +59,176 @@ class _GeminiValuationPayload(BaseModel):
     reasoning_factors: list[_FactorPayload] = Field(default_factory=list)
     sources: list[_SourcePayload] = Field(default_factory=list)
     raw_notes: str | None = None
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirectHandler)
+
+
+def _resolve_real_url(url: str, timeout: float = 2.0) -> str:
+    """Resuelve redirecciones de Google Search Grounding a sus URLs finales de destino."""
+    if not url or "grounding-api-redirect" not in url:
+        return url
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+        )
+        with _NO_REDIRECT_OPENER.open(req, timeout=timeout) as resp:
+            return resp.geturl()
+    except urllib.error.HTTPError as e:
+        if e.code in (301, 302, 303, 307, 308):
+            loc = e.headers.get("Location")
+            if loc:
+                return urljoin(url, loc)
+    except Exception:
+        pass
+    return url
+
+
+def _sanitize_property_url(url: str) -> str:
+    """Corrige slugs de Idealista alucinados por el LLM hacia rutas canónicas y activas."""
+    if not url:
+        return url
+    clean = url.strip()
+    if "idealista.com" in clean:
+        clean = clean.replace("/teatinos-universidad/", "/teatinos/")
+        clean = clean.replace("/hacienda-bizcochero/", "/el-tejar-hacienda-bizcochero/")
+        clean = clean.replace("/carretera-de-cadiz-huelin/", "/carretera-de-cadiz/huelin/")
+
+        clean = re.sub(r"/con-de-(?:cuatro|4)-dormitorios?/?", "/con-de-cuatro-cinco-habitaciones-o-mas/", clean)
+        clean = re.sub(r"/con-de-(?:tres|3)-dormitorios?/?", "/con-de-tres-dormitorios/", clean)
+        clean = re.sub(r"/con-de-(?:dos|2)-dormitorios?/?", "/con-de-dos-dormitorios/", clean)
+        clean = re.sub(r"/con-de-(?:un|1)-dormitorios?/?", "/con-de-un-dormitorio/", clean)
+
+        clean = re.sub(r"/con-precio-hasta_[0-9]+/?", "/", clean)
+
+        parsed = urlparse(clean)
+        clean_path = re.sub(r"/+", "/", parsed.path)
+        if not clean_path.endswith("/"):
+            clean_path += "/"
+        clean = urlunparse(parsed._replace(path=clean_path))
+
+    return clean
+
+
+def _format_source_title(raw_title: str | None, url: str) -> str:
+    """Genera un título legible y representativo para los enlaces de Idealista y Fotocasa."""
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.replace("www.", "")
+
+        if raw_title:
+            stripped = raw_title.strip()
+            if (
+                stripped.lower() not in (domain.lower(), "idealista.com", "fotocasa.es", "habitaclia.com")
+                and len(stripped) > 8
+            ):
+                return stripped
+
+        parts = [p for p in parsed.path.strip("/").split("/") if p]
+        if "idealista.com" in domain and parts:
+            is_alquiler = any("alquiler" in p for p in parts)
+            is_venta = any("venta" in p for p in parts)
+            action = "Alquiler" if is_alquiler else ("Venta" if is_venta else "Inmuebles")
+            loc_parts = [
+                p for p in parts
+                if p not in (
+                    "geo", "venta-viviendas", "alquiler-viviendas", "con-pisos",
+                    "inmuebles", "areas", "con-de-cuatro-cinco-habitaciones-o-mas",
+                    "con-de-tres-dormitorios", "con-de-dos-dormitorios", "con-de-un-dormitorio",
+                )
+            ]
+            clean_zone = ", ".join([p.replace("-", " ").title() for p in loc_parts])
+            return f"{action} de pisos en {clean_zone} — Idealista" if clean_zone else f"{action} de viviendas — Idealista"
+        elif "fotocasa.es" in domain and parts:
+            is_alquiler = "alquiler" in parts
+            action = "Alquiler" if is_alquiler else "Venta"
+            loc_parts = [
+                p for p in parts
+                if p not in ("es", "comprar", "alquiler", "viviendas", "vivienda", "area", "maps", "l", "d")
+            ]
+            clean_zone = ", ".join([p.replace("-", " ").title() for p in loc_parts if not p.isdigit() and len(p) > 2])
+            return f"{action} en {clean_zone} — Fotocasa" if clean_zone else f"{action} de viviendas — Fotocasa"
+    except Exception:
+        pass
+    return raw_title or url
+
+
+def _assemble_sources(
+    payload_sources: list[_SourcePayload],
+    resolved_grounding: list[tuple[str, str]],
+) -> list[ValuationSource]:
+    """Combina fuentes del payload del modelo con URLs reales resueltas desde Google Search Grounding."""
+    sources: list[ValuationSource] = []
+    used_grounding_indices: set[int] = set()
+    seen_urls: set[str] = set()
+
+    for s in payload_sources:
+        s_url = _sanitize_property_url(s.url.strip())
+        if not (s_url.startswith("http://") or s_url.startswith("https://")):
+            continue
+
+        matched_idx = None
+        # 1. Coincidencia exacta de URL
+        for idx, (g_url, _) in enumerate(resolved_grounding):
+            if g_url.rstrip("/") == s_url.rstrip("/"):
+                matched_idx = idx
+                break
+
+        # 2. Coincidencia por portal y modalidad (venta/alquiler) si no hubo match exacto
+        if matched_idx is None and resolved_grounding:
+            s_domain = urlparse(s_url).netloc.replace("www.", "")
+            s_is_alquiler = "alquiler" in s_url.lower()
+            for idx, (g_url, _) in enumerate(resolved_grounding):
+                if idx in used_grounding_indices:
+                    continue
+                g_domain = urlparse(g_url).netloc.replace("www.", "")
+                g_is_alquiler = "alquiler" in g_url.lower()
+                if s_domain and s_domain == g_domain and s_is_alquiler == g_is_alquiler:
+                    matched_idx = idx
+                    break
+
+        if matched_idx is not None:
+            used_grounding_indices.add(matched_idx)
+            g_url, g_title = resolved_grounding[matched_idx]
+            final_url = g_url
+            final_title = _format_source_title(g_title or s.title, g_url)
+        else:
+            final_url = s_url
+            final_title = _format_source_title(s.title, s_url)
+
+        norm = final_url.rstrip("/")
+        if norm not in seen_urls:
+            seen_urls.add(norm)
+            sources.append(
+                ValuationSource(
+                    title=final_title,
+                    url=final_url,
+                    price=s.price,
+                    surface_m2=s.surface_m2,
+                )
+            )
+
+    # Añadir fuentes restantes de búsqueda no emparejadas con el payload
+    for idx, (g_url, g_title) in enumerate(resolved_grounding):
+        if idx in used_grounding_indices:
+            continue
+        norm = g_url.rstrip("/")
+        if norm not in seen_urls:
+            seen_urls.add(norm)
+            sources.append(
+                ValuationSource(
+                    title=_format_source_title(g_title, g_url),
+                    url=g_url,
+                )
+            )
+
+    return sources
 
 
 class GeminiMarketValuationAdapter(MarketValuationPort):
@@ -121,7 +295,8 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
         )
 
         user_prompt = (
-            f"Por favor, calcula la estimación de venta y alquiler para el siguiente inmueble:\n"
+            f"Busca en Google Search anuncios de venta y alquiler en Idealista y Fotocasa para inmuebles en {address.street}, {address.city} (CP: {address.postal_code}, País: {address.country}).\n"
+            f"Con las referencias reales encontradas, calcula la estimación de venta y alquiler para el siguiente inmueble:\n"
             f"- Tipología: {property_type.value}\n"
             f"- Dirección: {address.street}, {address.city} (CP: {address.postal_code}, País: {address.country})\n"
             f"- Superficie: {surface_m2} m2\n"
@@ -238,30 +413,11 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
             except ValueError:
                 continue
 
-        # 3. Extraer Fuentes del payload y Grounding Chunks
-        sources: list[ValuationSource] = []
-        seen_urls: set[str] = set()
-
-        for s in payload.sources:
-            clean_url = s.url.strip()
-            if clean_url.startswith("http://") or clean_url.startswith("https://"):
-                title = s.title.strip() or clean_url
-                try:
-                    sources.append(
-                        ValuationSource(
-                            title=title,
-                            url=clean_url,
-                            price=s.price,
-                            surface_m2=s.surface_m2,
-                        )
-                    )
-                    seen_urls.add(clean_url)
-                except ValueError:
-                    continue
-
-        # Extraer defensivamente chunks de búsqueda web de grounding_metadata
+        # 3. Extraer y resolver Fuentes de búsqueda web y payload
+        resolved_grounding: list[tuple[str, str]] = []
         grounding_metadata = getattr(candidate, "grounding_metadata", None)
         if grounding_metadata and getattr(grounding_metadata, "grounding_chunks", None):
+            raw_grounding_items: list[tuple[str, str]] = []
             for chunk in grounding_metadata.grounding_chunks:
                 web = getattr(chunk, "web", None)
                 if not web:
@@ -272,21 +428,17 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
                 clean_uri = uri.strip()
                 if not (clean_uri.startswith("http://") or clean_uri.startswith("https://")):
                     continue
-                if clean_uri in seen_urls:
-                    continue
-
                 raw_title = getattr(web, "title", None)
                 title = raw_title.strip() if raw_title and isinstance(raw_title, str) else clean_uri
-                try:
-                    sources.append(
-                        ValuationSource(
-                            title=title,
-                            url=clean_uri,
-                        )
-                    )
-                    seen_urls.add(clean_uri)
-                except ValueError:
-                    continue
+                raw_grounding_items.append((clean_uri, title))
+
+            if raw_grounding_items:
+                with ThreadPoolExecutor(max_workers=min(len(raw_grounding_items), 5)) as executor:
+                    resolved_urls = list(executor.map(_resolve_real_url, [item[0] for item in raw_grounding_items]))
+                for (_, title), res_url in zip(raw_grounding_items, resolved_urls):
+                    resolved_grounding.append((res_url, title))
+
+        sources = _assemble_sources(payload.sources, resolved_grounding)
 
         # 4. Construir rangos ordenados
         sale_vals = sorted([payload.sale_range.min, payload.sale_range.median, payload.sale_range.max])
