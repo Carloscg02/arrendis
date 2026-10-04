@@ -22,9 +22,16 @@ from backend.adapters.sqlite_adapter import (
     SQLiteFiscalCarryforwardRepository,
     SQLitePropertyValuationRepository,
 )
-from backend.domain.ports import PasswordHasherPort, TokenServicePort, UserRepository, LLMProviderPort, MarketValuationPort
+from backend.domain.ports import (
+    PasswordHasherPort,
+    TokenServicePort,
+    UserRepository,
+    LLMProviderPort,
+    MarketValuationPort,
+    InvoiceExtractorPort,
+)
 from backend.adapters.gemini_adapter import GeminiFlashAdapter
-from backend.adapters.gemini_valuation_adapter import GeminiMarketValuationAdapter, MockMarketValuationAdapter
+from backend.adapters.valuation import GeminiMarketValuationAdapter, MockMarketValuationAdapter
 
 
 def get_db(request: Request) -> SQLiteConnection:
@@ -101,31 +108,34 @@ def get_llm_provider(request: Request) -> LLMProviderPort | None:
     return getattr(request.app.state, "llm_provider", None)
 
 
-def get_utility_registry() -> UtilityExtractorRegistry:
-    from backend.domain.extraction import UtilityExtractorRegistry, RepsolExtractionStrategy
-    return UtilityExtractorRegistry([
-        RepsolExtractionStrategy(),
-    ])
+def get_invoice_extractor(
+    llm_provider: LLMProviderPort | None = Depends(get_llm_provider),
+) -> InvoiceExtractorPort:
+    from backend.adapters.extraction import (
+        CompositeInvoiceExtractor,
+        UtilityExtractorRegistry,
+        RepsolExtractionStrategy,
+        AIExtractionStrategy,
+    )
+    registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
+    fallback = AIExtractionStrategy(llm_provider) if llm_provider else None
+    return CompositeInvoiceExtractor(registry=registry, fallback_strategy=fallback)
 
 
 def get_process_utility_invoice_use_case(
     property_repo: SQLitePropertyRepository = Depends(get_property_repo),
     expense_repo: SQLiteExpenseRepository = Depends(get_expense_repo),
-    registry: UtilityExtractorRegistry = Depends(get_utility_registry),
-    llm_provider: LLMProviderPort | None = Depends(get_llm_provider),
+    invoice_extractor: InvoiceExtractorPort = Depends(get_invoice_extractor),
 ) -> ProcessUtilityInvoiceUseCase:
     from backend.adapters.pdf_extractor_adapter import PyMuPDFTextExtractorAdapter
-    from backend.domain.extraction import AIExtractionStrategy
     from backend.application.use_cases import ProcessUtilityInvoiceUseCase
 
     pdf_extractor = PyMuPDFTextExtractorAdapter()
-    fallback_strategy = AIExtractionStrategy(llm_provider) if llm_provider is not None else None
     return ProcessUtilityInvoiceUseCase(
         pdf_extractor=pdf_extractor,
-        registry=registry,
+        invoice_extractor=invoice_extractor,
         property_repo=property_repo,
         expense_repo=expense_repo,
-        fallback_strategy=fallback_strategy,
     )
 
 

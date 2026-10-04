@@ -8,6 +8,7 @@ sin especificar CÓMO se implementa. Los adaptadores los implementan.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from datetime import date
 from backend.domain.entities import (
@@ -29,6 +30,7 @@ from backend.domain.value_objects import (
     LLMResponse,
     Address,
     MarketValuationResult,
+    UtilityInvoiceData,
 )
 
 
@@ -283,6 +285,30 @@ class LLMProviderPort(ABC):
         Raises:
             RateLimitError: Si el proveedor rechaza por cuota tras agotar reintentos.
             LLMProviderError: Para errores no recuperables.
+        """
+        ...
+
+
+@dataclass(frozen=True)
+class ExtractedInvoice:
+    """Resultado de la extracción de una factura conteniendo los datos y la estrategia empleada."""
+    data: UtilityInvoiceData
+    strategy_used: str
+
+
+class InvoiceExtractorPort(ABC):
+    """Puerto de salida para la extracción de datos estructurados de facturas de suministros."""
+
+    @abstractmethod
+    def extract_invoice_data(self, document_text: str) -> ExtractedInvoice | None:
+        """Extrae datos de la factura (CUPS, importe, fecha, comercializadora, tipo) y la estrategia utilizada.
+
+        Args:
+            document_text: Texto plano extraído del documento original.
+
+        Returns:
+            ExtractedInvoice con los datos identificados y el identificador de estrategia,
+            o None si la extracción no pudo completarse.
         """
         ...
 
