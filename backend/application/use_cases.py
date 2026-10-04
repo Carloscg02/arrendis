@@ -51,6 +51,7 @@ from backend.domain.ports import (
     FiscalCarryforwardRepository,
     LLMProviderPort,
     PDFTextExtractorPort,
+    InvoiceExtractorPort,
     PropertyValuationRepository,
 )
 from backend.domain.services import ProfitCalculator, FiscalCategoryMapper, FiscalCalculator, FiscalSimulatorService
@@ -69,7 +70,6 @@ from backend.domain.value_objects import (
     ReasoningFactor,
     ValuationSource,
 )
-from backend.domain.extraction import ExtractionStrategy, UtilityExtractorRegistry
 
 class CreatePropertyUseCase:
     """Caso de uso: crear y persistir una nueva propiedad."""
@@ -830,16 +830,14 @@ class ProcessUtilityInvoiceUseCase:
     def __init__(
         self,
         pdf_extractor: PDFTextExtractorPort,
-        registry: UtilityExtractorRegistry,
+        invoice_extractor: InvoiceExtractorPort,
         property_repo: PropertyRepository,
         expense_repo: ExpenseRepository,
-        fallback_strategy: ExtractionStrategy | None = None,
     ) -> None:
         self._pdf_extractor = pdf_extractor
-        self._registry = registry
+        self._invoice_extractor = invoice_extractor
         self._property_repo = property_repo
         self._expense_repo = expense_repo
-        self._fallback_strategy = fallback_strategy
 
     def execute(self, pdf_bytes: bytes, user_id: str) -> ProcessUtilityInvoiceResult:
         """Procesa una factura PDF y crea un Expense verificado.
@@ -860,30 +858,15 @@ class ProcessUtilityInvoiceUseCase:
         # 1. Extraer texto plano con PyMuPDF
         raw_text = self._pdf_extractor.extract_text(pdf_bytes)
 
-        # 2. Intentar estrategia Regex según comercializadora
-        invoice_data: UtilityInvoiceData | None = None
-        strategy_used = "unknown"
-        strategy = self._registry.find_strategy(raw_text)
+        # 2. Extraer datos estructurados mediante el puerto InvoiceExtractorPort
+        extracted = self._invoice_extractor.extract_invoice_data(raw_text)
+        if extracted is None:
+            raise ExtractionFailedError("La extracción de la factura no pudo completarse.")
 
-        if strategy is not None:
-            invoice_data = strategy.extract(raw_text)
-            if invoice_data is not None:
-                strategy_used = strategy.provider_name
+        invoice_data = extracted.data
+        strategy_used = extracted.strategy_used
 
-        # 3. Fallback a IA si no hubo coincidencia Regex o falló la extracción
-        if invoice_data is None:
-            if self._fallback_strategy is None:
-                raise ExtractionFailedError(
-                    "No se pudo extraer la factura con reglas Regex y no hay estrategia de IA configurada."
-                )
-            invoice_data = self._fallback_strategy.extract(raw_text)
-            if invoice_data is None:
-                raise ExtractionFailedError(
-                    "La extracción de la factura no pudo completarse ni por Regex ni por IA."
-                )
-            strategy_used = self._fallback_strategy.provider_name
-
-        # 4. Matching unívoco CUPS -> Property del usuario
+        # 3. Matching unívoco CUPS -> Property del usuario
         prop = self._property_repo.find_by_cups(invoice_data.cups, user_id=user_id)
         if prop is None:
             raise PropertyNotFoundForCUPSError(

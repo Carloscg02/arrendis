@@ -35,9 +35,10 @@ from backend.domain.entities import (
     PropertyType,
     UtilityType,
 )
-from backend.domain.extraction import (
+from backend.adapters.extraction import (
     RepsolExtractionStrategy,
     UtilityExtractorRegistry,
+    CompositeInvoiceExtractor,
 )
 
 
@@ -60,13 +61,15 @@ def test_process_utility_invoice_full_lifecycle_sqlite(sqlite_connection):
 
     # 2. Configurar el caso de uso
     pdf_extractor = PyMuPDFTextExtractorAdapter()
-    registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
+    invoice_extractor = CompositeInvoiceExtractor(
+        registry=UtilityExtractorRegistry([RepsolExtractionStrategy()]),
+        fallback_strategy=None,
+    )
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=pdf_extractor,
-        registry=registry,
+        invoice_extractor=invoice_extractor,
         property_repo=prop_repo,
         expense_repo=expense_repo,
-        fallback_strategy=None,
     )
 
     # 3. Cargar el PDF de muestra real

@@ -49,7 +49,8 @@ from backend.api.routes.onboarding import router as onboarding_router
 from backend.api.routes.health import router as health_router
 from backend.api.middleware.security import SecurityHeadersMiddleware
 from backend.api.middleware.rate_limit import RateLimitMiddleware
-from backend.adapters.gemini_adapter import GeminiFlashAdapter
+from backend.adapters.extraction import GeminiFlashAdapter
+
 
 
 @asynccontextmanager

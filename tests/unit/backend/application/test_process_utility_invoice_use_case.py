@@ -37,15 +37,17 @@ from backend.domain.entities import (
     UtilityInvoiceData,
     UtilityType,
 )
-from backend.domain.extraction import (
+from backend.adapters.extraction import (
     ExtractionStrategy,
     RepsolExtractionStrategy,
     UtilityExtractorRegistry,
+    CompositeInvoiceExtractor,
 )
 from backend.domain.ports import (
     ExpenseRepository,
     PDFTextExtractorPort,
     PropertyRepository,
+    InvoiceExtractorPort,
 )
 from backend.domain.value_objects import Address, UtilityInvoiceData
 
@@ -100,10 +102,9 @@ def test_use_case_via_a_regex_success(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
-        fallback_strategy=None,
     )
 
     result = use_case.execute(pdf_bytes=b"dummy_bytes", user_id="user_123")
@@ -155,10 +156,9 @@ def test_use_case_fallback_to_ai_when_regex_fails(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry, fallback_strategy=mock_ai_strategy),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
-        fallback_strategy=mock_ai_strategy,
     )
 
     result = use_case.execute(pdf_bytes=b"dummy", user_id="user_123")
@@ -190,10 +190,9 @@ def test_use_case_fallback_to_ai_when_provider_unknown(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry, fallback_strategy=mock_ai_strategy),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
-        fallback_strategy=mock_ai_strategy,
     )
 
     result = use_case.execute(pdf_bytes=b"dummy", user_id="user_123")
@@ -211,10 +210,9 @@ def test_use_case_raises_when_regex_fails_and_no_ai_strategy(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry, fallback_strategy=None),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
-        fallback_strategy=None,
     )
 
     with pytest.raises(ExtractionFailedError, match="no hay estrategia de IA configurada"):
@@ -232,10 +230,9 @@ def test_use_case_raises_when_both_regex_and_ai_fail(
     registry = UtilityExtractorRegistry([])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry, fallback_strategy=mock_ai_strategy),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
-        fallback_strategy=mock_ai_strategy,
     )
 
     with pytest.raises(ExtractionFailedError, match="no pudo completarse ni por Regex ni por IA"):
@@ -262,7 +259,7 @@ def test_use_case_raises_when_cups_not_found_for_user(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
     )
@@ -296,7 +293,7 @@ def test_use_case_respects_multi_tenancy(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
     )
@@ -318,7 +315,7 @@ def test_use_case_raises_empty_pdf_when_extractor_raises(
     registry = UtilityExtractorRegistry([])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
     )
@@ -367,7 +364,7 @@ def test_use_case_raises_duplicate_invoice_by_invoice_number(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
     )
@@ -418,7 +415,7 @@ def test_use_case_raises_duplicate_invoice_by_date_and_amount_fallback(
     registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
     use_case = ProcessUtilityInvoiceUseCase(
         pdf_extractor=mock_pdf_extractor,
-        registry=registry,
+        invoice_extractor=CompositeInvoiceExtractor(registry),
         property_repo=mock_property_repo,
         expense_repo=mock_expense_repo,
     )
