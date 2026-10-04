@@ -31,6 +31,14 @@ class SecurityHeadersMiddleware:
                 headers["X-Frame-Options"] = "DENY"
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
                 headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+                headers["Content-Security-Policy"] = (
+                    "default-src 'self'; "
+                    "img-src 'self' data: https: blob:; "
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                    "font-src 'self' https://fonts.gstatic.com data:; "
+                    "script-src 'self' 'unsafe-inline'; "
+                    "connect-src 'self' https: ws: wss:;"
+                )
 
                 env = os.getenv("ENVIRONMENT", "").lower()
                 force_hsts = os.getenv("FORCE_HSTS", "") == "1"
