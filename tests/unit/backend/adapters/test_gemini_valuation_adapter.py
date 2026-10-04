@@ -309,3 +309,61 @@ def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_c
     second_call_kwargs = mock_client.models.generate_content.call_args_list[1].kwargs
     assert second_call_kwargs["config"].tools is None
 
+
+def test_sanitize_property_url():
+    from backend.adapters.gemini_valuation_adapter import _sanitize_property_url
+
+    # District normalization
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/"
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/hacienda-bizcochero/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/el-tejar-hacienda-bizcochero/"
+    # Bedroom normalization
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-dormitorios/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-cinco-habitaciones-o-mas/"
+    # Price filter strip
+    assert _sanitize_property_url("https://www.idealista.com/alquiler-viviendas/malaga/teatinos/con-precio-hasta_2000/") == "https://www.idealista.com/alquiler-viviendas/malaga/teatinos/"
+
+
+def test_format_source_title():
+    from backend.adapters.gemini_valuation_adapter import _format_source_title
+
+    assert "Venta de pisos en Malaga, Teatinos" in _format_source_title("idealista.com", "https://www.idealista.com/venta-viviendas/malaga/teatinos/")
+    assert "Alquiler en Teatinos — Fotocasa" in _format_source_title(None, "https://www.fotocasa.es/es/alquiler/viviendas/teatinos/l")
+    assert _format_source_title("Piso luminoso en Paseo Marítimo", "https://www.idealista.com/inmueble/12345/") == "Piso luminoso en Paseo Marítimo"
+
+
+def test_assemble_sources_replaces_hallucinated_url_with_resolved_grounding():
+    from backend.adapters.gemini_valuation_adapter import _assemble_sources, _SourcePayload
+
+    payload_sources = [
+        _SourcePayload(
+            title="Idealista Teatinos",
+            url="https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/hacienda-bizcochero/",
+            price=Decimal("450000"),
+            surface_m2=125,
+        ),
+        _SourcePayload(
+            title="Idealista Alquiler",
+            url="https://www.idealista.com/alquiler-viviendas/malaga/teatinos-universidad/con-precio-hasta_2000/",
+            price=Decimal("1800"),
+            surface_m2=125,
+        ),
+    ]
+
+    resolved_grounding = [
+        ("https://www.idealista.com/geo/venta-viviendas/calle-decano-manuel-dominguez-malaga-malaga/", "idealista.com"),
+        ("https://www.idealista.com/geo/alquiler-viviendas/calle-juan-del-encina-malaga-malaga/", "idealista.com"),
+        ("https://www.fotocasa.es/es/comprar/viviendas/area/calle-decano-manuel-dominguez-malaga-capital/l", "fotocasa.es"),
+    ]
+
+    sources = _assemble_sources(payload_sources, resolved_grounding)
+    assert len(sources) == 3
+    # Venta matched with real geo URL while retaining price and m2
+    assert sources[0].url == "https://www.idealista.com/geo/venta-viviendas/calle-decano-manuel-dominguez-malaga-malaga/"
+    assert sources[0].price == Decimal("450000")
+    assert sources[0].surface_m2 == 125
+    # Alquiler matched with real geo URL while retaining price and m2
+    assert sources[1].url == "https://www.idealista.com/geo/alquiler-viviendas/calle-juan-del-encina-malaga-malaga/"
+    assert sources[1].price == Decimal("1800")
+    # Additional Fotocasa source added from grounding
+    assert sources[2].url == "https://www.fotocasa.es/es/comprar/viviendas/area/calle-decano-manuel-dominguez-malaga-capital/l"
+
+
