@@ -113,24 +113,8 @@ def bootstrap_onboarding(
             detail=str(e),
         )
 
-    image_url = f"/api/images/{prop.image_filename}" if prop.image_filename else None
-    return PropertyResponse(
-        id=prop.id,
-        name=prop.name,
-        address=AddressSchema(
-            street=prop.address.street,
-            city=prop.address.city,
-            postal_code=prop.address.postal_code,
-            country=prop.address.country,
-        ),
-        property_type=prop.property_type.value,
-        status=prop.status.value,
-        image_url=image_url,
-        has_fiscal_data=prop.has_fiscal_data,
-        cups_electricity=prop.cups_electricity,
-        cups_gas=prop.cups_gas,
-        cups_water=prop.cups_water,
-    )
+    from backend.api.routes.properties import _entity_to_response
+    return _entity_to_response(prop)
 
 
 @router.post("/users/me/onboarding/skip", status_code=status.HTTP_200_OK)
