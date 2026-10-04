@@ -98,31 +98,40 @@ response.set_cookie(
 
 ---
 
-## 4. Protección contra Fuerza Bruta con Rate Limiting
+## 4. Protección contra Fuerza Bruta y DoS con Rate Limiting Estratificado (Tiered Throttling)
 
-Implementado en [`backend/api/middleware/rate_limit.py`](file:///home/carlos/rental-handler/backend/api/middleware/rate_limit.py) mediante la clase [`InMemoryRateLimiter`](file:///home/carlos/rental-handler/backend/api/middleware/rate_limit.py):
+Implementado en [`backend/api/middleware/rate_limit.py`](file:///home/carlos/rental-handler/backend/api/middleware/rate_limit.py) mediante la clase [`InMemoryRateLimiter`](file:///home/carlos/rental-handler/backend/api/middleware/rate_limit.py) y [`RateLimitMiddleware`](file:///home/carlos/rental-handler/backend/api/middleware/rate_limit.py):
 
-### 4.1 Algoritmo: Sliding Window Log (Ventana Deslizante)
+### 4.1 Estratificación por Niveles (Tiered Architecture)
+Toda la API está protegida mediante cuotas adaptadas a la criticidad y coste computacional del recurso:
+
+| Nivel | Ámbito / Rutas | Cuota por IP | Respuesta y Detalle |
+| :--- | :--- | :---: | :--- |
+| **Nivel 1: Autenticación (Crítico)** | `POST /api/auth/login`<br>`POST /api/auth/register` | **10 req/min** | `429 Too Many Requests`<br>`{"detail": "Demasiados intentos de autenticación...", "tier": "auth"}` |
+| **Nivel 2: Cómputo Pesado / IA** | `/api/fiscal/report/pdf`<br>`/api/properties/{id}/valuation`<br>`/api/expenses/upload*` | **30 req/min** | `429 Too Many Requests`<br>`{"detail": "Demasiadas peticiones a operaciones de alto coste...", "tier": "heavy"}` |
+| **Nivel 3: Global API / Navegación** | Resto de rutas `/api/*` (`/properties`, `/incomes`, `/contracts`, etc.) | **100 req/min** | `429 Too Many Requests`<br>`{"detail": "Límite global de peticiones de API excedido...", "tier": "global"}` |
+
+*Exenciones Estándar:* Peticiones preflight `OPTIONS` de CORS (estrictamente exentas conforme a especificación W3C) y archivos estáticos locales (`/api/images/*`).
+
+### 4.2 Algoritmo: Sliding Window Log (Ventana Deslizante)
 * **Fundamento Matemático:** A diferencia de una ventana fija (donde un atacante puede concentrar el doble de peticiones en la frontera entre dos minutos), la ventana deslizante registra la marca temporal de cada intento en una lista enlazada o deque. Para cada nueva petición:
   1. Se purgan todas las marcas de tiempo anteriores a `ahora - 60s`.
-  2. Se cuenta el número de peticiones remanentes en los últimos 60 segundos.
-  3. Si el total supera el límite (5 peticiones/minuto en `/api/auth/login` y `/api/auth/register`), se deniega la petición.
-* **Respuesta Estándar HTTP:**
-  - Código: `429 Too Many Requests`.
-  - Cabecera: `Retry-After: <segundos_restantes_para_reintentar>`.
-  - Cuerpo: `{"detail": "Demasiados intentos. Por favor, espere X segundos antes de reintentar."}`.
+  2. Se cuenta el número de peticiones remanentes en los últimos 60 segundos dentro del nivel correspondiente.
+  3. Si el total supera el límite del nivel, se deniega la petición devolviendo cabecera `Retry-After: <segundos_restantes>`.
+* **Identificación del Cliente:** Detección de IP real mediante cabecera proxy `X-Forwarded-For` o fallback a `client.host`.
 
-### 4.2 Control Estricto de Memoria (Anti-Memory Exhaustion)
+### 4.3 Control Estricto de Memoria (Anti-Memory Exhaustion)
 * **El Problema:** Un atacante con una botnet que envíe peticiones desde millones de IPs falsificadas podría saturar la memoria RAM del servidor con entradas de seguimiento de rate-limiting.
 * **La Solución Implementada:**
-  - Capacidad máxima acotada a **10.000 IPs concurrentes**.
+  - Capacidad máxima acotada a **10.000 IPs concurrentes** por limitador.
   - Cuando se alcanza el umbral, se ejecuta una evicción **LRU (Least Recently Used)** automática que purga las claves más antiguas hasta reducir la ocupación al 90% (9.000 entradas).
   - Thread-Safety garantizado mediante un cerrojo mutex reentrante (`threading.Lock`).
 
-### 4.3 Ataques que Mitiga:
-* **Credential Stuffing:** Ataques automatizados que prueban millones de pares usuario/contraseña obtenidos de filtraciones públicas.
-* **Password Spraying:** Intentos coordinados de probar pocas contraseñas comunes contra muchas cuentas.
-* **Bcrypt Hash DoS (Resource Exhaustion):** El cálculo de hashes bcrypt está deliberadamente ralentizado por diseño (factor de coste de CPU/RAM). Permitir miles de intentos de login por segundo saturaría los núcleos del servidor; el rate limiter frena el flujo antes de invocar la función de verificación criptográfica.
+### 4.4 Ataques que Mitiga:
+* **Credential Stuffing & Brute Force:** Ataques automatizados que prueban millones de credenciales contra endpoints de login.
+* **Bcrypt Hash DoS (Resource Exhaustion):** Sobrecarga de CPU mediante peticiones masivas al hasher criptográfico.
+* **Scraping Masivo y DoS de Base de Datos:** Extracción abusiva de datos o saturación de conexiones en SQLite sobre `/api/properties` o `/api/incomes`.
+* **Agotamiento de Cuota de IA:** Spam sobre `/api/properties/{id}/valuation` que consumiría créditos de la API de Google Gemini.
 
 ---
 

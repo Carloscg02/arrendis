@@ -1,10 +1,13 @@
 """
-Middleware y gestor en memoria de limitación de tasa (Rate Limiting) - F-40.
+Middleware y gestor en memoria de limitación de tasa estratificada (Tiered Rate Limiting) - F-40.
 
 Implementa control de frecuencia mediante ventana deslizante (Sliding Window Log)
-focalizado exclusivamente en endpoints de autenticación (POST /api/auth/login y
-POST /api/auth/register), con política de desalojo LRU para prevención de agotamiento
-de memoria (OOM).
+en tres niveles de protección:
+1. Nivel Auth (10 req/min): POST /api/auth/login y POST /api/auth/register (anti-fuerza bruta).
+2. Nivel Cómputo Pesado (30 req/min): generación de PDFs, tasación IA y subida de facturas.
+3. Nivel Global API (100 req/min): resto de rutas /api/* para tráfico y navegación legítima.
+
+Incluye política de desalojo LRU para prevención estricta de agotamiento de memoria (OOM).
 """
 
 from __future__ import annotations
@@ -79,21 +82,91 @@ class InMemoryRateLimiter:
             self._records.clear()
 
 
-# Instancia singleton predeterminada
-default_rate_limiter = InMemoryRateLimiter(limit=10, window_seconds=60, max_keys=10000)
+class TieredRateLimiterGroup:
+    """Agrupador de limitadores estratificados que permite resetearlos de forma unificada."""
+
+    def __init__(self, auth: InMemoryRateLimiter, heavy: InMemoryRateLimiter, global_: InMemoryRateLimiter) -> None:
+        self.auth = auth
+        self.heavy = heavy
+        self.global_ = global_
+
+    def reset(self) -> None:
+        self.auth.reset()
+        self.heavy.reset()
+        self.global_.reset()
+
+    def is_rate_limited(self, key: str, now: float | None = None) -> tuple[bool, int]:
+        return self.auth.is_rate_limited(key, now)
+
+    @property
+    def limit(self) -> int:
+        return self.auth.limit
+
+    @property
+    def window_seconds(self) -> int:
+        return self.auth.window_seconds
+
+    @property
+    def max_keys(self) -> int:
+        return self.auth.max_keys
+
+
+# Instancias predeterminadas por nivel
+default_auth_limiter = InMemoryRateLimiter(limit=10, window_seconds=60, max_keys=10000)
+default_heavy_limiter = InMemoryRateLimiter(limit=30, window_seconds=60, max_keys=10000)
+default_global_limiter = InMemoryRateLimiter(limit=100, window_seconds=60, max_keys=10000)
+
+default_rate_limiter = TieredRateLimiterGroup(
+    default_auth_limiter,
+    default_heavy_limiter,
+    default_global_limiter,
+)
 
 
 class RateLimitMiddleware:
-    """Middleware ASGI para throttling en endpoints sensibles de autenticación."""
+    """Middleware ASGI para throttling estratificado en toda la API."""
 
-    PROTECTED_PATHS = {
+    AUTH_PATHS = {
         "/api/auth/login",
         "/api/auth/register",
     }
 
-    def __init__(self, app: ASGIApp, limiter: InMemoryRateLimiter | None = None) -> None:
+    HEAVY_PATH_SUFFIXES = (
+        "/valuation",
+        "/fiscal-report",
+        "/fiscal-report/pdf",
+        "/upload",
+        "/upload-multiple",
+    )
+
+    EXEMPT_PREFIXES = (
+        "/api/images",
+    )
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        auth_limiter: InMemoryRateLimiter | None = None,
+        heavy_limiter: InMemoryRateLimiter | None = None,
+        global_limiter: InMemoryRateLimiter | None = None,
+        limiter: InMemoryRateLimiter | TieredRateLimiterGroup | None = None,
+    ) -> None:
         self.app = app
-        self.limiter = limiter or default_rate_limiter
+        if isinstance(limiter, TieredRateLimiterGroup):
+            self.auth_limiter = limiter.auth
+            self.heavy_limiter = limiter.heavy
+            self.global_limiter = limiter.global_
+        elif isinstance(limiter, InMemoryRateLimiter):
+            self.auth_limiter = limiter
+            self.heavy_limiter = heavy_limiter or default_heavy_limiter
+            self.global_limiter = global_limiter or default_global_limiter
+        else:
+            self.auth_limiter = auth_limiter or default_auth_limiter
+            self.heavy_limiter = heavy_limiter or default_heavy_limiter
+            self.global_limiter = global_limiter or default_global_limiter
+
+        # Alias para compatibilidad con tests existentes
+        self.limiter = self.auth_limiter
 
     def _is_enabled(self) -> bool:
         # Precedencia: 1) FORCE_RATE_LIMIT=1, 2) TESTING=1 -> False, 3) RATE_LIMIT_ENABLED
@@ -114,21 +187,79 @@ class RateLimitMiddleware:
         return client[0] if client else "127.0.0.1"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and scope["method"] == "POST":
-            path = scope.get("path", "").rstrip("/")
-            if path in self.PROTECTED_PATHS and self._is_enabled():
-                client_ip = self._get_client_ip(scope)
-                is_limited, retry_after = self.limiter.is_rate_limited(client_ip)
-                if is_limited:
-                    response = JSONResponse(
-                        status_code=429,
-                        headers={"Retry-After": str(retry_after)},
-                        content={
-                            "detail": "Demasiados intentos de autenticación. Por favor, inténtelo de nuevo más tarde.",
-                            "retry_after": retry_after,
-                        },
-                    )
-                    await response(scope, receive, send)
-                    return
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Peticiones preflight OPTIONS de CORS están universalmente exentas
+        if scope["method"] == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "").rstrip("/")
+
+        # Solo aplicamos rate limiting a rutas /api
+        if not path.startswith("/api"):
+            await self.app(scope, receive, send)
+            return
+
+        # Rutas estáticas de bajo coste exentas (ej: /api/images)
+        if any(path.startswith(prefix) for prefix in self.EXEMPT_PREFIXES):
+            await self.app(scope, receive, send)
+            return
+
+        if not self._is_enabled():
+            await self.app(scope, receive, send)
+            return
+
+        client_ip = self._get_client_ip(scope)
+
+        # Nivel 1: Autenticación (10 req/min)
+        if path in self.AUTH_PATHS and scope["method"] == "POST":
+            is_limited, retry_after = self.auth_limiter.is_rate_limited(client_ip)
+            if is_limited:
+                response = JSONResponse(
+                    status_code=429,
+                    headers={"Retry-After": str(retry_after)},
+                    content={
+                        "detail": "Demasiados intentos de autenticación. Por favor, inténtelo de nuevo más tarde.",
+                        "retry_after": retry_after,
+                        "tier": "auth",
+                    },
+                )
+                await response(scope, receive, send)
+                return
+
+        # Nivel 2: Cómputo Pesado / IA (30 req/min)
+        elif any(path.endswith(suffix) for suffix in self.HEAVY_PATH_SUFFIXES):
+            is_limited, retry_after = self.heavy_limiter.is_rate_limited(client_ip)
+            if is_limited:
+                response = JSONResponse(
+                    status_code=429,
+                    headers={"Retry-After": str(retry_after)},
+                    content={
+                        "detail": "Demasiadas peticiones a operaciones de alto coste. Por favor, espere antes de reintentar.",
+                        "retry_after": retry_after,
+                        "tier": "heavy",
+                    },
+                )
+                await response(scope, receive, send)
+                return
+
+        # Nivel 3: Navegación General de API (100 req/min)
+        else:
+            is_limited, retry_after = self.global_limiter.is_rate_limited(client_ip)
+            if is_limited:
+                response = JSONResponse(
+                    status_code=429,
+                    headers={"Retry-After": str(retry_after)},
+                    content={
+                        "detail": "Límite global de peticiones de API excedido. Por favor, espere unos momentos.",
+                        "retry_after": retry_after,
+                        "tier": "global",
+                    },
+                )
+                await response(scope, receive, send)
+                return
 
         await self.app(scope, receive, send)
