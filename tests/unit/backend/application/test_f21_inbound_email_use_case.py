@@ -26,7 +26,7 @@ from backend.domain.entities import (
     FiscalExpenseCategory,
 )
 from backend.domain.value_objects import Address, Email, PasswordHash
-from backend.domain.extraction import UtilityExtractorRegistry, RepsolExtractionStrategy
+from backend.adapters.extraction import UtilityExtractorRegistry, RepsolExtractionStrategy, CompositeInvoiceExtractor
 from backend.adapters.pdf_extractor_adapter import PyMuPDFTextExtractorAdapter
 from backend.application.use_cases import (
     ProcessUtilityInvoiceUseCase,
@@ -46,13 +46,15 @@ def sample_pdf_bytes() -> bytes:
 @pytest.fixture
 def utility_use_case(property_repo, expense_repo):
     pdf_extractor = PyMuPDFTextExtractorAdapter()
-    registry = UtilityExtractorRegistry([RepsolExtractionStrategy()])
+    invoice_extractor = CompositeInvoiceExtractor(
+        registry=UtilityExtractorRegistry([RepsolExtractionStrategy()]),
+        fallback_strategy=None,
+    )
     return ProcessUtilityInvoiceUseCase(
         pdf_extractor=pdf_extractor,
-        registry=registry,
+        invoice_extractor=invoice_extractor,
         property_repo=property_repo,
         expense_repo=expense_repo,
-        fallback_strategy=None,
     )
 
 

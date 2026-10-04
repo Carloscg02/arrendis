@@ -4,7 +4,7 @@ Tests unitarios para UtilityExtractorRegistry (F-18 / OCP Registry).
 Verifica el desacoplamiento del registro de estrategias de extracción.
 """
 
-from backend.domain.extraction import (
+from backend.adapters.extraction import (
     ExtractionStrategy,
     RepsolExtractionStrategy,
     UtilityExtractorRegistry,

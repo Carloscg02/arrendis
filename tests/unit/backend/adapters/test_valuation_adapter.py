@@ -5,10 +5,11 @@ import pytest
 
 from google.genai.errors import APIError
 
-from backend.adapters.gemini_valuation_adapter import (
+from backend.adapters.valuation import (
     GeminiMarketValuationAdapter,
     MockMarketValuationAdapter,
 )
+
 from backend.domain.entities import (
     PropertyType,
     PropertyCondition,
@@ -110,7 +111,7 @@ def test_gemini_adapter_init_missing_key():
         GeminiMarketValuationAdapter(api_key="")
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_success_flow(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -199,7 +200,7 @@ def test_gemini_adapter_success_flow(mock_client_cls, sample_address: Address):
     assert result.sources[1].title == "Anuncio en Fotocasa"
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_rate_limit_error(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -218,7 +219,7 @@ def test_gemini_adapter_rate_limit_error(mock_client_cls, sample_address: Addres
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_safety_blocked_response(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -237,7 +238,7 @@ def test_gemini_adapter_safety_blocked_response(mock_client_cls, sample_address:
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_invalid_json_response(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -258,7 +259,7 @@ def test_gemini_adapter_invalid_json_response(mock_client_cls, sample_address: A
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_cls, sample_address: Address):
     """Verifica que ante un 429 por agotamiento de cuota de búsqueda, se reintenta sin herramientas y se obtiene la valoración."""
     mock_client = MagicMock()
@@ -308,4 +309,66 @@ def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_c
     # Comprobar que en el segundo intento no se pasaron herramientas
     second_call_kwargs = mock_client.models.generate_content.call_args_list[1].kwargs
     assert second_call_kwargs["config"].tools is None
+
+
+def test_sanitize_property_url():
+    from backend.adapters.valuation.url_sanitizer import sanitize_property_url as _sanitize_property_url
+
+    # District normalization
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/"
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/hacienda-bizcochero/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/el-tejar-hacienda-bizcochero/"
+    # Bedroom normalization
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-dormitorios/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-cinco-habitaciones-o-mas/"
+    # Price filter strip
+    assert _sanitize_property_url("https://www.idealista.com/alquiler-viviendas/malaga/teatinos/con-precio-hasta_2000/") == "https://www.idealista.com/alquiler-viviendas/malaga/teatinos/"
+    # Street incorrectly nested in regional hierarchy stripped to valid district
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos/avenida-doctor-manuel-dominguez/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/"
+
+
+def test_format_source_title():
+    from backend.adapters.valuation.url_sanitizer import format_source_title as _format_source_title
+
+    assert "Venta de pisos en Malaga, Teatinos" in _format_source_title("idealista.com", "https://www.idealista.com/venta-viviendas/malaga/teatinos/")
+    assert "Alquiler en Teatinos — Fotocasa" in _format_source_title(None, "https://www.fotocasa.es/es/alquiler/viviendas/teatinos/l")
+    assert _format_source_title("Piso luminoso en Paseo Marítimo", "https://www.idealista.com/inmueble/12345/") == "Piso luminoso en Paseo Marítimo"
+
+
+def test_assemble_sources_replaces_hallucinated_url_with_resolved_grounding():
+    from backend.adapters.valuation.url_sanitizer import assemble_sources as _assemble_sources
+    from backend.adapters.valuation.schemas import _SourcePayload
+
+
+    payload_sources = [
+        _SourcePayload(
+            title="Idealista Teatinos",
+            url="https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/hacienda-bizcochero/",
+            price=Decimal("450000"),
+            surface_m2=125,
+        ),
+        _SourcePayload(
+            title="Idealista Alquiler",
+            url="https://www.idealista.com/alquiler-viviendas/malaga/teatinos-universidad/con-precio-hasta_2000/",
+            price=Decimal("1800"),
+            surface_m2=125,
+        ),
+    ]
+
+    resolved_grounding = [
+        ("https://www.idealista.com/geo/venta-viviendas/calle-decano-manuel-dominguez-malaga-malaga/", "idealista.com"),
+        ("https://www.idealista.com/geo/alquiler-viviendas/calle-juan-del-encina-malaga-malaga/", "idealista.com"),
+        ("https://www.fotocasa.es/es/comprar/viviendas/area/calle-decano-manuel-dominguez-malaga-capital/l", "fotocasa.es"),
+    ]
+
+    sources = _assemble_sources(payload_sources, resolved_grounding)
+    assert len(sources) == 3
+    # Venta matched with real geo URL while retaining price and m2
+    assert sources[0].url == "https://www.idealista.com/geo/venta-viviendas/calle-decano-manuel-dominguez-malaga-malaga/"
+    assert sources[0].price == Decimal("450000")
+    assert sources[0].surface_m2 == 125
+    # Alquiler matched with real geo URL while retaining price and m2
+    assert sources[1].url == "https://www.idealista.com/geo/alquiler-viviendas/calle-juan-del-encina-malaga-malaga/"
+    assert sources[1].price == Decimal("1800")
+    # Additional Fotocasa source added from grounding
+    assert sources[2].url == "https://www.fotocasa.es/es/comprar/viviendas/area/calle-decano-manuel-dominguez-malaga-capital/l"
+
 
