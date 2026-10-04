@@ -10,7 +10,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 from backend.domain.entities import ExtractionConfidence, UtilityType
-from backend.domain.extraction import AIExtractionStrategy
+from backend.adapters.extraction import AIExtractionStrategy
 from backend.domain.ports import LLMProviderPort
 from backend.domain.value_objects import LLMRequest, LLMResponse
 
