@@ -1,26 +1,29 @@
 # Arrendis — Plataforma Integral de Gestión Patrimonial y Motor Fiscal AEAT
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?logo=githubactions&logoColor=white)](.github/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/Tests-350%2B%20Passing-success?logo=pytest&logoColor=white)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-401%20Passing-success?logo=pytest&logoColor=white)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](requirements.txt)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](backend/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-61DAFB?logo=react&logoColor=black)](frontend/)
 [![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2B%20DDD-orange)](#arquitectura-hexagonal-y-ddd)
 [![Cloud Infrastructure](https://img.shields.io/badge/Cloud-Oracle%20Cloud%20%7C%20Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://oracle.com)
 
-> **Arrendis** es una plataforma SaaS desarrollada para propietarios e inversores inmobiliarios particulares en España. Resuelve la gestión de inmuebles y contratos, la ingesta automática de facturas de suministros y la liquidación del **IRPF inmobiliario (Modelo 100 AEAT)** con generación de borradores oficiales.
+> **Arrendis** es una plataforma SaaS desarrollada para propietarios e inversores inmobiliarios particulares en España. Resuelve la gestión de inmuebles y contratos, la ingesta automática de facturas de suministros, la estimación de mercado asistida por IA y la liquidación del **IRPF inmobiliario (Modelo 100 AEAT)** con generación de borradores oficiales.
 
 ---
 
 ## Resumen técnico
 
-* **Arquitectura Hexagonal y DDD estricto**: Dominio en Python puro sin dependencias de frameworks externos, con puertos tipados y adaptadores intercambiables.
+* **Arquitectura Hexagonal y DDD estricto**: Dominio en Python puro sin dependencias de frameworks externos, con puertos tipados y adaptadores modulares intercambiables (`extraction/`, `valuation/`, `sqlite_adapter`).
 * **Spec-Driven Development (SDD)**: Metodología donde el desarrollador actúa como arquitecto orquestador y la IA como motor de ejecución guiado por especificaciones formales (`specs/`), puertas de aprobación de diseño antes de escribir código y distribución de la implementación del spec entre subagentes implementadores y revisores.
 * **Autenticación Shielded JWT**: Sistema híbrido de doble token (Access Token en memoria de React y Refresh Token en cookie HttpOnly) para mitigar vectores XSS y CSRF, con aislamiento multi-tenant estricto.
 * **Procesamiento Inteligente de Facturas (Edge + LLM)**: Ingesta serverless por correo (`facturas@arrendis.com`), anonimización de datos personales con `PrivacyScrubber` (RGPD) y extracción híbrida: Regex de alta velocidad (<2 ms) con fallback a Google Gemini Flash.
+* **Estimación de Mercado con Google Search Grounding**: Motor de tasación que combina el modelo multimodal de Google con búsqueda web en vivo (Idealista, Fotocasa) para calcular rangos de venta y alquiler con comparables reales.
 * **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española utilizando todas las casillas oficiales de hacienda con generación de informe en PDF.
+* **Experiencia Móvil PWA**: Soporte Progressive Web App con Service Worker de Vite, instalación standalone y diseño responsive mobile-first.
 * **Infraestructura Cloud Real**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en Docker) con SQLite en modo WAL y hot-backups automatizados.
-* **Testing y CICD**: Suite de más de **350 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
+* **Testing y CICD**: Suite de **401 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
+
 
 ---
 
@@ -151,12 +154,12 @@ Procesar facturas de luz y gas suele ser tedioso para el usuario. El sistema aut
    * El usuario reenvía sus facturas a `facturas@arrendis.com`.
    * Un **Cloudflare Worker** serverless intercepta el correo entrante, extrae el archivo PDF adjunto y hace un POST al webhook de la API validando una clave secreta.
 2. **Anonimizador previo (Privacy Scrubber)**:
-   * Antes de pasar el texto de la factura a cualquier API externa, un servicio de dominio elimina datos personales mediante expresiones regulares:
+   * Antes de pasar el texto de la factura a cualquier API externa, un componente de anonimización (`PrivacyScrubber` en la capa de adaptadores de extracción) elimina datos personales mediante expresiones regulares:
      `DNI/NIE/CIF -> [REDACTED_NIF]`, `IBAN -> [REDACTED_IBAN]`, nombres y direcciones postales.
    * Se conservan intactos los datos necesarios para la gestión contable: el código **CUPS** (con el que se asocia la factura a la vivienda automáticamente), fechas e importes.
 3. **Estrategia de extracción híbrida**:
    * **Paso 1 (Regex determinista)**: Para comercializadoras conocidas (Repsol, etc.), un parser propio extrae los campos en **menos de 2 ms** con **coste 0**.
-   * **Paso 2 (Fallback con Gemini Flash)**: Si la factura es de una compañía no reconocida o el layout cambia, se envía el texto ya anonimizado a Gemini Flash pidiendo salida JSON estructurada y aplicando reintentos exponenciales con `tenacity`.
+   * **Paso 2 (Fallback con Gemini Flash)**: Si la factura es de una compañía no reconocida o el layout cambia, se envía el texto ya anonimizado a Gemini Flash pidiendo salida JSON estructurada y aplicando reintentos exponenciales.
 
 ---
 
@@ -175,15 +178,15 @@ El motor `FiscalCalculator` traduce a código las reglas de la Agencia Tributari
 
 ## Estrategia de Testing
 
-El proyecto cuenta con más de **350 tests automatizados** con `pytest`:
+El proyecto cuenta con **401 tests automatizados** con `pytest`:
 
-* **Unitarios de dominio**: Pruebas de valor fiscal (23 casos borde de amortizaciones, topes y arrastres), inmutabilidad de Value Objects, anonimización con `PrivacyScrubber` y parsers regex.
+* **Unitarios de dominio**: Pruebas de valor fiscal (casos borde de amortizaciones, topes y arrastres de Ley 12/2023), inmutabilidad de Value Objects y parsers regex.
 * **Integración**: Repositorios SQLite comprobando transacciones y modo WAL, extracción sobre PDFs reales y endpoints de FastAPI con autenticación.
 * **Ciclo de vida E2E**: Pruebas que simulan años fiscales completos y la compensación de excesos a lo largo de 4 ejercicios consecutivos.
-* **Tests sin coste ni red**: Las llamadas al LLM están mockeadas a nivel de puerto en la suite de CI. Toda la batería de pruebas corre en local o en GitHub Actions en unos 2 segundos.
+* **Tests sin coste ni red**: Las llamadas al LLM están mockeadas a nivel de puerto en la suite de CI. Toda la batería de pruebas corre en local o en GitHub Actions en menos de 6 segundos.
 
 ```bash
-========================= 350 passed in 2.14s =========================
+========================= 401 passed in 5.96s =========================
 ```
 
 ---
@@ -205,7 +208,8 @@ El proyecto está desplegado en internet utilizando capas gratuitas de proveedor
 
 El pipeline en [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automatiza las fases de verificación y despliegue ante cada push a `main`:
 
-1. **CI**: Ejecuta los 350 tests del backend con `pytest` en Python 3.12 y valida el chequeo de tipos (`tsc`) y build de Vite en Node 22.
+1. **CI**: Ejecuta los 401 tests del backend con `pytest` en Python 3.12 y valida el chequeo de tipos (`tsc`) y build de Vite en Node 22.
+
 2. **CD**: Si los tests pasan, se conecta por SSH a la máquina de Oracle Cloud, actualiza el código (`git pull`) y relanza el contenedor de backend (`docker compose up -d --build backend`) sin caída de servicio.
 
 ---
