@@ -51,31 +51,28 @@ backend/
 │   ├── entities.py                       # Entidades y Enums (Expense, Property, PropertyValuation, etc.)
 │   ├── value_objects.py                  # Money, Address, UtilityInvoiceData, MarketValuationResult, etc.
 │   ├── services.py                       # FiscalCalculator, ProfitCalculator (100% puro)
-│   ├── ports.py                          # CONTRATOS ABSTRACTOS:
-│   │                                     #   - InvoiceExtractorPort (NUEVO contrato semántico)
-│   │                                     #   - MarketValuationPort (existente)
-│   │                                     #   - LLMProviderPort (se mantiene para health checks y utilidades)
-│   └── extraction.py                     # FACHADA DE DEPRECACIÓN TEMPORAL (re-exports con deprecation warning)
+│   └── ports.py                          # CONTRATOS ABSTRACTOS:
+│                                         #   - InvoiceExtractorPort (puerto semántico de extracción)
+│                                         #   - MarketValuationPort (puerto semántico de valoración)
+│                                         #   - LLMProviderPort (puerto técnico para salud/generación)
 │
 ├── application/
-│   ├── use_cases.py                      # ProcessUtilityInvoiceUseCase (usa InvoiceExtractorPort con compatibilidad legacy)
+│   ├── use_cases.py                      # ProcessUtilityInvoiceUseCase (usa InvoiceExtractorPort limpio)
 │   └── valuation_use_cases.py            # RequestPropertyValuationUseCase (usa MarketValuationPort)
 │
 └── adapters/
-    ├── gemini_adapter.py                 # Permanece como GeminiFlashAdapter(LLMProviderPort) para /api/llm/health
-    ├── gemini_valuation_adapter.py       # FACHADA DE DEPRECACIÓN (re-exports para backward compatibility en tests)
-    │
     ├── extraction/                       # Subpaquete modular de extracción de facturas
-    │   ├── __init__.py                   # Exporta CompositeInvoiceExtractor, RepsolInvoiceExtractor, GeminiInvoiceExtractor, etc.
+    │   ├── __init__.py                   # Exporta CompositeInvoiceExtractor, RepsolInvoiceExtractor, GeminiInvoiceExtractor, GeminiFlashAdapter, etc.
     │   ├── base.py                       # Contrato base interno ExtractionStrategy y UtilityExtractorRegistry
     │   ├── repsol_regex_adapter.py       # Extractor Regex específico de Repsol
-    │   ├── gemini_extractor_adapter.py   # Extractor IA con prompt y llamada a Gemini (o LLMProviderPort)
+    │   ├── gemini_extractor_adapter.py   # Estrategia IA con prompt contable y sanitizado
+    │   ├── gemini_adapter.py             # Implementación GeminiFlashAdapter(LLMProviderPort) con backoff exponencial
     │   ├── privacy_scrubber.py           # Sanitizador RGPD (DNI, IBAN, CIF)
     │   └── composite_registry.py         # Orquestador Composite que implementa InvoiceExtractorPort
     │
     └── valuation/                        # Subpaquete modular de estimación de mercado
         ├── __init__.py                   # Exporta GeminiMarketValuationAdapter, MockMarketValuationAdapter
-        ├── adapter.py                    # Implementación limpia de MarketValuationPort (~120 líneas)
+        ├── adapter.py                    # Implementación limpia de MarketValuationPort (~140 líneas)
         ├── schemas.py                    # Schemas Pydantic internos (_RangePayload, _GeminiValuationPayload, etc.)
         ├── prompts.py                    # System instructions y plantillas de 2 fases
         ├── search_grounding.py           # Resolución concurrente de URLs de Google Search Grounding

@@ -5,10 +5,11 @@ import pytest
 
 from google.genai.errors import APIError
 
-from backend.adapters.gemini_valuation_adapter import (
+from backend.adapters.valuation import (
     GeminiMarketValuationAdapter,
     MockMarketValuationAdapter,
 )
+
 from backend.domain.entities import (
     PropertyType,
     PropertyCondition,
@@ -110,7 +111,7 @@ def test_gemini_adapter_init_missing_key():
         GeminiMarketValuationAdapter(api_key="")
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_success_flow(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -199,7 +200,7 @@ def test_gemini_adapter_success_flow(mock_client_cls, sample_address: Address):
     assert result.sources[1].title == "Anuncio en Fotocasa"
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_rate_limit_error(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -218,7 +219,7 @@ def test_gemini_adapter_rate_limit_error(mock_client_cls, sample_address: Addres
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_safety_blocked_response(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -237,7 +238,7 @@ def test_gemini_adapter_safety_blocked_response(mock_client_cls, sample_address:
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_invalid_json_response(mock_client_cls, sample_address: Address):
     mock_client = MagicMock()
     mock_client_cls.return_value = mock_client
@@ -258,7 +259,7 @@ def test_gemini_adapter_invalid_json_response(mock_client_cls, sample_address: A
         )
 
 
-@patch("backend.adapters.gemini_valuation_adapter.genai.Client")
+@patch("backend.adapters.valuation.adapter.genai.Client")
 def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_cls, sample_address: Address):
     """Verifica que ante un 429 por agotamiento de cuota de búsqueda, se reintenta sin herramientas y se obtiene la valoración."""
     mock_client = MagicMock()
@@ -311,7 +312,7 @@ def test_gemini_adapter_search_quota_fallback_to_direct_generation(mock_client_c
 
 
 def test_sanitize_property_url():
-    from backend.adapters.gemini_valuation_adapter import _sanitize_property_url
+    from backend.adapters.valuation.url_sanitizer import sanitize_property_url as _sanitize_property_url
 
     # District normalization
     assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos-universidad/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/"
@@ -325,7 +326,7 @@ def test_sanitize_property_url():
 
 
 def test_format_source_title():
-    from backend.adapters.gemini_valuation_adapter import _format_source_title
+    from backend.adapters.valuation.url_sanitizer import format_source_title as _format_source_title
 
     assert "Venta de pisos en Malaga, Teatinos" in _format_source_title("idealista.com", "https://www.idealista.com/venta-viviendas/malaga/teatinos/")
     assert "Alquiler en Teatinos — Fotocasa" in _format_source_title(None, "https://www.fotocasa.es/es/alquiler/viviendas/teatinos/l")
@@ -333,7 +334,9 @@ def test_format_source_title():
 
 
 def test_assemble_sources_replaces_hallucinated_url_with_resolved_grounding():
-    from backend.adapters.gemini_valuation_adapter import _assemble_sources, _SourcePayload
+    from backend.adapters.valuation.url_sanitizer import assemble_sources as _assemble_sources
+    from backend.adapters.valuation.schemas import _SourcePayload
+
 
     payload_sources = [
         _SourcePayload(
