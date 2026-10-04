@@ -107,6 +107,12 @@ def _sanitize_property_url(url: str) -> str:
 
         clean = re.sub(r"/con-precio-hasta_[0-9]+/?", "/", clean)
 
+        # Si se concatenó el slug de una calle dentro de la jerarquía regional (lo que provoca 404 en Idealista)
+        # ej. /venta-viviendas/malaga/teatinos/avenida-doctor-manuel-dominguez/ -> /venta-viviendas/malaga/teatinos/
+        street_pattern = r"/(?:avenida|avda|calle|paseo|plaza|camino|carrer|via)-[^/]+/?$"
+        if re.search(street_pattern, clean) and "/geo/" not in clean:
+            clean = re.sub(street_pattern, "/", clean)
+
         parsed = urlparse(clean)
         clean_path = re.sub(r"/+", "/", parsed.path)
         if not clean_path.endswith("/"):
@@ -243,7 +249,7 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
         if not api_key or not api_key.strip():
             raise MarketValuationError("API key is required", provider=self.PROVIDER_NAME)
         self.api_key = api_key
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-flash-latest")
         try:
             self.client = genai.Client(api_key=api_key)
         except Exception as e:
@@ -294,9 +300,15 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
             "}\n"
         )
 
-        user_prompt = (
-            f"Busca en Google Search anuncios de venta y alquiler en Idealista y Fotocasa para inmuebles en {address.street}, {address.city} (CP: {address.postal_code}, País: {address.country}).\n"
-            f"Con las referencias reales encontradas, calcula la estimación de venta y alquiler para el siguiente inmueble:\n"
+        search_prompt = (
+            f"Busca anuncios activos y precios reales en Idealista y Fotocasa de viviendas en venta y alquiler en "
+            f"{address.street}, {address.city} (CP: {address.postal_code}, País: {address.country}). "
+            f"Detalla los inmuebles comparables encontrados para {property_type.value} de {surface_m2} m2, "
+            f"{bedrooms if bedrooms is not None else ''} dormitorios, sus precios de venta y rentas de alquiler, superficies en m2 y características principales."
+        )
+
+        direct_prompt = (
+            f"Por favor, calcula la estimación de venta y alquiler para el siguiente inmueble:\n"
             f"- Tipología: {property_type.value}\n"
             f"- Dirección: {address.street}, {address.city} (CP: {address.postal_code}, País: {address.country})\n"
             f"- Superficie: {surface_m2} m2\n"
@@ -307,8 +319,7 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
             f"- Estado de conservación: {condition.value if condition else 'No especificado'}\n\n"
             "Instrucciones específicas:\n"
             "1. Determina el micro-barrio exacto o zona de influencia de la dirección indicada.\n"
-            "2. Busca precios reales y comparables para esa tipología, dormitorios y micro-barrio en 2025-2026.\n"
-            "3. En las fuentes, incluye enlaces al micro-barrio específico en Idealista o Fotocasa."
+            "2. Estima los valores de mercado y referencias en Idealista o Fotocasa."
         )
 
         config = types.GenerateContentConfig(
@@ -323,11 +334,82 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
 
         while True:
             try:
+                contents = search_prompt if config.tools else direct_prompt
+
                 response = self.client.models.generate_content(
                     model=self.model_name,
-                    contents=user_prompt,
+                    contents=contents,
                     config=config,
                 )
+
+                # Si la llamada incluía herramientas de búsqueda y devolvió texto descriptivo en lugar de JSON estructurado,
+                # significa que Gemini realizó la búsqueda web dedicada en directo. Procedemos al cálculo analítico fundamentado.
+                raw_text = getattr(response, "text", "") or ""
+                candidate = response.candidates[0] if getattr(response, "candidates", None) else None
+                has_json_schema = '"sale_range"' in raw_text
+
+                if config.tools and candidate and not has_json_schema:
+                    verified_urls: list[str] = []
+                    gm = getattr(candidate, "grounding_metadata", None)
+                    if gm and getattr(gm, "grounding_chunks", None):
+                        raw_items = [
+                            c.web.uri.strip() for c in gm.grounding_chunks
+                            if getattr(c, "web", None) and getattr(c.web, "uri", None) and isinstance(c.web.uri, str)
+                        ]
+                        if raw_items:
+                            with ThreadPoolExecutor(max_workers=min(len(raw_items), 5)) as ex:
+                                resolved = list(ex.map(_resolve_real_url, raw_items))
+                            for u in resolved:
+                                if u and u.startswith("http") and u not in verified_urls:
+                                    verified_urls.append(u)
+
+                    calc_prompt = (
+                        "Eres un tasador inmobiliario senior experto en el mercado inmobiliario de España.\n"
+                        "Basándote ESTRICTAMENTE en las siguientes ofertas y datos reales de mercado recopilados en directo de la zona:\n\n"
+                        "--- TESTIGOS Y ANUNCIOS REALES ENCONTRADOS EN LA ZONA ---\n"
+                        f"{raw_text}\n"
+                        "---------------------------------------------------------\n\n"
+                        "Calcula la tasación y estimación de mercado para este inmueble concreto:\n"
+                        f"- Tipología: {property_type.value}\n"
+                        f"- Dirección: {address.street}, {address.city} (CP: {address.postal_code}, País: {address.country})\n"
+                        f"- Superficie: {surface_m2} m2\n"
+                        f"- Dormitorios: {bedrooms if bedrooms is not None else 'No especificado'}\n"
+                        f"- Baños: {bathrooms if bathrooms is not None else 'No especificado'}\n"
+                        f"- Planta: {floor if floor is not None else 'No especificada'}\n"
+                        f"- Ascensor: {'Sí' if has_elevator is True else ('No' if has_elevator is False else 'Desconocido')}\n"
+                        f"- Estado de conservación: {condition.value if condition else 'No especificado'}\n\n"
+                    )
+                    if verified_urls:
+                        calc_prompt += (
+                            "Enlaces reales verificados de la búsqueda (utiliza estos enlaces en el array 'sources'):\n"
+                            + "\n".join(f"- {u}" for u in verified_urls[:6])
+                            + "\n\n"
+                        )
+                    calc_prompt += (
+                        "FORMATO DE SALIDA (EXCLUSIVAMENTE JSON):\n"
+                        "Debes responder con un objeto JSON válido con la siguiente estructura:\n"
+                        "{\n"
+                        '  "sale_range": {"min": ..., "median": ..., "max": ...},\n'
+                        '  "rent_range": {"min": ..., "median": ..., "max": ...},\n'
+                        '  "confidence": "HIGH",\n'
+                        '  "reasoning_factors": [\n'
+                        '    {"factor_name": "...", "impact_percent": 0.0, "description": "..."}\n'
+                        "  ],\n"
+                        '  "sources": [\n'
+                        '    {"title": "...", "url": "...", "price": ..., "surface_m2": ...}\n'
+                        "  ],\n"
+                        '  "raw_notes": "..."\n'
+                        "}\n"
+                    )
+
+                    calc_config = types.GenerateContentConfig(temperature=0.1)
+                    calc_response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=calc_prompt,
+                        config=calc_config,
+                    )
+                    return self._parse_response(calc_response, grounding_candidate=candidate)
+
                 return self._parse_response(response)
 
             except APIError as e:
@@ -367,7 +449,7 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
                     continue
                 raise MarketValuationError(f"Unexpected error: {str(e)}", provider=self.PROVIDER_NAME)
 
-    def _parse_response(self, response: Any) -> MarketValuationResult:
+    def _parse_response(self, response: Any, grounding_candidate: Any = None) -> MarketValuationResult:
         if not response or not getattr(response, "candidates", None):
             raise MarketValuationError("Respuesta vacía o bloqueada por el proveedor", provider=self.PROVIDER_NAME)
 
@@ -415,7 +497,8 @@ class GeminiMarketValuationAdapter(MarketValuationPort):
 
         # 3. Extraer y resolver Fuentes de búsqueda web y payload
         resolved_grounding: list[tuple[str, str]] = []
-        grounding_metadata = getattr(candidate, "grounding_metadata", None)
+        target_candidate = grounding_candidate or candidate
+        grounding_metadata = getattr(target_candidate, "grounding_metadata", None)
         if grounding_metadata and getattr(grounding_metadata, "grounding_chunks", None):
             raw_grounding_items: list[tuple[str, str]] = []
             for chunk in grounding_metadata.grounding_chunks:

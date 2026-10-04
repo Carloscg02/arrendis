@@ -320,6 +320,8 @@ def test_sanitize_property_url():
     assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-dormitorios/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/con-de-cuatro-cinco-habitaciones-o-mas/"
     # Price filter strip
     assert _sanitize_property_url("https://www.idealista.com/alquiler-viviendas/malaga/teatinos/con-precio-hasta_2000/") == "https://www.idealista.com/alquiler-viviendas/malaga/teatinos/"
+    # Street incorrectly nested in regional hierarchy stripped to valid district
+    assert _sanitize_property_url("https://www.idealista.com/venta-viviendas/malaga/teatinos/avenida-doctor-manuel-dominguez/") == "https://www.idealista.com/venta-viviendas/malaga/teatinos/"
 
 
 def test_format_source_title():
