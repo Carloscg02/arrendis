@@ -108,13 +108,14 @@ backend/
 │   ├── entities.py          # Property, Expense, Income, LeaseContract, User
 │   ├── value_objects.py     # Money, CadastralBreakdown, AcquisitionCost, FiscalReport
 │   ├── services.py          # FiscalCalculator, ProfitCalculator, FiscalCategoryMapper
-│   ├── extraction.py        # PrivacyScrubber, UtilityRegistry, RepsolStrategy
-│   └── ports.py             # Interfaces abstractas (Repositorios, LLM, PDF)
+│   └── ports.py             # Interfaces abstractas (Repositorios, LLM, PDF, Facturas, Tasación)
 ├── application/             # Casos de uso (orquestación)
-│   └── use_cases.py         # ProcessUtilityInvoice, CalculateFiscalReport...
+│   ├── use_cases.py         # ProcessUtilityInvoice, CalculateFiscalReport...
+│   └── valuation_use_cases.py # RequestPropertyValuation...
 ├── adapters/                # Implementaciones técnicas concretas
+│   ├── extraction/          # Pipeline modular de facturas (Composite, Regex, Gemini, Scrubber RGPD)
+│   ├── valuation/           # Pipeline modular de valoración (Gemini Grounding, Mocks)
 │   ├── sqlite_adapter.py    # Persistencia SQLite con modo WAL y transacciones
-│   ├── gemini_adapter.py    # Cliente Gemini con retry exponencial y JSON schema
 │   ├── pdf_extractor_adapter.py # Extracción de texto con PyMuPDF
 │   ├── aeat_pdf_renderer_adapter.py # Renderizado del borrador en PDF con ReportLab
 │   └── auth_adapter.py      # Bcrypt y JWT
@@ -122,6 +123,7 @@ backend/
     ├── routes/              # Endpoints HTTP
     ├── schemas.py           # Validación de DTOs con Pydantic v2
     └── dependencies.py      # Inyección de dependencias
+
 ```
 
 * **Dominio sin frameworks**: No hay imports de FastAPI, SQLAlchemy ni librerías de terceros en `domain/`. Todo son clases de Python, dataclasses inmutables y puertos (`ABC`).

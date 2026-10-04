@@ -46,7 +46,8 @@ from backend.api.routes.contracts import router as contracts_router
 from backend.api.routes.llm import router as llm_router
 from backend.api.routes.webhooks import router as webhooks_router
 from backend.api.routes.onboarding import router as onboarding_router
-from backend.adapters.gemini_adapter import GeminiFlashAdapter
+from backend.adapters.extraction import GeminiFlashAdapter
+
 
 
 @asynccontextmanager
