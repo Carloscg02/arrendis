@@ -7,6 +7,8 @@ services:
       dockerfile: cicd/Dockerfile
     restart: always
     env_file: ../.env
+    environment:
+      - ENVIRONMENT=production
     volumes:
       - ../data:/app/data
     expose:

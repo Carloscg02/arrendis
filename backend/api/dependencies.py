@@ -7,6 +7,7 @@ Proveen los repositorios concretos (SQLite) a los endpoints via Depends().
 from __future__ import annotations
 
 import os
+import sys
 from fastapi import Depends, Request, Header, HTTPException
 from backend.domain.entities import User
 
@@ -79,7 +80,18 @@ def get_hasher() -> BcryptPasswordHasherAdapter:
 
 
 def get_token_service() -> JWTTokenServiceAdapter:
-    return JWTTokenServiceAdapter()
+    secret_key = os.getenv("JWT_SECRET") or os.getenv("JWT_SECRET_KEY")
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    is_testing = os.getenv("TESTING") == "1" or "pytest" in sys.modules
+
+    if env in ("production", "staging") and not is_testing:
+        if not secret_key or secret_key == "dev-secret-key-change-in-production":
+            raise RuntimeError(
+                "CRITICAL SECURITY CONFIGURATION ERROR: "
+                "JWT_SECRET (o JWT_SECRET_KEY) must be configured with a secure, non-default secret in production/staging environments."
+            )
+
+    return JWTTokenServiceAdapter(secret_key=secret_key)
 
 
 async def get_current_user(
@@ -90,7 +102,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="No autenticado")
     token = authorization.split(" ", 1)[1]
     token_service = get_token_service()
-    user_id = token_service.verify_token(token)
+    user_id = token_service.verify_token(token, expected_type="access")
     if user_id is None:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
     user_repo = SQLiteUserRepository(db)

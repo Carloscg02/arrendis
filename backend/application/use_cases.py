@@ -396,7 +396,7 @@ class RefreshTokenUseCase:
         self._tokens = tokens
 
     def execute(self, refresh_token: str) -> tuple[str, str]:
-        user_id = self._tokens.verify_token(refresh_token)
+        user_id = self._tokens.verify_token(refresh_token, expected_type="refresh")
         if user_id is None:
             raise ValueError("Token de refresco inválido o expirado.")
         user = self._user_repo.find_by_id(user_id)
@@ -413,7 +413,7 @@ class GetCurrentUserUseCase:
         self._tokens = tokens
 
     def execute(self, access_token: str) -> User:
-        user_id = self._tokens.verify_token(access_token)
+        user_id = self._tokens.verify_token(access_token, expected_type="access")
         if user_id is None:
             raise ValueError("Token de acceso inválido o expirado.")
         user = self._user_repo.find_by_id(user_id)

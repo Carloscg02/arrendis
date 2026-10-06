@@ -213,7 +213,9 @@ class FakeTokenServiceAdapter(TokenServicePort):
         return f"access-{user_id}"
     def create_refresh_token(self, user_id: str) -> str:
         return f"refresh-{user_id}"
-    def verify_token(self, token: str) -> str | None:
+    def verify_token(self, token: str, expected_type: str = "access") -> str | None:
+        if expected_type and not token.startswith(f"{expected_type}-"):
+            return None
         for prefix in ("access-", "refresh-"):
             if token.startswith(prefix):
                 return token[len(prefix):]
