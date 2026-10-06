@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Query, status
 
 from backend.adapters.sqlite_adapter import (
     SQLiteConnection,
@@ -212,13 +212,41 @@ def update_property_cups(
     return _entity_to_response(updated_prop)
 
 
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def _validate_image_magic_bytes(content: bytes) -> str:
+    """Valida la firma binaria real (magic bytes) de la imagen (SEC-07).
+
+    Previene ataques de evasión donde un atacante declara Content-Type 'image/jpeg' o 'image/png'
+    para subir scripts PHP, HTML, ejecutables o polyglots.
+    Retorna la extensión real ('jpg' o 'png') o genera HTTPException 400.
+    """
+    if len(content) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo es demasiado pequeño o no es una imagen válida.",
+        )
+    # JPEG magic bytes: FF D8 FF
+    if content.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    # PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Firma de archivo inválida. El contenido del archivo no corresponde a una imagen JPG o PNG auténtica.",
+    )
+
+
 @router.post("/{property_id}/image", response_model=PropertyResponse)
 async def upload_property_image(
     property_id: str,
     file: UploadFile = File(...),
     db: SQLiteConnection = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> PropertyResponse:
+):
     """Sube o actualiza la foto de una propiedad."""
     prop_repo = SQLitePropertyRepository(db)
     try:
@@ -226,17 +254,17 @@ async def upload_property_image(
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Property '{property_id}' not found")
     
-    # Validate file type
+    # Validate file type header
     if file.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(status_code=400, detail="Solo se permiten archivos JPG o PNG")
     
-    # Validate file size (5MB max)
-    contents = await file.read()
-    if len(contents) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="El archivo no puede superar 5 MB")
+    # Validate file size bounded read (5MB max)
+    contents = await file.read(MAX_IMAGE_SIZE + 1)
+    if len(contents) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="El archivo no puede superar 5 MB")
     
-    # Determine extension
-    ext = "jpg" if file.content_type == "image/jpeg" else "png"
+    # SEC-07: Determine extension from verified binary signature
+    ext = _validate_image_magic_bytes(contents)
     filename = f"{property_id}.{ext}"
     
     # Delete old image if exists

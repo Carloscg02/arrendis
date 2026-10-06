@@ -177,14 +177,39 @@ class RateLimitMiddleware:
         return os.getenv("RATE_LIMIT_ENABLED", "true").lower() in ("1", "true", "yes")
 
     def _get_client_ip(self, scope: Scope) -> str:
-        headers = dict(scope.get("headers", []))
-        x_forwarded_for = headers.get(b"x-forwarded-for")
-        if x_forwarded_for:
-            ip_str = x_forwarded_for.decode("latin1").split(",")[0].strip()
-            if ip_str:
-                return ip_str
+        """Obtiene la dirección IP del cliente de forma segura.
+        
+        SEC-04: Mitigación de IP Spoofing. Solo se confía en cabeceras de proxy (CF-Connecting-IP,
+        X-Forwarded-For) si la conexión directa proviene de un proxy confiable (localhost,
+        reverse proxies en TRUSTED_PROXIES o si TRUST_PROXY_HEADERS=true).
+        """
         client = scope.get("client")
-        return client[0] if client else "127.0.0.1"
+        direct_ip = client[0] if client else "127.0.0.1"
+
+        trust_all = os.getenv("TRUST_PROXY_HEADERS", "false").lower() in ("1", "true", "yes")
+        default_trusted = {"127.0.0.1", "::1", "localhost", "testclient"}
+        env_trusted = {
+            p.strip()
+            for p in os.getenv("TRUSTED_PROXIES", "").split(",")
+            if p.strip()
+        }
+        trusted_proxies = default_trusted | env_trusted
+
+        if trust_all or direct_ip in trusted_proxies:
+            headers = dict(scope.get("headers", []))
+            cf_ip = headers.get(b"cf-connecting-ip")
+            if cf_ip:
+                ip_str = cf_ip.decode("latin1").strip()
+                if ip_str:
+                    return ip_str
+
+            x_forwarded_for = headers.get(b"x-forwarded-for")
+            if x_forwarded_for:
+                ip_str = x_forwarded_for.decode("latin1").split(",")[0].strip()
+                if ip_str:
+                    return ip_str
+
+        return direct_ip
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
