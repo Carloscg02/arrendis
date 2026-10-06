@@ -77,19 +77,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — permitir origenes tanto en local como en producción (Cloudflare Pages y dominio arrendis)
+# CORS — permitir origenes tanto en local como en producción (Cloudflare Pages legítimos y dominio arrendis)
+_cors_extra_origins = [
+    o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+_cors_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://arrendis.com",
+    "https://app.arrendis.com",
+    "https://staging.arrendis.com",
+]
+
+# SEC-03: Solo permitir subdominios oficiales de Arrendis y subdominios propios del proyecto en Cloudflare Pages
+_cors_origin_regex = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"^https://([a-zA-Z0-9-]+\.)*arrendis\.(com|es)$|^https://(arrendis|rental-handler)(-[a-zA-Z0-9]+)?\.pages\.dev$",
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://arrendis.com",
-        "https://app.arrendis.com",
-        "https://staging.arrendis.com",
-    ],
-    allow_origin_regex=r"^https://.*\.arrendis\.(com|es)$|^https://.*\.pages\.dev$",
+    allow_origins=_cors_default_origins + _cors_extra_origins,
+    allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

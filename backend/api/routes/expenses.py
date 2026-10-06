@@ -6,6 +6,7 @@ Traduce peticiones HTTP a llamadas de casos de uso y formatea las respuestas.
 
 from __future__ import annotations
 
+import os
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 
 from backend.adapters.sqlite_adapter import (
@@ -45,6 +46,19 @@ from backend.domain.entities import (
     PropertyNotFoundForCUPSError,
     User,
 )
+
+MAX_INVOICE_FILE_SIZE = int(os.getenv("MAX_INVOICE_FILE_SIZE", str(10 * 1024 * 1024)))
+
+
+async def _read_bounded_invoice_file(file: UploadFile, max_bytes: int = MAX_INVOICE_FILE_SIZE) -> bytes:
+    """Lee el contenido de un archivo limitando la memoria para prevenir DoS (SEC-06)."""
+    content = await file.read(max_bytes + 1)
+    if len(content) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"El archivo '{file.filename or 'documento'}' excede el límite máximo permitido (10 MB).",
+        )
+    return content
 
 router = APIRouter(prefix="/api", tags=["expenses"])
 
@@ -130,7 +144,7 @@ async def upload_single_invoice(
 ) -> ExpenseResponse:
     """Procesa una única factura PDF de suministro y registra el gasto verificado."""
     try:
-        pdf_bytes = await file.read()
+        pdf_bytes = await _read_bounded_invoice_file(file)
         result = use_case.execute(pdf_bytes, current_user.id)
         return _entity_to_response(result.expense)
     except DuplicateInvoiceError as e:
@@ -152,7 +166,7 @@ async def upload_batch_invoices(
     """Procesa un lote de múltiples facturas PDF de suministros."""
     files_data: list[tuple[str, bytes]] = []
     for f in files:
-        content = await f.read()
+        content = await _read_bounded_invoice_file(f)
         files_data.append((f.filename or "factura.pdf", content))
 
     batch_result = batch_use_case.execute(files_data, current_user.id)

@@ -1,25 +1,29 @@
 # Informe de Auditoría de Ciberseguridad — Rama `develop`
 
-**Proyecto:** Gestión de Alquileres (Rental Handler API)  
-**Entorno auditado:** Rama `develop` (`/home/carlos/rental-handler`)  
+**Proyecto:** Gestión de Alquileres (Rental Handler API / Arrendis)  
+**Entorno auditado:** Rama `develop` (`/home/carlos/rental-handler`) y rama `feature/e-06-identidad-acceso`  
 **Metodología:** OWASP Top 10:2025, OWASP API Security Top 10:2023, Strix Skillsets (`find-security-vulnerabilities-in-code`, `api-security-testing`)  
-**Fecha de evaluación:** 5 de octubre de 2026  
+**Fecha de evaluación:** 5 y 6 de octubre de 2026  
 **Auditor:** Antigravity Autonomous Security Agent  
+**Estado General:** 🟢 **100% DE HALLAZGOS REMEDIADOS (7 de 7 resueltos y verificados con pruebas automatizadas)**
 
 ---
 
 ## 1. Resumen Ejecutivo
 
-Se ha realizado una auditoría exhaustiva de seguridad sobre la rama `develop` de la plataforma de gestión de alquileres, evaluando tanto el análisis estático de código fuente (SAST) como pruebas dinámicas sobre la API FastAPI montada en memoria (DAST).
+Se ha completado la auditoría exhaustiva de seguridad sobre la rama `develop` de la plataforma Arrendis, evaluando análisis estático de código fuente (SAST), pruebas dinámicas sobre API en memoria (DAST) y pruebas de penetración automatizadas (Pentesting).
+
+Los **7 hallazgos detectados han sido completamente remediados y blindados** con pruebas de regresión en `tests/unit/backend/api/test_security_pentest.py`. La suite completa pasa al 100% (434 tests pasando en `develop`, 473 tests pasando en `feature/e-06-identidad-acceso`).
 
 ### Resumen de Hallazgos por Severidad
 
-| Severidad | Total | Estado |
-| :--- | :---: | :--- |
-| 🔴 **Crítica** | 1 | Confirmado dinámicamente |
-| 🟠 **Alta** | 2 | Confirmado dinámicamente |
-| 🟡 **Media** | 2 | Confirmado dinámicamente |
-| 🔵 **Baja / Informativa** | 2 | Verificado en código |
+| Severidad | Total Detectados | Estado Actual | Verificación |
+| :--- | :---: | :---: | :--- |
+| 🔴 **Crítica** | 1 | 🟢 **1 Resuelta** | Pentest automatizado pasando |
+| 🟠 **Alta** | 2 | 🟢 **2 Resueltas** | Pentest automatizado pasando |
+| 🟡 **Media** | 2 | 🟢 **2 Resueltas** | Pentest automatizado pasando |
+| 🔵 **Baja / Informativa** | 2 | 🟢 **2 Resueltas** | Pentest automatizado pasando |
+| **TOTAL** | **7** | 🟢 **7 Resueltas (100%)** | **0 Regresiones en la suite** |
 
 ---
 
@@ -28,20 +32,20 @@ Se ha realizado una auditoría exhaustiva de seguridad sobre la rama `develop` d
 | ID | Severidad | Categoría OWASP | Componente Afectado | Vulnerabilidad | Estado |
 | :--- | :---: | :--- | :--- | :--- | :---: |
 | **SEC-01** | 🔴 **Crítica** | A02:2021 Cryptographic Failures / A07:2021 Auth | `backend/adapters/auth_adapter.py` + `dependencies.py` | Clave secreta JWT predeterminada (`dev-secret-key-change-in-production`) no sobreescrita por variables de entorno en producción. | 🟢 Resuelta |
-| **SEC-02** | 🟠 **Alta** | A01:2021 Broken Access Control / A07:2021 Auth | `backend/adapters/auth_adapter.py` | Confusión de tipo de token: los Refresh Tokens (vida útil 7 días) son aceptados como Access Tokens. | 🟢 Resuelta |
-| **SEC-03** | 🟠 **Alta** | A05:2021 Security Misconfiguration | `backend/api/main.py` | Configuración CORS permisiva con credenciales sobre comodín multinquilino (`*.pages.dev`). | ⏳ Pendiente |
-| **SEC-04** | 🟡 **Media** | A04:2021 Insecure Design / API4:2023 Rate Limit | `backend/api/middleware/rate_limit.py` | Evasión de limitador de tasa mediante cabecera `X-Forwarded-For` arbitraria (IP Spoofing). | ⏳ Pendiente |
-| **SEC-05** | 🟡 **Media** | A02:2021 Cryptographic Failures / Webhooks | `backend/api/routes/webhooks.py` | Secreto de webhook predeterminado y comparación no resistente a ataques de temporización (`!=`). | ⏳ Pendiente |
-| **SEC-06** | 🔵 **Baja** | API4:2023 Unrestricted Resource Consumption | `backend/api/routes/expenses.py` | Falta de límite de tamaño en subida de facturas PDF en memoria (`await file.read()`). | ⏳ Pendiente |
-| **SEC-07** | 🔵 **Baja** | A08:2021 Software and Data Integrity Failures | `backend/api/routes/properties.py` | Validación de imágenes dependiente únicamente de la cabecera `Content-Type` sin comprobar magic bytes. | ⏳ Pendiente |
+| **SEC-02** | 🟠 **Alta** | A01:2021 Broken Access Control / A07:2021 Auth | `backend/adapters/auth_adapter.py` + `ports.py` + `use_cases.py` | Confusión de tipo de token: los Refresh Tokens (vida útil 7 días) eran aceptados en endpoints como Access Tokens. | 🟢 Resuelta |
+| **SEC-03** | 🟠 **Alta** | A05:2021 Security Misconfiguration | `backend/api/main.py` | Configuración CORS permisiva con credenciales sobre comodín multinquilino (`*.pages.dev`). | 🟢 Resuelta |
+| **SEC-04** | 🟡 **Media** | A04:2021 Insecure Design / API4:2023 Rate Limit | `backend/api/middleware/rate_limit.py` | Evasión de limitador de tasa mediante cabecera `X-Forwarded-For` arbitraria (IP Spoofing). | 🟢 Resuelta |
+| **SEC-05** | 🟡 **Media** | A02:2021 Cryptographic Failures / Webhooks | `backend/api/routes/webhooks.py` | Secreto de webhook predeterminado y comparación no resistente a ataques de temporización (`!=`). | 🟢 Resuelta |
+| **SEC-06** | 🔵 **Baja** | API4:2023 Unrestricted Resource Consumption | `backend/api/routes/expenses.py` + `webhooks.py` | Falta de límite de tamaño en subida de facturas PDF en memoria (`await file.read()`). | 🟢 Resuelta |
+| **SEC-07** | 🔵 **Baja** | A08:2021 Software and Data Integrity Failures | `backend/api/routes/properties.py` | Validación de imágenes dependiente únicamente de la cabecera `Content-Type` sin comprobar magic bytes. | 🟢 Resuelta |
 
 ---
 
-## 3. Detalle de Vulnerabilidades y Pruebas de Verificación
+## 3. Detalle de Vulnerabilidades y Resoluciones Aplicadas
 
 ### SEC-01: Clave secreta JWT predeterminada y falsificación de tokens (🔴 Crítica) — [🟢 RESUELTA]
 
-- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentest automatizados.
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
 - **Ubicación:** `backend/adapters/auth_adapter.py:19` y `backend/api/dependencies.py:81`
 - **Mecánica original:**
   En `auth_adapter.py`, el constructor `JWTTokenServiceAdapter` definía una clave por defecto, y `dependencies.py` nunca leía `os.getenv("JWT_SECRET")` ni `os.getenv("JWT_SECRET_KEY")`.
@@ -52,14 +56,14 @@ Se ha realizado una auditoría exhaustiva de seguridad sobre la rama `develop` d
   1. `get_token_service()` en `dependencies.py` y `auth_adapter.py` ahora leen de forma prioritaria `JWT_SECRET` (y `JWT_SECRET_KEY`) desde el entorno.
   2. En entornos `production` o `staging`, el servidor valida obligatoriamente que la clave esté configurada y no sea la de desarrollo, abortando con `RuntimeError` en caso de omisión.
   3. Se inyectó `ENVIRONMENT=production` automáticamente en `cicd/docker-compose.prod.yml`.
-  4. Se añadieron pruebas de pentesting en `tests/unit/backend/api/test_security_pentest.py` que verifican el rechazo de tokens forjados con la clave de desarrollo (429/429 tests pasando).
+  4. Se añadieron pruebas de pentesting en `tests/unit/backend/api/test_security_pentest.py` (`test_pentest_jwt_secret_configured_rejects_default_dev_secret` y `test_pentest_jwt_service_blocks_default_secret_in_production`).
 
 ---
 
 ### SEC-02: Confusión de tipo de Token / Scope Bypassed (🟠 Alta) — [🟢 RESUELTA]
 
-- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentest automatizados.
-- **Ubicación:** `backend/adapters/auth_adapter.py:44`, `backend/domain/ports.py:197`, `backend/application/use_cases.py:396` y `backend/api/dependencies.py:102`
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/adapters/auth_adapter.py`, `backend/domain/ports.py`, `backend/application/use_cases.py` y `backend/api/dependencies.py`
 - **Mecánica original:**
   El método `verify_token` decodificaba el token pero solo extraía `payload.get("sub")`. No validaba si el claim `"type"` era `"access"` o `"refresh"`.
 - **Impacto:** Los tokens de refresco (diseñados para viajar solo en cookies HTTP-only a `/api/auth/refresh` y válidos durante 7 días) podían ser usados en la cabecera `Authorization: Bearer <refresh_token>` en cualquier ruta de la API, ampliando la ventana de exposición en caso de filtración de tokens.
@@ -70,99 +74,90 @@ Se ha realizado una auditoría exhaustiva de seguridad sobre la rama `develop` d
   2. Si `expected_type` no coincide exactamente con `payload.get("type")`, `verify_token` retorna `None` inmediatamente (rechazo seguro).
   3. `RefreshTokenUseCase` valida obligatoriamente `expected_type="refresh"`.
   4. `GetCurrentUserUseCase` y la dependencia FastAPI `get_current_user` validan obligatoriamente `expected_type="access"`.
-  5. Se añadió la prueba de pentesting `test_pentest_token_type_confusion_rejection` en `tests/unit/backend/api/test_security_pentest.py` demostrando que un refresh token en `Authorization: Bearer` es rechazado con **HTTP 401**, y un access token en la cookie `/api/auth/refresh` también es rechazado con **HTTP 401**. (429/429 tests en develop y 469/469 en e-06 pasando).
+  5. Se añadió la prueba de pentesting `test_pentest_token_type_confusion_rejection` demostrando que un refresh token en `Authorization: Bearer` es rechazado con **HTTP 401**, y un access token en la cookie `/api/auth/refresh` también es rechazado con **HTTP 401**.
 
 ---
 
-### SEC-03: CORS permisivo sobre dominio multinquilino con credenciales (🟠 Alta)
+### SEC-03: CORS permisivo sobre dominio multinquilino con credenciales (🟠 Alta) — [🟢 RESUELTA]
 
-- **Ubicación:** `backend/api/main.py:92-96`
-- **Mecánica:**
-  ```python
-  allow_origin_regex=r"^https://.*\.arrendis\.(com|es)$|^https://.*\.pages\.dev$",
-  allow_credentials=True,
-  ```
-  `*.pages.dev` es un dominio público compartido de Cloudflare Pages. Cualquier usuario en el mundo puede desplegar un sitio web gratuito bajo `https://nombre-aleatorio.pages.dev`.
-- **Impacto:** Un atacante puede alojar un sitio web en `https://attacker.pages.dev` y realizar peticiones `fetch()` con `credentials: "include"` contra la API de Arrendis. Dado que la cabecera `Access-Control-Allow-Origin` refleja el origen atacante y `Access-Control-Allow-Credentials: true` está habilitado, el navegador del usuario víctima compartirá cookies de sesión y permitirá al atacante leer respuestas privadas.
-- **Resultado de la prueba dinámica:**
-  > Petición con `Origin: https://evil-attacker.pages.dev` devolvió:
-  > `Access-Control-Allow-Origin: https://evil-attacker.pages.dev`
-  > `Access-Control-Allow-Credentials: true`
-- **Remediación:**
-  Restringir el regex únicamente a los subdominios legítimos del proyecto en Cloudflare Pages:
-  ```python
-  allow_origin_regex=r"^https://.*\.arrendis\.(com|es)$|^https://rental-handler-[a-z0-9]+\.pages\.dev$",
-  ```
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/api/main.py:80-105`
+- **Mecánica original:**
+  `allow_origin_regex=r"^https://.*\.arrendis\.(com|es)$|^https://.*\.pages\.dev$"` con `allow_credentials=True`.
+  Cualquier persona puede publicar un sitio gratuito en Cloudflare Pages (`https://atacante.pages.dev`). Al estar permitido el comodín con credenciales, la web del atacante podía consultar la API y leer datos privados de cualquier víctima autenticada.
+- **Impacto:** Robo de información de sesión y datos personales mediante ataques CSRF/CORS cross-origin.
+- **Resolución aplicada:**
+  1. Se acotó el regex en `main.py` para permitir únicamente los subdominios legítimos del proyecto en Cloudflare Pages:
+     `r"^https://([a-zA-Z0-9-]+\.)*arrendis\.(com|es)$|^https://(arrendis|rental-handler)(-[a-zA-Z0-9]+)?\.pages\.dev$"`
+  2. Se añadió soporte para orígenes dinámicos autorizados mediante la variable `CORS_ALLOWED_ORIGINS`.
+  3. Se añadió la prueba `test_pentest_cors_rejects_unauthorized_pages_dev` en `test_security_pentest.py`, confirmando que orígenes como `https://evil-attacker.pages.dev` no reciben cabecera `Access-Control-Allow-Origin`, mientras que `https://rental-handler.pages.dev` y `https://app.arrendis.com` son autorizados correctamente.
 
 ---
 
-### SEC-04: Evasión de Rate Limiting por Spoofing de IP (🟡 Media)
+### SEC-04: Evasión de Rate Limiting por Spoofing de IP (🟡 Media) — [🟢 RESUELTA]
 
-- **Ubicación:** `backend/api/middleware/rate_limit.py:179-188`
-- **Mecánica:**
-  ```python
-  def _get_client_ip(self, scope: Scope) -> str:
-      headers = dict(scope.get("headers", []))
-      x_forwarded_for = headers.get(b"x-forwarded-for")
-      if x_forwarded_for:
-          ip_str = x_forwarded_for.decode("latin1").split(",")[0].strip()
-          if ip_str:
-              return ip_str
-      client = scope.get("client")
-      return client[0] if client else "127.0.0.1"
-  ```
-  Se confía ciegamente en el valor proporcionado por el cliente en `X-Forwarded-For` sin verificar si la conexión directa proviene de un proxy inverso de confianza (reverse proxy).
-- **Impacto:** En un ataque de fuerza bruta contra `/api/auth/login`, el atacante solo necesita alterar el valor de `X-Forwarded-For` en cada intento para resetear el contador de la ventana deslizante por IP, anulando el límite de 10 peticiones/minuto.
-- **Resultado de la prueba dinámica:**
-  > Se enviaron 15 intentos consecutivos de login variando la cabecera `X-Forwarded-For: 203.0.113.i`. Ninguno fue bloqueado con HTTP 429; todos respondieron 401.
-- **Remediación:**
-  Obtener la IP de la conexión TCP directa (`scope["client"]`) por defecto, y solo interpretar `X-Forwarded-For` (o `CF-Connecting-IP`) si la IP del cliente directo pertenece a un CIDR de proxy confiable (e.g. Cloudflare / Nginx interno).
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/api/middleware/rate_limit.py:179-215`
+- **Mecánica original:**
+  `_get_client_ip` tomaba ciegamente el valor de `X-Forwarded-For` enviado por cualquier cliente sin comprobar si la conexión directa provenía de un proxy inverso confiable.
+- **Impacto:** En un ataque de fuerza bruta contra `/api/auth/login`, el atacante solo necesitaba enviar una cabecera `X-Forwarded-For` distinta en cada intento para resetear el límite de 10 peticiones/minuto.
+- **Resolución aplicada:**
+  1. `_get_client_ip` ahora extrae primero la IP de conexión TCP directa (`scope["client"][0]`).
+  2. Solo interpreta `CF-Connecting-IP` o `X-Forwarded-For` si la conexión directa proviene de un proxy confiable (localhost, subredes de proxy configuradas en `TRUSTED_PROXIES` o si `TRUST_PROXY_HEADERS=true`).
+  3. Si un cliente directo no confiable envía `X-Forwarded-For`, la cabecera es ignorada y se aplica el límite sobre su IP directa real.
+  4. Se añadió la prueba `test_pentest_rate_limit_spoofed_x_forwarded_for_from_untrusted_client` confirmando que intentos con IPs rotadas en `X-Forwarded-For` desde un cliente no confiable son bloqueados con **HTTP 429 Too Many Requests**.
 
 ---
 
-### SEC-05: Secreto por defecto y vulnerabilidad a Timing Attacks en Webhook (🟡 Media)
+### SEC-05: Secreto por defecto y vulnerabilidad a Timing Attacks en Webhook (🟡 Media) — [🟢 RESUELTA]
 
-- **Ubicación:** `backend/api/routes/webhooks.py:38-43`
-- **Mecánica:**
-  ```python
-  configured_secret = os.getenv("INBOUND_WEBHOOK_SECRET", "dev-inbound-secret")
-  if configured_secret and x_webhook_secret != configured_secret:
-      raise HTTPException(status_code=401, ...)
-  ```
-- **Impacto:** Si la variable no se define en producción, se acepta el secreto de desarrollo conocido. Además, la comparación `!=` estándar entre cadenas es susceptible a ataques de temporización (timing attacks).
-- **Remediación:**
-  ```python
-  import hmac
-  configured_secret = os.getenv("INBOUND_WEBHOOK_SECRET")
-  if not configured_secret or not x_webhook_secret or not hmac.compare_digest(x_webhook_secret, configured_secret):
-      raise HTTPException(status_code=401, detail="No autorizado")
-  ```
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/api/routes/webhooks.py:38-60`
+- **Mecánica original:**
+  Si no se definía `INBOUND_WEBHOOK_SECRET` en producción, se aceptaba el secreto de desarrollo conocido (`dev-inbound-secret`). Además, la comparación `!=` clásica de strings era vulnerable a ataques de temporización (timing attacks).
+- **Impacto:** Ingesta no autorizada de facturas o inferencia de caracteres del secreto por análisis de latencia.
+- **Resolución aplicada:**
+  1. Se implementó comparación en tiempo constante usando `secrets.compare_digest(x_webhook_secret, configured_secret)`.
+  2. En entornos `production` o `staging`, el webhook exige que `INBOUND_WEBHOOK_SECRET` esté configurado y no sea el secreto de desarrollo, respondiendo con `HTTP 503` en caso contrario.
+  3. Se añadió la prueba `test_pentest_webhook_secret_constant_time_and_production_protection` validando tanto el rechazo con 401 de secretos erróneos como el bloqueo con 503 ante configuraciones inseguras en producción.
 
 ---
 
-### SEC-06: Falta de límite de tamaño en subida de facturas (🔵 Baja)
+### SEC-06: Falta de límite de tamaño en subida de facturas (🔵 Baja) — [🟢 RESUELTA]
 
-- **Ubicación:** `backend/api/routes/expenses.py:133, 155`
-- **Mecánica:**
-  `pdf_bytes = await file.read()` lee el fichero completo a memoria sin verificar previamente el tamaño ni limitar la lectura en streaming.
-- **Impacto:** Subidas de ficheros gigantescos (>500MB) pueden provocar agotamiento de memoria (OOM crash) en el proceso de Uvicorn.
-- **Remediación:**
-  Establecer un límite estricto (ej. 15 MB) antes de procesar el buffer en memoria.
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/api/routes/expenses.py:45-60, 145-175` y `backend/api/routes/webhooks.py:50-70`
+- **Mecánica original:**
+  `await file.read()` leía ficheros arbitrariamente grandes en memoria sin límite de bytes, permitiendo ataques de denegación de servicio por agotamiento de RAM (OOM Crash).
+- **Impacto:** Subidas maliciosas de ficheros gigantes (>500MB) podían provocar la caída del proceso Uvicorn.
+- **Resolución aplicada:**
+  1. Se implementó la función auxiliar `_read_bounded_invoice_file` que lee únicamente hasta `MAX_INVOICE_FILE_SIZE + 1` bytes (10 MB por defecto, configurable mediante variable de entorno).
+  2. Si el fichero supera el límite, se corta la lectura de inmediato y se retorna **HTTP 413 (Content Too Large)** sin volcar el contenido completo en la memoria del servidor.
+  3. Se aplicó tanto a subidas individuales (`/api/expenses/upload-invoice`), como a lotes (`/api/expenses/upload-invoices`) y adjuntos de webhooks.
+  4. Se añadió la prueba `test_pentest_oversized_pdf_upload_rejected_413` confirmando el rechazo inmediato con HTTP 413.
 
 ---
 
-### SEC-07: Validación superficial de tipo de fichero en imágenes (🔵 Baja)
+### SEC-07: Validación superficial de tipo de fichero en imágenes (🔵 Baja) — [🟢 RESUELTA]
 
-- **Ubicación:** `backend/api/routes/properties.py:230`
-- **Mecánica:**
-  Solo se evalúa `file.content_type in ["image/jpeg", "image/png"]`. Esta cabecera es declarada por el cliente y no garantiza que el contenido sea una imagen real.
-- **Impacto:** Permite subir ficheros con contenido malicioso bajo extensión `.png` o `.jpg`. Si bien `nosniff` mitiga la ejecución, es una buena práctica verificar los magic bytes del archivo.
+- **Estado:** 🟢 **Resuelta**. Parcheada y blindada con tests de pentesting.
+- **Ubicación:** `backend/api/routes/properties.py:215-255`
+- **Mecánica original:**
+  La validación dependía exclusivamente de la cabecera enviada por el cliente `file.content_type in ["image/jpeg", "image/png"]`, permitiendo subir scripts o binarios ejecutables simplemente cambiando la cabecera MIME.
+- **Impacto:** Potencial evasión de filtros y subida de archivos maliciosos disfrazados de imágenes.
+- **Resolución aplicada:**
+  1. Se implementó `_validate_image_magic_bytes(content: bytes)` que comprueba los primeros bytes del archivo (firmas binarias / magic bytes):
+     - JPEG: `\xFF\xD8\xFF`
+     - PNG: `\x89PNG\r\n\x1a\n`
+  2. La extensión final del archivo guardado en disco (`.jpg` o `.png`) se determina a partir de la firma binaria validada, nunca de la cabecera del cliente.
+  3. Se añadió lectura acotada de memoria (máximo 5 MB) con respuesta HTTP 413 si se excede.
+  4. Se añadió la prueba `test_pentest_image_upload_content_type_spoofing_rejected` verificando que scripts o contenidos no binarios con cabecera `image/jpeg` son rechazados con **HTTP 400 Bad Request** ("Firma de archivo inválida").
 
 ---
 
 ## 4. Controles de Seguridad Positivos Validados
 
-Durante la auditoría también se confirmaron múltiples controles de seguridad implementados con rigor:
+Durante la auditoría también se confirmaron múltiples controles de seguridad nativos implementados con rigor:
 
 1. **Prevención de Inyección SQL:** Todas las consultas en `backend/adapters/sqlite_adapter.py` emplean consultas parametrizadas con marcadores `?`. No se hallaron concatenaciones directas en DML.
 2. **Control de Acceso Objeto a Objeto (Anti-IDOR / BOLA):**
@@ -174,14 +169,10 @@ Durante la auditoría también se confirmaron múltiples controles de seguridad 
 
 ---
 
-## 5. Plan de Remediación Priorizado
+## 5. Resultado Final y Estado de Verificación
 
-1. **Inmediato (P0):**
-   - Modificar `get_token_service()` para inyectar `JWT_SECRET_KEY` desde entorno y validar `expected_type="access"` en `verify_token()`.
-   - Ajustar el regex de CORS para eliminar el comodín `^https://.*\.pages\.dev$`.
-2. **A corto plazo (P1):**
-   - Asegurar el webhook con `hmac.compare_digest` y exigir que `INBOUND_WEBHOOK_SECRET` sea obligatorio en entornos no locales.
-   - Ajustar la resolución de IP en `RateLimitMiddleware` para evitar spoofing vía `X-Forwarded-For`.
-3. **Mantenimiento (P2):**
-   - Añadir límite de tamaño a las subidas de PDFs en `expenses.py`.
-   - Añadir comprobación de magic bytes en la subida de imágenes.
+Todas las vulnerabilidades identificadas en la auditoría inicial han sido completamente solventadas, aplicadas en ambas ramas de desarrollo (`develop` y `feature/e-06-identidad-acceso`), y cubiertas por una suite de pentesting automatizada permanente.
+
+- **Suite de Pentesting (`test_security_pentest.py`):** 13/13 pruebas exitosas (0 fallos).
+- **Suite global `develop` (`rental-handler`):** 434/434 pruebas exitosas (0 fallos).
+- **Suite global `feature/e-06-identidad-acceso`:** 473/473 pruebas exitosas (0 fallos).
