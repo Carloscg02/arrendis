@@ -1,9 +1,18 @@
 # 🔑 Épica E-06: Identidad Avanzada, Control de Cuentas y Observabilidad de Usuarios
 
-> **Versión:** 1.0  
-> **Estado:** Roadmap Definido / Especificaciones Iniciales Listas  
-> **Fecha:** 2026-10-03  
+> **Versión:** 1.1  
+> **Estado:** ⏸️ **On Hold / En Pausa (Reestructuración pendiente)**  
+> **Fecha de actualización:** 2026-10-08  
 > **Dependencias previas:** F-06 (Autenticación JWT) ✅, E-04 (Launch Readiness & Blindaje Web) ✅  
+
+> [!IMPORTANT]
+> **Aviso de Estado y Plan de Reestructuración (Decisión de Producto):**
+> Esta épica se encuentra actualmente **EN PAUSA (ON HOLD)**.
+> Está planificado formalmente dividir esta épica en **dos épicas independientes** en una próxima sesión de refinamiento para garantizar una validación técnica y operativa exhaustiva:
+> 1. **Épica de Observabilidad, Auditoría y Trazabilidad de Usuarios:** Registro de eventos de seguridad, hashing/anonimización de IPs según normativa RGPD, tabla `user_audit_events` y panel de métricas operativas.
+> 2. **Épica de Autenticación Social Federada con Google OAuth2:** Integración con Google Identity Services, flujo OIDC, verificación criptográfica de ID tokens y prevención de *Confused Deputy*.
+> 
+> Mientras se formaliza esta partición en el backlog, la plataforma opera de forma autónoma y blindada en producción mediante el sistema de autenticación nativo Shielded JWT y rate limiting de tres niveles implementados en E-04.
 
 ---
 
