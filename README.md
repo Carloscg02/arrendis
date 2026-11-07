@@ -1,7 +1,7 @@
 # Arrendis — Plataforma Integral de Gestión Patrimonial y Motor Fiscal AEAT
 
 [![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?logo=githubactions&logoColor=white)](.github/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/Tests-401%20Passing-success?logo=pytest&logoColor=white)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-434%20Passing-success?logo=pytest&logoColor=white)](tests/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](requirements.txt)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](backend/)
 [![React](https://img.shields.io/badge/Frontend-React%2019%20%7C%20TypeScript-61DAFB?logo=react&logoColor=black)](frontend/)
@@ -22,7 +22,7 @@
 * **Motor Fiscal AEAT**: Modelado algorítmico de la normativa tributaria española utilizando todas las casillas oficiales de hacienda con generación de informe en PDF.
 * **Experiencia Móvil PWA**: Soporte Progressive Web App con Service Worker de Vite, instalación standalone y diseño responsive mobile-first.
 * **Infraestructura Cloud Real**: Despliegue distribuido en Cloudflare Pages (Frontend SPA), Cloudflare Workers (Ingesta email), Caddy 2 (Reverse proxy con TLS automático) y Oracle Cloud Infrastructure Ampere VM (Backend en Docker) con SQLite en modo WAL y hot-backups automatizados.
-* **Testing y CICD**: Suite de **401 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
+* **Testing y CICD**: Suite de **434 pruebas automatizadas** (unitarias, de integración y ciclo de vida E2E) integradas en un pipeline de CI/CD en GitHub Actions con despliegue continuo por SSH.
 
 
 ---
@@ -48,11 +48,16 @@ flowchart TD
         subgraph Docker ["Contenedor Backend"]
             FastAPI["FastAPI (Python 3.12)\nCasos de uso y API REST"]
             
-            subgraph Extraccion ["Pipeline de Extracción"]
+            subgraph Extraccion ["Pipeline de Facturas"]
                 PyMuPDF["PyMuPDF\nTexto en memoria"]
                 Scrubber["Privacy Scrubber\nAnonimiza DNI, IBAN, nombres"]
                 RegexExtractor["Regex Matcher\nRepsol, Iberdrola (< 2ms)"]
                 LLMExtractor["Gemini Flash Adapter\nStructured Output JSON"]
+            end
+
+            subgraph Tasacion ["Motor de Estimación de Mercado"]
+                ValuationEngine["Gemini Valuation Adapter\nMicro-localización y Search Grounding"]
+                RedirectResolver["URL Sanitizer & Resolver\nThreadPoolExecutor (URLs reales)"]
             end
 
             FiscalEngine["Motor Fiscal AEAT\nAmortizaciones, topes y arrastres\nGenerador PDF ReportLab"]
@@ -62,6 +67,11 @@ flowchart TD
             SQLite["SQLite (WAL Mode)\nDecimal como TEXT"]
             CronBackup["Backup caliente diario (.backup)"]
         end
+    end
+
+    subgraph ExternalAI ["Google Cloud AI & Web"]
+        GoogleAI["Google Gemini API\n(Flash)"]
+        SearchGrounding["Google Search Grounding\nIdealista & Fotocasa en vivo"]
     end
 
     User -->|HTTPS| CF_Pages
@@ -74,7 +84,12 @@ flowchart TD
     FastAPI --> PyMuPDF --> Scrubber
     Scrubber --> RegexExtractor
     Scrubber -.->|Fallback si no encaja regex| LLMExtractor
-    LLMExtractor -.-> GoogleAI["Google Gemini API"]
+    LLMExtractor -.-> GoogleAI
+
+    FastAPI --> ValuationEngine
+    ValuationEngine <--> GoogleAI
+    GoogleAI <--> SearchGrounding
+    ValuationEngine --> RedirectResolver
 
     FastAPI --> FiscalEngine
     FastAPI --> SQLite
@@ -163,6 +178,22 @@ Procesar facturas de luz y gas suele ser tedioso para el usuario. El sistema aut
 
 ---
 
+## Estimación de mercado con IA (Google Search Grounding)
+
+Conocer el valor de venta o el alquiler óptimo de un inmueble suele obligar a buscar manualmente en portales o pagar suscripciones caras. Arrendis automatiza esta valoración combinando **Google Gemini** con **búsqueda web en vivo**:
+
+1. **Búsqueda hiperlocal con Search Grounding**:
+   * En lugar de estimar a ciegas o con datos desactualizados, el sistema consulta en tiempo real en **Idealista** y **Fotocasa** usando la dirección exacta, el micro-barrio y las características de la vivienda (superficie, dormitorios, planta, ascensor y estado).
+   * Filtrar por micro-barrio (por ejemplo, *Huelin* en vez de todo el macro-distrito de *Carretera de Cádiz* en Málaga) evita distorsiones de precio en distritos amplios y heterogéneos.
+2. **Resolución de enlaces reales**:
+   * Google Search Grounding genera enlaces de redirección internos. El adaptador resuelve en paralelo (con `ThreadPoolExecutor`) las URLs directas a los anuncios reales para que el propietario pueda contrastar las fuentes.
+3. **Cálculo de horquillas y nivel de confianza**:
+   * A partir de los anuncios comparables encontrados, el motor calcula rangos de venta y alquiler (`mínimo`, `estimado`, `máximo`), asigna un nivel de confianza (`HIGH`, `MEDIUM`, `LOW`) y detalla los factores que influyen en el valor (ascensor, reforma, orientación).
+4. **Modo offline para desarrollo y pruebas**:
+   * En local o durante los tests no es necesario consumir cuota de Google. El backend conmuta automáticamente a un adaptador simulado (`MockMarketValuationAdapter`) que genera valoraciones coherentes sin salir a internet.
+
+---
+
 ## Motor de cálculo fiscal (Modelo 100 AEAT)
 
 El motor `FiscalCalculator` traduce a código las reglas de la Agencia Tributaria para el cálculo del IRPF en alquileres de vivienda:
@@ -178,15 +209,15 @@ El motor `FiscalCalculator` traduce a código las reglas de la Agencia Tributari
 
 ## Estrategia de Testing
 
-El proyecto cuenta con **401 tests automatizados** con `pytest`:
+El proyecto cuenta con **434 tests automatizados** con `pytest`:
 
 * **Unitarios de dominio**: Pruebas de valor fiscal (casos borde de amortizaciones, topes y arrastres de Ley 12/2023), inmutabilidad de Value Objects y parsers regex.
 * **Integración**: Repositorios SQLite comprobando transacciones y modo WAL, extracción sobre PDFs reales y endpoints de FastAPI con autenticación.
 * **Ciclo de vida E2E**: Pruebas que simulan años fiscales completos y la compensación de excesos a lo largo de 4 ejercicios consecutivos.
-* **Tests sin coste ni red**: Las llamadas al LLM están mockeadas a nivel de puerto en la suite de CI. Toda la batería de pruebas corre en local o en GitHub Actions en menos de 6 segundos.
+* **Tests sin coste ni red**: Las llamadas al LLM están mockeadas a nivel de puerto en la suite de CI. Toda la batería de pruebas corre en local o en GitHub Actions en menos de 14 segundos.
 
 ```bash
-========================= 401 passed in 5.96s =========================
+======================= 434 passed in 13.53s =======================
 ```
 
 ---
@@ -208,7 +239,7 @@ El proyecto está desplegado en internet utilizando capas gratuitas de proveedor
 
 El pipeline en [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automatiza las fases de verificación y despliegue ante cada push a `main`:
 
-1. **CI**: Ejecuta los 401 tests del backend con `pytest` en Python 3.12 y valida el chequeo de tipos (`tsc`) y build de Vite en Node 22.
+1. **CI**: Ejecuta los 434 tests del backend con `pytest` en Python 3.12 y valida el chequeo de tipos (`tsc`) y build de Vite en Node 22.
 
 2. **CD**: Si los tests pasan, se conecta por SSH a la máquina de Oracle Cloud, actualiza el código (`git pull`) y relanza el contenedor de backend (`docker compose up -d --build backend`) sin caída de servicio.
 
@@ -221,6 +252,7 @@ El pipeline en [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) au
 | **SQLite (WAL) en NVMe** | PostgreSQL gestionado | Para este volumen de uso, un servidor Postgres gestionado añade coste mensual, latencia de red y mantenimiento. SQLite con WAL soporta cientos de lecturas por segundo, no consume recursos extra y simplifica las copias de seguridad a un único archivo. |
 | **Caddy 2** | Nginx + Certbot | Caddy renueva y gestiona los certificados HTTPS de Let's Encrypt de forma nativa sin necesidad de configurar tareas cron externas ni scripts de recarga. |
 | **Extractor híbrido (Regex + LLM)** | Usar solo LLM | Mandar cada factura al LLM añade latencia (2-4 s), coste económico y riesgo de respuestas erróneas. El parser regex resuelve la gran mayoría de facturas en menos de 2 ms con 100% de precisión. |
+| **Tasación con Search Grounding** | Scraping web o APIs cerradas de pago | El scraping tradicional (Puppeteer, BeautifulSoup) sufre bloqueos anti-bot frecuentes (Cloudflare, Akamai) y cambios de diseño. Las APIs oficiales de portales son caras y exclusivas para agencias. Gemini con Search Grounding obtiene comparables reales y actualizados de Idealista y Fotocasa de forma estable y legal. |
 | **Dominio en Python puro** | Modelos acoplados a ORMs | Evita el problema del modelo anémico y que la lógica fiscal dependa de la base de datos. Permite ejecutar cientos de pruebas unitarias en milisegundos sin levantar bases de datos de prueba. |
 
 ---
@@ -251,6 +283,9 @@ cd ..
 ```bash
 cp cicd/.env.example .env
 ```
+
+> [!NOTE]
+> `GEMINI_API_KEY` es opcional en local. Si no la configuras o activas `USE_MOCK_VALUATION=true`, el sistema utilizará adaptadores simulados para las valoraciones y el parser regex para las facturas, permitiendo probar toda la aplicación sin coste de API.
 
 ### 3. Levantar frontend y backend
 ```bash
