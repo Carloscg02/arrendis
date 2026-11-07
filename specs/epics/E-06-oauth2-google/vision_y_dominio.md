@@ -1,30 +1,21 @@
-# 🔑 Épica E-06: Identidad Avanzada, Control de Cuentas y Observabilidad de Usuarios
+# 🔑 Épica E-06: Autenticación Social Federada con Google OAuth2
 
-> **Versión:** 1.1  
-> **Estado:** ⏸️ **On Hold / En Pausa (Reestructuración pendiente)**  
-> **Fecha de actualización:** 2026-10-08  
+> **Versión:** 2.0  
+> **Estado:** 📋 Backlog / Especificación de Visión y Dominio Lista  
+> **Fecha de actualización:** 2026-10-10  
 > **Dependencias previas:** F-06 (Autenticación JWT) ✅, E-04 (Launch Readiness & Blindaje Web) ✅  
-
-> [!IMPORTANT]
-> **Aviso de Estado y Plan de Reestructuración (Decisión de Producto):**
-> Esta épica se encuentra actualmente **EN PAUSA (ON HOLD)**.
-> Está planificado formalmente dividir esta épica en **dos épicas independientes** en una próxima sesión de refinamiento para garantizar una validación técnica y operativa exhaustiva:
-> 1. **Épica de Observabilidad, Auditoría y Trazabilidad de Usuarios:** Registro de eventos de seguridad, hashing/anonimización de IPs según normativa RGPD, tabla `user_audit_events` y panel de métricas operativas.
-> 2. **Épica de Autenticación Social Federada con Google OAuth2:** Integración con Google Identity Services, flujo OIDC, verificación criptográfica de ID tokens y prevención de *Confused Deputy*.
-> 
-> Mientras se formaliza esta partición en el backlog, la plataforma opera de forma autónoma y blindada en producción mediante el sistema de autenticación nativo Shielded JWT y rate limiting de tres niveles implementados en E-04.
 
 ---
 
 ## 1. Objetivo de Negocio y Justificación
 
-Proporcionar a **Arrendis** un sistema maduro de gestión de identidades, autenticación federada moderna (Google OAuth2), control administrativo granular sobre la activación y suspensión de cuentas de usuario (`is_active`), y registro de auditoría de actividad para garantizar la seguridad y supervisión del ciclo de vida del usuario.
+Proporcionar a **Arrendis** un flujo de autenticación e inicio de sesión moderno y sin fricción mediante **Google OAuth2 / OIDC (Google Identity Services)**, permitiendo a propietarios particulares y colaboradores acceder a la plataforma con un solo clic, reduciendo drásticamente la tasa de abandono en el registro por fatiga de contraseñas (*Password Fatigue*).
 
 ### ¿Qué problemas resuelve esta épica?
 
-1. **Fricción en el alta de usuarios (Password Fatigue):** Los usuarios y familiares prefieren autenticarse con un solo clic utilizando su cuenta de Google en lugar de tener que recordar otra contraseña y confirmar registros largos.
-2. **Falta de control administrativo sobre quién accede a la plataforma:** Actualmente, cualquier persona que acceda a `/register` puede crearse una cuenta y empezar a crear registros en la base de datos de producción. El administrador necesita poder habilitar/deshabilitar cuentas (`is_active`) o poner la plataforma en modo lista de espera / acceso restringido por invitación.
-3. **Puntos ciegos sobre actividad sospechosa o fallos de acceso:** No existe un registro de auditoría (*Audit Log*) que registre intentos de inicio de sesión fallidos, altas de usuarios, o cambios de estado de cuentas para responder ante incidentes de seguridad o dar soporte a usuarios con problemas de acceso.
+1. **Fricción y abandono en el alta de usuarios:** Recordar contraseñas adicionales y rellenar formularios largos desmotiva al usuario en su primera toma de contacto con la aplicación.
+2. **Validación automática de email:** Con Google Identity Services, la identidad y el correo electrónico del usuario ya vienen verificados directamente por Google, evitando cuentas falsas y flujos engorrosos de activación vía email.
+3. **Mantenimiento y unificación del modelo de seguridad:** Los usuarios registrados con Google se integran de manera transparente con el esquema de tokens JWT nativos (Access Token en memoria + Refresh Token en cookie `HttpOnly` blindada) y la política de aislamiento multi-inquilino de Arrendis.
 
 ---
 
@@ -32,30 +23,29 @@ Proporcionar a **Arrendis** un sistema maduro de gestión de identidades, autent
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ ÉPICA E-06: IDENTIDAD AVANZADA Y CONTROL DE CUENTAS                    │
+│ ÉPICA E-06: AUTENTICACIÓN SOCIAL FEDERADA CON GOOGLE OAUTH2            │
 │                                                                        │
-│   [ F-44: Control Administrativo y Estado de Cuentas (is_active) ]     │
-│   [ F-45: Autenticación Social Federada con Google OAuth2 ]           │
-│   [ F-46: Registro de Auditoría de Accesos y Métricas de Usuarios ]    │
+│   [ F-44: Extensión del Modelo de Dominio de Usuario (auth_provider) ] │
+│   [ F-45: Integración Google Identity Services y Verificación OIDC ]   │
+│   [ F-46: Experiencia UI de Login/Registro Social en Atelier ]        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### ✅ Lo que ENTRA en esta épica:
 - **Modelo de Dominio y Persistencia de Usuario:**
-  - Incorporación del campo `is_active: bool = True` (o configurable por defecto a `False` en modo lista de espera/invitación) y `auth_provider: str = 'local' | 'google'` en la entidad `User` y en la tabla `users` de SQLite.
-  - Validación de estado activo en los casos de uso de autenticación (`LoginUserUseCase`, `RefreshTokenUseCase` y autenticación por bearer token). Si `is_active == False`, se bloquea el acceso con código `403 Forbidden`.
-  - Capacidad administrativa (vía comando CLI o endpoint protegido) para activar, desactivar o consultar el estado de cuentas.
+  - Incorporación del campo `auth_provider: str = 'local' | 'google'` (y `google_id: Optional[str]`) en la entidad `User` y migración de esquema en `SQLiteUserRepository`.
+  - Política de vinculación (*account linking*): si un usuario se registra con Google y su email coincide con una cuenta local previa, se valida y unifica respetando el aislamiento de datos.
 - **Autenticación con Google (OAuth2 / OIDC):**
-  - Integración en frontend del botón oficial de Google Identity Services (*Sign in with Google*).
-  - Endpoint en backend `/api/auth/google` que valida criptográficamente el `id_token` de Google (mediante clave pública de Google / `google-auth` library) sin comprometer secretos del cliente.
-  - Creación automática o vinculación de usuario existente por correo electrónico y emisión de tokens JWT habituales de Arrendis.
-- **Auditoría y Métricas:**
-  - Tabla de auditoría `user_audit_events` (marcas de tiempo, evento: `LOGIN_SUCCESS`, `LOGIN_FAILED`, `REGISTER`, `DEACTIVATED`, IP anonimizada y User-Agent).
-  - Endpoint de métricas de actividad básica para el administrador.
+  - Puerto de infraestructura `OAuthVerifierPort` desacoplado del framework.
+  - Adaptador `GoogleOAuthVerifierAdapter` que valida criptográficamente el `id_token` de Google mediante certificados públicos oficiales (`https://www.googleapis.com/oauth2/v3/certs`) o `google-auth`, verificando `aud` (Client ID) para evitar ataques de *Confused Deputy*.
+  - Endpoint en backend `/api/auth/google` que procesa el token de Google y expide la dupla habitual de JWT Access Token y Refresh Cookie de Arrendis.
+- **Frontend & UX (Atelier Editorial):**
+  - Botón oficial *Sign in with Google* integrado de forma nativa en `/login` y `/register`, adaptado armónicamente al diseño editorial Atelier y accesible en PWA/móvil.
 
 ### ❌ Lo que NO entra en esta épica:
-- Pasarelas de pago o suscripciones monetizadas (Stripe).
-- Roles complejos multi-organización (RBAC jerárquico enterprise): Arrendis opera con usuarios particulares propietarios de inmuebles.
+- Auditoría, eventos de seguridad y métricas operativas (desacoplado formalmente a **Épica E-08: Monitoreo, Trazabilidad y Auditoría**).
+- Otros proveedores sociales (Apple ID, GitHub, Microsoft).
+- Gestión de permisos y roles organizacionales enterprise (RBAC complejo).
 
 ---
 
@@ -63,11 +53,10 @@ Proporcionar a **Arrendis** un sistema maduro de gestión de identidades, autent
 
 | Término | Definición |
 |---|---|
-| **Federated Identity** | Mecanismo que delega la autenticación de usuarios en un proveedor de identidad de confianza externo (Google) mediante protocolos abiertos (OIDC / OAuth 2.0). |
-| **Google ID Token** | Token JWT firmado criptográficamente por los servidores de Google que certifica la identidad y el correo electrónico verificado del usuario. |
-| **is_active** | Indicador booleano que determina si un usuario tiene permiso activo para interactuar con la plataforma o si se encuentra suspendido/pendiente de aprobación. |
-| **Soft Suspension / Ban** | Estado donde la cuenta de usuario se conserva intacta en la base de datos pero se le deniega el acceso a la API mediante un código `403 Forbidden`. |
-| **Audit Log** | Registro inmutable de eventos de seguridad que permite trazar cuándo y desde dónde se produjeron inicios de sesión o modificaciones de estado. |
+| **Federated Identity** | Mecanismo que delega la verificación de la identidad del usuario en un proveedor externo de confianza (Google) mediante OpenID Connect (OIDC). |
+| **Google ID Token** | Token JWT emitido y firmado criptográficamente por los servidores de Google que certifica la identidad y el correo electrónico verificado del usuario. |
+| **auth_provider** | Indicador en la entidad `User` que identifica el origen de la credencial (`'local'` para email/password, `'google'` para autenticación federada). |
+| **Confused Deputy Prevention** | Validación estricta en backend que comprueba que el claim `aud` del token coincide con el `GOOGLE_CLIENT_ID` registrado de Arrendis, evitando la reutilización de tokens firmados para otras aplicaciones. |
 
 ---
 
@@ -84,45 +73,45 @@ Proporcionar a **Arrendis** un sistema maduro de gestión de identidades, autent
 │ FastAPI Backend (Hexagonal)                                            │
 │                                                                        │
 │   ┌──────────────────────────────────────────────────────────────┐    │
-│   │ GoogleOAuthAdapter (Valida firma con google.oauth2.id_token) │    │
+│   │ GoogleOAuthVerifierAdapter (OAuthVerifierPort)               │    │
+│   │ - Valida firma criptográfica con certificados de Google      │    │
+│   │ - Valida aud == GOOGLE_CLIENT_ID (Anti-Confused Deputy)      │    │
 │   └──────────────────────────────┬───────────────────────────────┘    │
-│                                  │ Extrae email verificado            │
+│                                  │ Retorna { email, sub, name }       │
 │   ┌──────────────────────────────▼───────────────────────────────┐    │
-│   │ GoogleLoginUseCase (Application)                             │    │
-│   │ - Busca o crea User en SQLiteUserRepository                   │    │
-│   │ - Verifica que user.is_active == True                        │    │
+│   │ GoogleAuthUseCase (Application)                              │    │
+│   │ - Busca o provisiona User en SQLiteUserRepository           │    │
 │   │ - Emite Access JWT + Refresh Cookie propios de Arrendis      │    │
-│   │ - Registra evento en AuditLogRepository                      │    │
 │   └──────────────────────────────────────────────────────────────┘    │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Desglose de Features Propuestas
+## 5. Desglose de Features
 
-### 1. `F-44`: Control Administrativo del Estado de Cuentas (`is_active`) y Política de Acceso
-- Ampliación de la entidad `User` en `backend/domain/entities.py` con el atributo `is_active: bool = True`.
-- Migración de esquema en `SQLiteUserRepository` añadiendo columna `is_active INTEGER DEFAULT 1`.
-- Validación en use cases de autenticación y dependencias (`get_current_user`): usuarios inactivos reciben `HTTP 403 Forbidden: Cuenta inactiva o pendiente de aprobación`.
-- Script / comando CLI administrativo `python -m backend.manage_users` para listar usuarios y conmutar su estado `is_active`.
+### 1. `F-44`: Extensión del Modelo de Dominio de Usuario (`auth_provider` y `google_id`)
+- Extensión de la entidad `User` en `backend/domain/entities.py` con atributos para proveedor de autenticación.
+- Migración de esquema en `SQLiteUserRepository` manteniendo retrocompatibilidad total con usuarios locales existentes (`auth_provider DEFAULT 'local'`).
+- Pruebas unitarias de entidad y persistencia en repositorio.
 
-### 2. `F-45`: Autenticación Social Federada con Google OAuth2 (Google Identity Services)
-- Puerto de infraestructura `OAuthVerifierPort` y adaptador `GoogleOAuthVerifierAdapter` que valida el `id_token` utilizando la librería oficial o verificación criptográfica JWT contra los certificados públicos de Google (`https://www.googleapis.com/oauth2/v3/certs`).
-- Endpoint `/api/auth/google` que procesa el token y retorna los JWTs nativos de Arrendis.
-- Integración en frontend del botón oficial de Google en las páginas de Login y Registro (`<GoogleLoginButton />`) respetando el estilo editorial Atelier.
+### 2. `F-45`: Integración Google Identity Services y Verificación Criptográfica OIDC
+- Creación de puerto `OAuthVerifierPort` en `backend/domain/ports.py`.
+- Adaptador `GoogleOAuthVerifierAdapter` en `backend/infrastructure/auth/` con verificación de firmas públicas y expiración.
+- Caso de uso `GoogleAuthUseCase` y endpoint HTTP `POST /api/auth/google`.
+- Emisión de cookies blindadas (`HttpOnly`, `SameSite=Lax/Strict`, `Secure`) y tokens estándar de sesión.
 
-### 3. `F-46`: Registro de Auditoría de Accesos y Métricas Operativas de Usuarios
-- Entidad `UserAuditEvent` y tabla SQLite `user_audit_log` para registrar eventos relevantes de ciclo de vida.
-- Almacenamiento seguro de direcciones IP con anonimización / hashing para cumplimiento con el RGPD.
-- Endpoint administrativo protegido `/api/admin/metrics` para consultar totales de usuarios activos, registros semanales e incidentes de acceso.
+### 3. `F-46`: Experiencia UI de Login/Registro Social en Atelier
+- Carga asíncrona segura de Google Identity Services SDK en frontend sin degradar Core Web Vitals.
+- Componente `<GoogleSignInButton />` integrado en pantallas `/login` y `/register`.
+- Manejo elegante de errores de red, permisos denegados o fallos de verificación con toasts Atelier.
 
 ---
 
 ## 6. Criterios de Aceptación Globales de la Épica
 
-- [ ] Un usuario con `is_active = False` no puede iniciar sesión ni realizar peticiones autenticadas a ningún endpoint de la API.
-- [ ] Un usuario puede registrarse o iniciar sesión mediante el botón "Continuar con Google" de forma transparente en menos de 2 segundos.
-- [ ] Los usuarios dados de alta mediante Google comparten el mismo modelo de datos y aislamiento que los usuarios locales.
-- [ ] Cada inicio de sesión exitoso o fallido queda registrado en el log de auditoría con marca de tiempo e IP.
-- [ ] Todos los tests unitarios y de integración de usuarios y autenticación pasan al 100%.
+- [ ] Un usuario nuevo puede registrarse y quedar autenticado con Google en menos de 2 segundos sin rellenar formularios manuales.
+- [ ] Un usuario registrado previamente con contraseña que inicie sesión con su misma cuenta de Google accede a sus propiedades sin duplicar inquilino ni perder datos.
+- [ ] Toda petición a `/api/auth/google` sin un `id_token` válido o con `aud` no coincidente devuelve `401 Unauthorized` de forma inmediata.
+- [ ] El flujo es 100% responsive y opera correctamente tanto en navegador de escritorio como en PWA móvil.
+- [ ] La cobertura de tests de use case y endpoint para Google Auth alcanza el 100% de los escenarios críticos (éxito, token inválido, token expirado).
